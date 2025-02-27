@@ -245,6 +245,8 @@ mpp-vars:
   image_masked_services:
     - systemd-hwdb-update.service
     - ldconfig.service
+    # this waits by default for all interfaces, we do not want that
+    - NetworkManager-wait-online.service
   image_masked_generators:
     # legacy scripts not supported
     - systemd-rc-local-generator
