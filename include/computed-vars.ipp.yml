@@ -139,7 +139,7 @@ mpp-vars:
     mpp-if: "'debug' in locals().get('kernel_package')"
     then: true
   systemd_timeout:
-    mpp-eval: "'90s' if use_debug or use_kernel_debug_package else systemd_timeout"
+    mpp-eval: "'180s' if use_debug or use_kernel_debug_package else systemd_timeout"
   # use_bluechi is a backwards compat option that enables both use_bluechi_agent and use_bluechi_controller
   use_bluechi_agent:
     mpp-eval: use_bluechi_agent or locals().get('use_bluechi')
