@@ -242,6 +242,12 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       {"After=qm.service" if _boot_check_qm_digest else ""}
+  root_sshd_authorized_keys_conf:
+    mpp-format-string: |
+      AuthorizedKeysFile /etc/ssh/authorized_keys/%u .ssh/authorized_keys
+  root_sshd_authorized_keys:
+    mpp-format-string: |
+      { newline.join(root_ssh_keys) }
 
 pipelines:
   # Some variables need to be written to files, do that here
@@ -595,3 +601,30 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['realtime-variables.conf']}
               to: tree:///realtime-variables.conf
+
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: root_sshd_authorized_keys_conf
+              text: $root_sshd_authorized_keys_conf
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['root_sshd_authorized_keys_conf']}
+              to: tree:///root_sshd_authorized_keys.conf
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: root_sshd_authorized_keys
+              text: $root_sshd_authorized_keys
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['root_sshd_authorized_keys']}
+              to: tree:///root_sshd_authorized_keys
