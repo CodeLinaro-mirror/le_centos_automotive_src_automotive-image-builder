@@ -17,6 +17,8 @@ mpp-vars:
   aboot_base: "0x1208800"
   aboot_dtb_file: "qcom/sa8775p-ride.dtb"
   image_size: 17179824128
+  qm_varpart_uuid: "283dd53c-d749-68ac-261d-104d9cd22f76"
+
   #use_tuned_realtime: true
   target_repos:
     - id: qcom-board-support
