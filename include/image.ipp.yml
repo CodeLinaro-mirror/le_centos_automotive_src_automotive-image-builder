@@ -506,6 +506,18 @@ pipelines:
                   - - from: input://tree/
                       to: tree:///
                   - mpp-eval: extra_tree_content
+          - type: org.osbuild.users
+            options:
+              users:
+                root:
+                  password:
+                    mpp-if: root_password
+                    then:
+                      mpp-eval: root_password
+                  keys:
+                    mpp-if: root_ssh_keys
+                    then:
+                      mpp-eval: root_ssh_keys
         - mpp-eval: image_extra_stages
         - - type: org.osbuild.selinux
             options:
