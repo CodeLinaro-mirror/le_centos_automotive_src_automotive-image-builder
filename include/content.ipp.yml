@@ -500,6 +500,34 @@ pipelines:
             type: org.osbuild.files
             origin: org.osbuild.source
             mpp-embed:
+              id: emergency.service
+              path: $_basedir/files/emergency.service
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['emergency.service']}
+              to: tree:///emergency.service
+
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: rescue.service
+              path: $_basedir/files/rescue.service
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['rescue.service']}
+              to: tree:///rescue.service
+
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
               id: subuid
               text: $subuid_content
           inlinefile2:

@@ -1,0 +1,13 @@
+[Unit]
+Description=Emergency Shell Override - Reboot
+Documentation=man:sulogin(8)
+DefaultDependencies=no
+Conflicts=shutdown.target
+Conflicts=rescue.service
+Before=shutdown.target
+Before=rescue.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --force reboot
+StandardOutput=journal 
