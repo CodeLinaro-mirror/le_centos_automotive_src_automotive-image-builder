@@ -1,4 +1,5 @@
 import os
+import glob
 
 from .exceptions import UnsupportedExport
 
@@ -56,7 +57,7 @@ EXPORT_DATAS = {
         "filename": "images",
         "is_dir": True,
         "convert": "simg",
-        "convert_filename": "images/rootfs.img",
+        "convert_filename": "images/*.ext4",
     },
 }
 
@@ -82,19 +83,19 @@ def export(outputdir, dest, dest_is_directory, export, runner):
     convert = data.get("convert", "")
     if convert == "simg":
         if "convert_filename" in data:
-            convert_file = os.path.join(exportdir, data["convert_filename"])
+            convert_files = glob.glob(os.path.join(exportdir, data["convert_filename"]))
         else:
-            convert_file = export_file
-        converted_file = convert_file.removesuffix(".img") + ".simg"
-
-        runner.run(
-            ["img2simg", convert_file, converted_file],
-            use_sudo=True,
-            use_container=True,
-        )
-        if export_is_dir:
+            convert_files = [export_file]
+        for convert_file in convert_files:
+            converted_file = os.path.splitext(convert_file)[0] + ".simg"
+            runner.run(
+                ["img2simg", convert_file, converted_file],
+                use_sudo=True,
+                use_container=True,
+            )
             runner.run(["rm", "-rf", convert_file], use_sudo=True)
-        else:
+
+        if not export_is_dir:
             export_file = converted_file
 
     if dest_is_directory:

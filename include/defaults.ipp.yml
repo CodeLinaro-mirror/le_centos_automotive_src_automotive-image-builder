@@ -198,6 +198,7 @@ mpp-vars:
     mpp-if: arch == 'aarch64'
     then: ttyAMA0
     else: ttyS0
+  disable_emergency_shell: true
   selinux_mode: enforcing
   selinux_policy: targeted
   selinux_secure_mode:

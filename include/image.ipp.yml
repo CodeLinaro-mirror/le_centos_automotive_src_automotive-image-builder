@@ -407,6 +407,32 @@ pipelines:
               source: root
               target: /
 
+  - mpp-if: use_qm and _qm_varpart_size != 0
+    then:
+      name: ext4-qm-var
+      build: name:build
+      stages:
+        - type: org.osbuild.truncate
+          options:
+            filename: qm_var.ext4
+            size:
+              mpp-format-string: "{_qm_varpart_size * 512}"
+        - type: org.osbuild.mkfs.ext4
+          devices:
+            device:
+              type: org.osbuild.loopback
+              options:
+                filename: qm_var.ext4
+                start: 0
+                size:
+                  mpp-format-int: "{int(_qm_varpart_size)}"
+          options:
+            uuid:
+              mpp-eval: qm_varpart_uuid
+            label: qm_var
+            verity: true
+            lazy_init: true
+
   - mpp-if: use_aboot
     then:
       name: aboot
@@ -423,6 +449,13 @@ pipelines:
               origin: org.osbuild.pipeline
               references:
                 - name:ext4
+            ext4-qm-var:
+              mpp-if: use_qm and _qm_varpart_size > 0
+              then:
+                type: org.osbuild.tree
+                origin: org.osbuild.pipeline
+                references:
+                  - name:ext4-qm-var
             tree:
               type: org.osbuild.tree
               origin: org.osbuild.pipeline
@@ -430,15 +463,20 @@ pipelines:
                 - name:image-tree
           options:
             paths:
-              - from: input://ext4/rootfs.ext4
-                to: tree:///images/rootfs.img
-              - from:
-                  mpp-if: use_kernel_debug_package
+              mpp-join:
+                - - from: input://ext4/rootfs.ext4
+                    to: tree:///images/rootfs.ext4
+                - mpp-if: use_qm and _qm_varpart_size > 0
                   then:
-                    mpp-format-string: "input://tree/boot/aboot-{rpms['rootfs'][kernel_core_package].evra}+debug.img"
-                  else:
-                    mpp-format-string: "input://tree/boot/aboot-{rpms['rootfs'][kernel_core_package].evra}.img"
-                to: tree:///images/aboot.img
+                    - from: input://ext4-qm-var/qm_var.ext4
+                      to: tree:///images/qm_var.ext4
+                - - from:
+                      mpp-if: use_kernel_debug_package
+                      then:
+                        mpp-format-string: "input://tree/boot/aboot-{rpms['rootfs'][kernel_core_package].evra}+debug.img"
+                      else:
+                        mpp-format-string: "input://tree/boot/aboot-{rpms['rootfs'][kernel_core_package].evra}.img"
+                    to: tree:///images/aboot.img
 
   # This is essentially rootfs with no image-specific stuff like boot, etc, but with
   # some required extras.
@@ -468,6 +506,18 @@ pipelines:
                   - - from: input://tree/
                       to: tree:///
                   - mpp-eval: extra_tree_content
+          - type: org.osbuild.users
+            options:
+              users:
+                root:
+                  password:
+                    mpp-if: root_password
+                    then:
+                      mpp-eval: root_password
+                  keys:
+                    mpp-if: root_ssh_keys
+                    then:
+                      mpp-eval: root_ssh_keys
         - mpp-eval: image_extra_stages
         - - type: org.osbuild.selinux
             options:

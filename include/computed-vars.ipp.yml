@@ -619,6 +619,11 @@ mpp-vars:
         path: /usr/lib/systemd/system/auto-boot-check.service.d
         parents: true
         exist_ok: true
+    - mpp-if: root_ssh_keys
+      then:
+        path: /etc/ssh/authorized_keys
+        parents: true
+        exist_ok: true
   # Extra content that will be copied from from extra-tree to the image, list amended by moode-*.ipp
   extra_tree_content:
     - from: input://extra-tree/systemd-system.conf
@@ -627,6 +632,14 @@ mpp-vars:
       to: tree:///usr/lib/systemd/coredump.conf.d/10-automotive.conf
     - from: input://extra-tree/rcu-normal.service
       to: tree:///usr/lib/systemd/system/rcu-normal.service
+    - mpp-if: disable_emergency_shell
+      then:
+        from: input://extra-tree/emergency.service
+        to: tree:///etc/systemd/system/emergency.service
+    - mpp-if: disable_emergency_shell
+      then:
+        from: input://extra-tree/rescue.service
+        to: tree:///etc/systemd/system/rescue.service
     - mpp-if: use_luks and luks_auto_unlock
       then:
         from: input://extra-tree/luks-key
@@ -703,6 +716,14 @@ mpp-vars:
       then:
         from: input://extra-tree/qm-automotive.conf
         to: tree:////usr/share/containers/systemd/qm.container.d/10-automotive.conf
+    - mpp-if: root_ssh_keys
+      then:
+        from: input://extra-tree/root_sshd_authorized_keys.conf
+        to: tree:///etc/ssh/sshd_config.d/99-custom-auhorized-keys.conf
+    - mpp-if: root_ssh_keys
+      then:
+        from: input://extra-tree/root_sshd_authorized_keys
+        to: tree:///etc/ssh/authorized_keys/root
 
   build_rpms:
     mpp-join:
