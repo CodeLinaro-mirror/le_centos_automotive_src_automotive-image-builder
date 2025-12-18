@@ -33,6 +33,9 @@ mpp-vars:
   use_debug: false
   # Name of kernel rpm to use
   kernel_package: kernel-automotive
+  # Name of kernel rpm to use in build pipeline
+  # Note: This is used in qemu to build the image, so we use the generic kernel here, not a hw specific one
+  build_kernel_package: kernel-automotive
   # Optional specific kernel rpm version to use
   kernel_version: ""
   extra_kernel_opts: []

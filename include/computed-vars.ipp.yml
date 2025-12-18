@@ -901,6 +901,7 @@ mpp-vars:
       - mpp-eval: arch_build_rpms
       - mpp-eval: target_build_rpms
       - - selinux-policy-$selinux_policy
+        - mpp-eval: build_kernel_package
         - mpp-if: use_luks
           then: cryptsetup
         - mpp-if: use_luks
