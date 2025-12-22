@@ -90,7 +90,16 @@ def listrpms(args, tmpdir, runner):
     print(data)
 
 
-def bootc_archive_to_store(runner, archive_file, container_name, user=False):
+def bootc_archive_to_store(
+    runner, archive_file, container_name, user=False, user_storage=False
+):
+    """
+    Copy a bootc OCI archive to container storage.
+
+    Args:
+        user: Write to user storage (run without sudo)
+        user_storage: Avoid sudo to prevent permission issues with user-owned storage
+    """
     cmdline = [
         "skopeo",
         "copy",
@@ -99,7 +108,7 @@ def bootc_archive_to_store(runner, archive_file, container_name, user=False):
         "containers-storage:" + container_name,
     ]
 
-    if user:
+    if user or user_storage:
         subprocess.run(cmdline, check=True)
     else:
         runner.run_as_root(cmdline)
@@ -216,7 +225,13 @@ def build(args, tmpdir, runner):
         else:
             # "-" to not store result in store
             if args.out != "-":
-                bootc_archive_to_store(runner, output_file, args.out, user=args.user)
+                bootc_archive_to_store(
+                    runner,
+                    output_file,
+                    args.out,
+                    user=args.user,
+                    user_storage=getattr(args, "user_storage", False),
+                )
 
             if args.disk and (args.user or args.out == "-"):
                 # We need it in the root store anyway to convert it
