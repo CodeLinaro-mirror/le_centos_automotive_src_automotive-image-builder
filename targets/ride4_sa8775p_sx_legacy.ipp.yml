@@ -5,6 +5,6 @@ mpp-vars:
 
 pipelines:
   - mpp-import-pipelines:
-      path: include/_ridesx4_common.ipp.yml
+      path: include/_ride4_common.ipp.yml
   - mpp-import-pipelines:
-      path: include/_ridesx4.ipp.yml
+      path: include/_ride4.ipp.yml

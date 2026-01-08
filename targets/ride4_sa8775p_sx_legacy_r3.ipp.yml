@@ -11,6 +11,6 @@ mpp-vars:
 # To derive and override mpp vars we move the overrides to an include file
 pipelines:
   - mpp-import-pipelines:
-      path: include/_ridesx4_common.ipp.yml
+      path: include/_ride4_common.ipp.yml
   - mpp-import-pipelines:
-      path: include/_ridesx4.ipp.yml
+      path: include/_ride4.ipp.yml
