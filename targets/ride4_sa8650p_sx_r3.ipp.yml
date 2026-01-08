@@ -1,0 +1,13 @@
+# A target for SA8650P SX Rev3 SoC
+# This is currently developed as a vendor kernel.
+version: "2"
+
+mpp-vars:
+  aboot_dtb_file: "extra/qcom/sa8650p-ride-v3.dtb"
+
+# To derive and override mpp vars we move the overrides to an include file
+pipelines:
+  - mpp-import-pipelines:
+      path: include/_ride4_common.ipp.yml
+  - mpp-import-pipelines:
+      path: include/_ride4_scmi.ipp.yml
