@@ -223,7 +223,7 @@ def build(args, tmpdir, runner):
                 remove_container = True
                 root_containername = random_container_name()
                 bootc_archive_to_store(
-                    runner, output_file, root_containername, user=args.user
+                    runner, output_file, root_containername, user=False
                 )
             else:
                 root_containername = args.out
