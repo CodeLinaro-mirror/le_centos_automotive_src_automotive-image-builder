@@ -14,7 +14,7 @@ SOURCE_FILENAME=""
 OUTPUT_DIR=$(pwd)
 
 usage() {
-  echo "Usage: build-rpm.sh [--generate-spec|--build_source|--build_binary] [--release] [--print-source-path] [output_dir]"
+  echo "Usage: build-rpm.sh [--generate-spec|--build-source|--build-binary] [--release] [--print-source-path] [output_dir]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -61,6 +61,11 @@ done
 if [ ${#POSITIONAL_ARGS[@]} -ge 1 ]
 then
   OUTPUT_DIR=${POSITIONAL_ARGS[0]}
+  # Create directory if it doesn't exist
+  if [ ! -d "$OUTPUT_DIR" ]
+  then
+    mkdir -p "$OUTPUT_DIR"
+  fi
 fi
 
 if [ $GENERATE_SPEC = false ] && [ $BUILD_SOURCE = false ]
