@@ -363,6 +363,10 @@ def podman_run_bootc_image_builder(
         prefix="automotive-image-builder-", dir="/var/tmp"
     ) as tmpdir:
         try:
+            # To easily test non-containerized bc-i-b builds, parse
+            # absolute paths as binary name:
+            use_container = not bib_container.startswith("/")
+
             args = [
                 "--build-container",
                 build_container,
@@ -372,17 +376,23 @@ def podman_run_bootc_image_builder(
                 build_type,
                 bootc_container,
             ]
-            volumes = {
-                "/output": tmpdir,
-                "/var/lib/containers/storage": "/var/lib/containers/storage",
-            }
-            res = run_podman_cmd(
-                bib_container,
-                volumes,
-                args,
-                podman_args=["--privileged", "--network=none"],
-                stdout_pipe=None if verbose else subprocess.DEVNULL,
-            )
+            if use_container:
+                volumes = {
+                    "/output": tmpdir,
+                    "/var/lib/containers/storage": "/var/lib/containers/storage",
+                }
+                res = run_podman_cmd(
+                    bib_container,
+                    volumes,
+                    args,
+                    podman_args=["--privileged", "--network=none"],
+                    stdout_pipe=None if verbose else subprocess.DEVNULL,
+                )
+            else:
+                res = run_cmd(
+                    [bib_container, "--output", tmpdir] + args,
+                    stdout_pipe=None if verbose else subprocess.DEVNULL,
+                )
 
             if res == 0:
                 src = os.path.join(tmpdir, src_path)
