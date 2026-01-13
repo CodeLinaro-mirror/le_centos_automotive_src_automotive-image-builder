@@ -339,6 +339,7 @@ trybuild() {
         --cache $OUTDIR/dnf-cache \
         --build-dir "$BUILDDIR" $FAST_OPTIONS \
         --define reproducible_image=true \
+        --verbose \
         "$@" > build-bootc.log
     result=$?
 
