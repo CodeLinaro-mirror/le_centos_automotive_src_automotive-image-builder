@@ -330,7 +330,7 @@ BUILD_ARGS = {
     },
     "--osbuild-manifest": {
         "type": "path",
-        "help": "Path to store osbuild manifest that was used",
+        "help": "Path to export the generated osbuild manifest that was used when building the image",
     },
     "--define": {
         "type": "append",
