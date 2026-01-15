@@ -8,8 +8,10 @@ IMG_FILE="out.img"
 trap 'cleanup_path "$IMG_FILE"' 'EXIT'
 
 echo_log "Starting build..."
-build_deprecated --export image \
+build \
+    --target qemu \
     partition-absolute-size.aib.yml \
+    "$NO_CTR_NAME" \
     "$IMG_FILE"
 echo_log "Build completed, output: $IMG_FILE"
 

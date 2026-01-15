@@ -115,22 +115,11 @@ echo_log "Test 6: Testing Compliance policy mode restrictions..."
 build --dry-run --policy compliance.aibp.yml simple-rpms.aib.yml "$NO_CTR_NAME" out
 echo_log "Compliance policy allows bootc"
 
-build_deprecated --policy compliance.aibp.yml --mode image simple-rpms.aib.yml out
-echo_log "Compliance policy allows image mode"
-
-if trybuild_deprecated --policy compliance.aibp.yml --mode package simple-rpms.aib.yml out 2> mode_error.txt; then
-    echo_fail "Compliance policy should deny package mode"
-    fatal "Compliance policy should have blocked package mode"
-else
-    echo_log "Compliance policy correctly blocked package mode"
-fi
-assert_file_has_content mode_error.txt "mode 'package' is not in allowed list"
-
 if trybuild_dev --dry-run --policy compliance.aibp.yml simple-rpms.aib.yml out.img 2> mode_error.txt; then
-    echo_fail "Compliance policy should deny traditional build"
-    fatal "Compliance policy should have blocked traditional build"
+    echo_fail "Compliance policy should deny development build"
+    fatal "Compliance policy should have blocked development build"
 else
-    echo_log "Compliance policy correctly blocked traditional build"
+    echo_log "Compliance policy correctly blocked development build"
 fi
 assert_file_has_content mode_error.txt "mode 'package' is not in allowed list"
 

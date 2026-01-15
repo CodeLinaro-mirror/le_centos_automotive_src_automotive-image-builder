@@ -21,10 +21,10 @@ trap 'cleanup_path "$IMG_NAME"' 'EXIT'
 
 # Build the image
 echo_log "Building AIB image..."
-build_deprecated --target qemu \
-    --mode image \
-    --export image \
+build \
+    --target qemu \
     selinux-config.aib.yml \
+    "$NO_CTR_NAME" \
     "$IMG_NAME"
 
 # Check if image was created

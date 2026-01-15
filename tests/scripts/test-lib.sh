@@ -308,32 +308,6 @@ save_to_tmt_data () {
 # Some default options that make builds faster, override if problematic
 FAST_OPTIONS="--define sign_kernel_modules=false"
 
-trybuild_deprecated() {
-    local result=0
-
-    $AIBDEV build-deprecated \
-        --distro=$AIB_DISTRO \
-        --cache $OUTDIR/dnf-cache \
-        --build-dir "$BUILDDIR" $FAST_OPTIONS \
-        --define reproducible_image=true \
-        "$@" > build.log
-    result=$?
-
-    return $result
-}
-
-build_deprecated() {
-   if ! trybuild_deprecated "$@"; then
-      echo FAILED to build image
-      # only show last 50 lines in
-      tail -n 50 build.log
-      # save build log to tmt test data
-      save_to_tmt_data build.log
-      exit 1
-   fi
-   save_to_tmt_data build.log
-}
-
 trybuild() {
     local result=0
 
