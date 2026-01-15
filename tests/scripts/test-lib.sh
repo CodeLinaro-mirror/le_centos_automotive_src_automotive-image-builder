@@ -313,6 +313,7 @@ trybuild() {
 
     $AIB build \
         --distro=$AIB_DISTRO \
+        --target qemu \
         --cache $OUTDIR/dnf-cache \
         --build-dir "$BUILDDIR" $FAST_OPTIONS \
         --define reproducible_image=true \

@@ -26,7 +26,6 @@ for YML_NAME in image-size-*.aib.yml; do
     # Build image
     echo_log "Building image: $YML_NAME"
     build \
-        --target qemu \
         "$YML_NAME" \
         "$NO_CTR_NAME" \
         "$IMAGE_NAME" || {

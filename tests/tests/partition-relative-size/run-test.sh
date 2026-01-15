@@ -8,11 +8,7 @@ IMG_FILE="out.img"
 trap 'cleanup_path "$IMG_FILE"' 'EXIT'
 
 echo_log "Starting build..."
-build \
-    --target qemu \
-    partition-relative-size.aib.yml \
-    "$NO_CTR_NAME" \
-    "$IMG_FILE"
+build partition-relative-size.aib.yml "$NO_CTR_NAME" "$IMG_FILE"
 echo_log "Build completed, output: $IMG_FILE"
 
 assert_partition_relative_size "$IMG_FILE" var 0.2

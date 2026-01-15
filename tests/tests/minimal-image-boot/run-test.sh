@@ -12,7 +12,7 @@ trap 'cleanup_path "$IMG_NAME"' 'EXIT'
 
 # Build the image
 echo_log "Building image from $MANIFEST..."
-build --target qemu "$MANIFEST" "$NO_CTR_NAME" "$IMG_NAME"
+build "$MANIFEST" "$NO_CTR_NAME" "$IMG_NAME"
 
 # Check if image was created
 assert_image_exists "$IMG_NAME"

@@ -297,7 +297,7 @@ assert_kernel_module_removed rcar_s4_out.json "rcar_dmac"
 
 # Test with qemu target - should only get global kernel module restrictions
 echo_log "  Testing qemu target does not get rcar_s4-specific restrictions..."
-build --dry-run --osbuild-manifest qemu_out.json --policy compliance.aibp.yml --target qemu simple-rpms.aib.yml "$NO_CTR_NAME" out
+build --dry-run --osbuild-manifest qemu_out.json --policy compliance.aibp.yml simple-rpms.aib.yml "$NO_CTR_NAME" out
 
 # Check that global modules are denied for qemu
 assert_kernel_module_removed qemu_out.json "bluetooth"
