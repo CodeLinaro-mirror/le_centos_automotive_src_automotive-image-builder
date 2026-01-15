@@ -747,6 +747,9 @@ mpp-vars:
     - path: /usr/lib/bootc-image-builder
       parents: true
       exist_ok: true
+    - path: /usr/lib/automotive-image-builder
+      parents: true
+      exist_ok: true
     - mpp-if: root_ssh_keys
       then:
         path: /etc/ssh/authorized_keys
@@ -868,6 +871,10 @@ mpp-vars:
       to: tree://///usr/lib/bootc/install/05-aib.toml
     - from: input://extra-tree/disk.yaml
       to: tree://///usr/lib/bootc-image-builder/disk.yaml
+    - mpp-if: use_ukibootpart
+      then:
+        from: input://extra-tree/ukibootctl_init.bin
+        to: tree://///usr/lib/automotive-image-builder/ukibootctl_init.bin
     - mpp-if: root_ssh_keys
       then:
         from: input://extra-tree/root_sshd_authorized_keys.conf
