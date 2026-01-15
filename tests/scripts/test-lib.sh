@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+# To simplify image build process don't store bootc container
+export NO_CTR_NAME="-"
+
 echo_log() {
     echo "INFO: $1"
 }

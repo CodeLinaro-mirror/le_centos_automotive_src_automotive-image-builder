@@ -16,7 +16,8 @@ trap 'cleanup_path "$IMG_NAME"' 'EXIT'
 echo_log "Building AIB image..."
 build --target qemu \
     kernel-cmdline-options.aib.yml \
-    - "$IMG_NAME"
+    "$NO_CTR_NAME" \
+    "$IMG_NAME"
 
 # Check if image was created
 assert_image_exists "$IMG_NAME"
