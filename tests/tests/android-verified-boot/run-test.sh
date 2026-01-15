@@ -43,7 +43,7 @@ $AIB inject-signed --reseal-with-key=private.pem "$AVB_PREPARED" to-sign "$AVB_S
 echo_pass "Built signed bootc container"
 
 echo_log "Building bootc disk image..."
-$AIB to-disk-image "$AVB_SIGNED" "$IMG_SIGNED"
+$AIB to-disk-image --verbose "$AVB_SIGNED" "$IMG_SIGNED"
 echo_pass "Built signed bootc disk image"
 
 ############################################
