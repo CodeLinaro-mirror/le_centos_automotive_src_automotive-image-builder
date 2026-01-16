@@ -1,0 +1,6 @@
+name: image-size-in-MB
+
+image:
+  # TODO: Decrease image size once https://github.com/osbuild/bootc-image-builder/issues/1152 is fixed
+  # image_size: "3500MB"
+  image_size: "3800MB"
