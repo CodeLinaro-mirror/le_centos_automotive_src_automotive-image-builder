@@ -7,7 +7,6 @@ from aib import AIBParameters
 from aib import exceptions
 from aib.exports import get_export_data
 
-
 BASE_DIR = "/usr/lib/automotive-image-builder"
 INVALID_YAML = """
   # Bad indentation

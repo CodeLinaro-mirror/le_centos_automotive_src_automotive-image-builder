@@ -7,7 +7,6 @@ from aib import exceptions
 from aib.arguments import parse_args
 from aib.runner import Runner
 
-
 BASE_DIR = "/usr/lib/automotive-image-builder"
 
 
