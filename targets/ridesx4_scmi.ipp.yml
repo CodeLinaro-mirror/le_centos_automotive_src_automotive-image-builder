@@ -1,14 +1,1 @@
-# A target for the QC RIDESX4 board with SCMI enabled firmware.
-#
-# This is currently developed as a vendor kernel.
-version: "2"
-
-mpp-vars:
-  aboot_dtb_file: "extra/qcom/sa8775p-ride-scmi.dtb"
-
-# To derive and override mpp vars we move the overrides to an include file
-pipelines:
-  - mpp-import-pipelines:
-      path: include/_ridesx4_common.ipp.yml
-  - mpp-import-pipelines:
-      path: include/_ridesx4_scmi.ipp.yml
+ride4_sa8775p_sx.ipp.yml
