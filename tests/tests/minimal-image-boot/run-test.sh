@@ -3,17 +3,16 @@
 source "$(dirname ${BASH_SOURCE[0]})"/../../scripts/test-lib.sh
 
 # Define connection and VM parameters
-CTR_NAME="localhost/minimal-image"
 IMG_NAME="test.img"
 MANIFEST=minimal-image-boot.aib.yml
 LOGFILE=serial-console.log
 
 # Update cleanup function parameters on each test artifact change
-trap 'cleanup_path "$IMG_NAME" ; cleanup_container "$CTR_NAME"' 'EXIT'
+trap 'cleanup_path "$IMG_NAME"' 'EXIT'
 
 # Build the image
 echo_log "Building image from $MANIFEST..."
-build --target qemu "$MANIFEST" "$CTR_NAME" "$IMG_NAME"
+build "$MANIFEST" "$NO_CTR_NAME" "$IMG_NAME"
 
 # Check if image was created
 assert_image_exists "$IMG_NAME"

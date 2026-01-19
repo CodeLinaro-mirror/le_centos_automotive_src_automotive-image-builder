@@ -8,9 +8,7 @@ IMG_FILE="out.img"
 trap 'cleanup_path "$IMG_FILE"' 'EXIT'
 
 echo_log "Starting build..."
-build_deprecated --export image \
-    partition-absolute-size.aib.yml \
-    "$IMG_FILE"
+build partition-absolute-size.aib.yml "$NO_CTR_NAME" "$IMG_FILE"
 echo_log "Build completed, output: $IMG_FILE"
 
 assert_partition_absolute_size "$IMG_FILE" var 524288000 10240

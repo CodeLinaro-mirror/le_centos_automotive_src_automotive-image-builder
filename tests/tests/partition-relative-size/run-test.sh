@@ -8,12 +8,11 @@ IMG_FILE="out.img"
 trap 'cleanup_path "$IMG_FILE"' 'EXIT'
 
 echo_log "Starting build..."
-build_deprecated --export image \
-    partition-relative-size.aib.yml \
-    "$IMG_FILE"
+build partition-relative-size.aib.yml "$NO_CTR_NAME" "$IMG_FILE"
 echo_log "Build completed, output: $IMG_FILE"
 
-assert_partition_relative_size "$IMG_FILE" var 0.2
-assert_partition_relative_size "$IMG_FILE" qm_var 0.1
+# bootc partition sizes requires bigger tolerance
+assert_partition_relative_size "$IMG_FILE" var 0.2 0.03
+assert_partition_relative_size "$IMG_FILE" qm_var 0.1 0.03
 
 

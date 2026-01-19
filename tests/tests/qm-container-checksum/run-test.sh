@@ -9,7 +9,7 @@ success=0
 
 # Build image
 echo_log "Building AIB image..."
-build --target qemu --policy qm-container-checksum-policy.aibp.yml qm-container-checksum.aib.yml - "$IMG_NAME"
+build --policy qm-container-checksum-policy.aibp.yml qm-container-checksum.aib.yml "$NO_CTR_NAME" "$IMG_NAME"
 
 # Verify image exists
 assert_image_exists "$IMG_NAME"

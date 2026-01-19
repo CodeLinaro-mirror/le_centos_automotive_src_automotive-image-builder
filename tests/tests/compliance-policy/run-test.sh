@@ -78,13 +78,13 @@ echo_log "=== Testing compliance policy enforcement ==="
 
 # Test 1: Verify via variables dump that --policy flag enables policy correctly
 echo_log "Test 1: Verifying --policy flag enables compliance policy..."
-build --dry-run --policy compliance.aibp.yml --dump-variables simple-rpms.aib.yml out
+build --dry-run --policy compliance.aibp.yml --dump-variables simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_file_has_content build-bootc.log '"disable_ipv6": true'
 echo_log "Compliance policy variables correctly set"
 
 # Test 2: Verify compliance policy denies forbidden RPMs
 echo_log "Test 2: Testing compliance policy denies forbidden RPMs..."
-if trybuild  --dry-run --policy compliance.aibp.yml --extend-define extra_rpms=nano simple-rpms.aib.yml out 2> rpm_error.txt; then
+if trybuild --dry-run --policy compliance.aibp.yml --extend-define extra_rpms=nano simple-rpms.aib.yml "$NO_CTR_NAME" out 2> rpm_error.txt; then
     echo_fail "Compliance policy should deny nano RPM"
     fatal "Compliance policy should have blocked nano"
 else
@@ -95,7 +95,7 @@ assert_file_has_content rpm_error.txt "denied rpms"
 # Test 4: Verify Compliance policy includes forbidden kernel modules in denylist
 echo_log "Test 4: Testing Compliance policy includes forbidden kernel modules in denylist..."
 # build with Compliance policy to generate OSBuild JSON
-build --dry-run --policy compliance.aibp.yml --osbuild-manifest out4.json simple-rpms.aib.yml out
+build --dry-run --policy compliance.aibp.yml --osbuild-manifest out4.json simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_has_file out4.json
 # Check for kernel module removal stage with specific modules in OSBuild JSON
 assert_jq out4.json '.pipelines[] | .stages[]? | select(.type == "org.osbuild-auto.kernel.remove-modules")'
@@ -106,31 +106,20 @@ echo_log "Compliance policy correctly includes forbidden kernel modules in denyl
 
 # Test 5: Verify --policy flag works with explicit compliance policy file
 echo_log "Test 5: Testing explicit compliance policy file..."
-build --dry-run --policy compliance.aibp.yml --dump-variables simple-rpms.aib.yml out
+build --dry-run --policy compliance.aibp.yml --dump-variables simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_file_has_content build-bootc.log '"disable_ipv6": true'
 echo_log "Explicit Compliance policy file works correctly"
 
 # Test 6: Verify Compliance policy allows image mode but denies package mode
 echo_log "Test 6: Testing Compliance policy mode restrictions..."
-build --dry-run --policy compliance.aibp.yml simple-rpms.aib.yml out
+build --dry-run --policy compliance.aibp.yml simple-rpms.aib.yml "$NO_CTR_NAME" out
 echo_log "Compliance policy allows bootc"
 
-build_deprecated --policy compliance.aibp.yml --mode image simple-rpms.aib.yml out
-echo_log "Compliance policy allows image mode"
-
-if trybuild_deprecated --policy compliance.aibp.yml --mode package simple-rpms.aib.yml out 2> mode_error.txt; then
-    echo_fail "Compliance policy should deny package mode"
-    fatal "Compliance policy should have blocked package mode"
-else
-    echo_log "Compliance policy correctly blocked package mode"
-fi
-assert_file_has_content mode_error.txt "mode 'package' is not in allowed list"
-
 if trybuild_dev --dry-run --policy compliance.aibp.yml simple-rpms.aib.yml out.img 2> mode_error.txt; then
-    echo_fail "Compliance policy should deny traditional build"
-    fatal "Compliance policy should have blocked traditional build"
+    echo_fail "Compliance policy should deny development build"
+    fatal "Compliance policy should have blocked development build"
 else
-    echo_log "Compliance policy correctly blocked traditional build"
+    echo_log "Compliance policy correctly blocked development build"
 fi
 assert_file_has_content mode_error.txt "mode 'package' is not in allowed list"
 
@@ -140,7 +129,7 @@ echo_log "Test 7: Testing Compliance policy manifest restrictions..."
 
 # Test that containers-storage transport is disallowed
 echo_log "  Testing containers-storage transport restriction..."
-if trybuild --dry-run --policy compliance.aibp.yml containers-storage.aib.yml out 2> containers_error.txt; then
+if trybuild --dry-run --policy compliance.aibp.yml containers-storage.aib.yml "$NO_CTR_NAME" out 2> containers_error.txt; then
     echo_fail "Compliance policy should deny containers-storage transport"
     fatal "Compliance policy should have blocked containers-storage transport"
 else
@@ -150,7 +139,7 @@ assert_file_has_content containers_error.txt "forbidden value 'containers-storag
 
 # Test that experimental properties are disallowed
 echo_log "  Testing experimental property restriction..."
-if trybuild --policy compliance.aibp.yml experimental.aib.yml out 2> experimental_error.txt; then
+if trybuild --policy compliance.aibp.yml experimental.aib.yml "$NO_CTR_NAME" out 2> experimental_error.txt; then
     echo_fail "Compliance policy should deny experimental properties"
     fatal "Compliance policy should have blocked experimental properties"
 else
@@ -165,12 +154,12 @@ echo_log "Test 8: Comprehensive comparison of build output with and without comp
 
 # Build without Compliance policy
 echo_log "  Building without Compliance policy..."
-build  --dry-run --osbuild-manifest no_compliance_out.json simple-rpms.aib.yml out
+build --dry-run --osbuild-manifest no_compliance_out.json simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_has_file no_compliance_out.json
 
 # Build with Compliance policy
 echo_log "  Building with Compliance policy..."
-build  --dry-run --osbuild-manifest compliance_out.json --policy compliance.aibp.yml simple-rpms.aib.yml out
+build --dry-run --osbuild-manifest compliance_out.json --policy compliance.aibp.yml simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_has_file compliance_out.json
 
 # Check compliance-specific kernel command line options are present
@@ -221,7 +210,7 @@ restrictions:
 EOF
 
 # Test that policy name resolution works (should find it in files/policies)
-build  --dry-run --policy installed-test --dump-variables simple-rpms.aib.yml out
+build --dry-run --policy installed-test --dump-variables simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_file_has_content build-bootc.log '"from_installed_policy": true'
 echo_log "Policy name resolution from base directory works correctly"
 
@@ -238,7 +227,7 @@ restrictions:
 EOF
 
 # This should use the local file, not the one in files/policies
-build  --dry-run --policy installed-test.aibp.yml --dump-variables simple-rpms.aib.yml out
+build --dry-run --policy installed-test.aibp.yml --dump-variables simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_file_has_content build-bootc.log '"from_local_policy": true'
 # Should NOT contain the installed policy's variable
 if grep -q '"from_installed_policy": true' build-bootc.log; then
@@ -262,7 +251,7 @@ EOF
 sudo cp system-test.aibp.yml /etc/automotive-image-builder/policies/
 
 # Test that policy name resolution finds the system policy
-build  --dry-run --policy system-test --dump-variables simple-rpms.aib.yml out
+build --dry-run --policy system-test --dump-variables simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_file_has_content build-bootc.log '"from_system_policy": true'
 echo_log "System-wide policy location works correctly"
 
@@ -279,7 +268,7 @@ restrictions:
 EOF
 
 # This should use the /etc/ policy, not the package one
-build  --dry-run --policy system-test --dump-variables simple-rpms.aib.yml --osbuild-manifest out.json out
+build --dry-run --policy system-test --dump-variables --osbuild-manifest out.json simple-rpms.aib.yml "$NO_CTR_NAME" out
 assert_file_has_content build-bootc.log '"from_system_policy": true'
 # Should NOT contain the package policy's variable
 if grep -q '"from_package_policy": true' build-bootc.log; then
@@ -295,7 +284,7 @@ echo_log "Test 13: Testing target-specific policy configuration..."
 
 # Test with rcar_s4 target - should get global + rcar_s4-specific kernel module restrictions
 echo_log "  Testing rcar_s4 target-specific kernel module restrictions..."
-build  --dry-run --policy compliance.aibp.yml --target rcar_s4  --osbuild-manifest rcar_s4_out.json  simple-rpms.aib.yml out
+build --dry-run --policy compliance.aibp.yml --target rcar_s4 --osbuild-manifest rcar_s4_out.json simple-rpms.aib.yml "$NO_CTR_NAME" out
 
 # Check that global modules are denied for rcar_s4
 assert_kernel_module_removed rcar_s4_out.json "bluetooth"
@@ -308,7 +297,7 @@ assert_kernel_module_removed rcar_s4_out.json "rcar_dmac"
 
 # Test with qemu target - should only get global kernel module restrictions
 echo_log "  Testing qemu target does not get rcar_s4-specific restrictions..."
-build  --dry-run --osbuild-manifest qemu_out.json --policy compliance.aibp.yml --target qemu simple-rpms.aib.yml out
+build --dry-run --osbuild-manifest qemu_out.json --policy compliance.aibp.yml simple-rpms.aib.yml "$NO_CTR_NAME" out
 
 # Check that global modules are denied for qemu
 assert_kernel_module_removed qemu_out.json "bluetooth"
@@ -326,7 +315,7 @@ echo_log "Test 14: Testing require_simple_manifest restriction..."
 
 # Test that compliance policy blocks low-level manifests
 echo_log "  Testing compliance policy blocks low-level manifests..."
-if trybuild_dev  --dry-run --policy compliance.aibp.yml lowlevel.mpp.yml out.img 2> manifest_type_error.txt; then
+if trybuild_dev --dry-run --policy compliance.aibp.yml lowlevel.mpp.yml out.img 2> manifest_type_error.txt; then
     echo_fail "Compliance policy should deny low-level manifests"
     fatal "Compliance policy should have blocked low-level manifest"
 else
@@ -337,7 +326,7 @@ assert_file_has_content manifest_type_error.txt "low-level manifest (.mpp.yml)"
 
 # Test that minimal policy (without require_simple_manifest) allows low-level manifests
 echo_log "  Testing minimal policy allows low-level manifests..."
-build  --dry-run --policy minimal.aibp.yml --osbuild-manifest lowlevel_allowed_out.json lowlevel.mpp.yml out
+build --dry-run --policy minimal.aibp.yml --osbuild-manifest lowlevel_allowed_out.json lowlevel.mpp.yml "$NO_CTR_NAME" out
 assert_has_file lowlevel_allowed_out.json
 echo_log "Minimal policy correctly allows low-level manifest"
 

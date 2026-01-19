@@ -9,7 +9,7 @@ trap 'cleanup_path "$IMAGE_NAME"' 'EXIT'
 
 for YML_NAME in image-size-*.aib.yml; do
     # Extract image_size value
-    IMAGE_SIZE=$(grep 'image_size:' "$YML_NAME" | awk -F': *' '{ print $2 }' | tr -d '"')
+    IMAGE_SIZE=$(grep -E "^[[:space:]]*image_size:" "$YML_NAME" | awk -F': *' '{ print $2 }' | tr -d '"')
 
     # Parse image_size and expected size in bytes based on unit
     UNIT=$(echo "$IMAGE_SIZE" | grep -oEi '(GiB|MB)$')
@@ -25,7 +25,10 @@ for YML_NAME in image-size-*.aib.yml; do
 
     # Build image
     echo_log "Building image: $YML_NAME"
-    build_deprecated --target qemu --export qcow2 "$YML_NAME" "$IMAGE_NAME" || {
+    build \
+        "$YML_NAME" \
+        "$NO_CTR_NAME" \
+        "$IMAGE_NAME" || {
         echo_fail "Build failed for $YML_NAME"
         exit 1
     }
@@ -33,7 +36,10 @@ for YML_NAME in image-size-*.aib.yml; do
     # Compare actual vs expected image size
     ACTUAL_BYTES=$(qemu-img info --output=json "$IMAGE_NAME" | jq '.["virtual-size"]')
 
-    TOLERANCE=4096  #  4 KiB buffer in case of metadata overhead when qemu-img creates a QCOW2 image.
+    # bootc image sizes requires bigger tolerance
+    # TOLERANCE=4096
+    TOLERANCE=65536
+
     DELTA=$(( ACTUAL_BYTES - EXPECTED_BYTES ))
     ABS_DELTA=${DELTA#-}  # absolute value
 

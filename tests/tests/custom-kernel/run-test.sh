@@ -97,12 +97,12 @@ mkdir -p "$REPO_DIR"
 cp -rp "${MOCK_RESULT_DIR}/." "$REPO_DIR/"
 createrepo "$REPO_DIR"
 
-# Update YAML configuration with repository path  
+# Update YAML configuration with repository path
 sed -i "s|^\(\s*baseurl:\).*|\1 file://${REPO_DIR}|" "$YML_NAME"
 
 # Build AIB image
 echo_log "Building AIB image..."
-build --target qemu - "$YML_NAME" "$IMG_NAME"
+build "$YML_NAME" "$NO_CTR_NAME" "$IMG_NAME"
 
 # Check if image was created
 assert_image_exists "$IMG_NAME"
