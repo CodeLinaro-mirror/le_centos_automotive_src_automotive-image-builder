@@ -311,7 +311,10 @@ class TestContents(unittest.TestCase):
             "chmod_files": [],
             "remove_files": [],
             "make_dirs": [],
-            "systemd": {"enabled": ["sshd"]},
+            "systemd": {
+                "enabled_services": ["sshd"],
+                "masked_services": ["getty@tty1.service"],
+            },
         }
 
         contents = Contents(self.mock_loader, data, self.extra_include)
@@ -320,7 +323,10 @@ class TestContents(unittest.TestCase):
         self.assertEqual(contents.repos, [{"baseurl": "http://example.com"}])
         self.assertEqual(contents.rpms, ["vim", "git"])
         self.assertEqual(contents.containers, ["registry.com/app:latest"])
-        self.assertEqual(contents.systemd, {"enabled": ["sshd"]})
+        self.assertEqual(
+            contents.systemd,
+            {"enabled_services": ["sshd"], "masked_services": ["getty@tty1.service"]},
+        )
 
     def test_get_key(self):
         """Test get_key method"""
@@ -614,7 +620,10 @@ class TestManifestLoader(unittest.TestCase):
             "content": {
                 "rpms": ["vim", "git", "podman"],
                 "container_images": ["registry.redhat.io/ubi8/ubi:latest"],
-                "systemd": {"enabled": ["sshd"]},
+                "systemd": {
+                    "enabled_services": ["sshd"],
+                    "masked_services": ["getty@tty1.service"],
+                },
             },
         }
         loader = self.load_manifest(
@@ -763,7 +772,10 @@ class TestManifestLoader(unittest.TestCase):
             "content": {
                 "rpms": ["vim", "git", "podman"],
                 "container_images": ["registry.redhat.io/ubi8/ubi:latest"],
-                "systemd": {"enabled": ["sshd"], "disabled": ["firewalld"]},
+                "systemd": {
+                    "enabled_services": ["sshd"],
+                    "disabled_services": ["firewalld"],
+                },
             },
         }
         loader = self.load_manifest(manifest)

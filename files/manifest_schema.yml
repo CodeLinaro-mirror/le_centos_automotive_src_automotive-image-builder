@@ -295,6 +295,11 @@ $defs:
             type: array
             items:
               type: string
+          masked_services:
+            description: List of systemd services to mask
+            type: array
+            items:
+              type: string
       sbom:
         description: Generate a Software Bill of Materials (SBOM) document in SPDX v2 format for the installed RPM packages.
         type: object
