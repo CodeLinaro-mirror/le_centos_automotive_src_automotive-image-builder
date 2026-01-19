@@ -17,6 +17,7 @@ import sys
 import tempfile
 import time
 import threading
+from pathlib import Path
 
 killed_qemu = False
 qemu_pidfile = None
@@ -50,6 +51,134 @@ class ShutdownHandler:
 
     def __exit__(self, type, value, traceback):
         pass
+
+
+class EFIFirmware:
+    available = None
+
+    def __init__(self, file, vars_file, use_secboot_vars, supports_json):
+        self.file = file
+        self.vars_file = vars_file
+        self.supports_json = supports_json
+        self.use_secboot_vars = use_secboot_vars
+
+    def add_qemu_args(self, args, qemu_args, tmpdir):
+        qemu_args.extend(
+            ["-drive", f"file={self.file},if=pflash,format=raw,unit=0,readonly=on"]
+        )
+        if self.vars_file:
+            vars_file = self.vars_file
+            if args.secureboot_vars:
+                vars_file = args.secureboot_vars
+                if not os.path.exists(vars_file):
+                    shutil.copyfile(self.vars_file, vars_file)
+            perms_args = (
+                "" if args.secureboot_writeable else ",snapshot=on,readonly=off"
+            )
+            qemu_args.extend(
+                ["-drive", f"file={vars_file},if=pflash,format=raw,unit=1{perms_args}"]
+            )
+        elif self.supports_json:
+            if args.arch == "x86_64":
+                qemuvars_device = "uefi-vars-x64"
+            else:
+                qemuvars_device = "uefi-vars-sysbus"
+            opts = ""
+            if args.efi_vars:
+                if args.efi_vars_writable:
+                    efi_vars = args.efi_vars
+                else:
+                    efi_vars = os.path.join(tmpdir.name, "efivars.json")
+                    shutil.copyfile(args.efi_vars, efi_vars)
+                opts += f",jsonfile={efi_vars}"
+            qemu_args.extend(["-device", qemuvars_device + opts])
+
+    @staticmethod
+    def enumerate(args):
+        if EFIFirmware.available is not None:
+            return
+        EFIFirmware.available = []
+
+        firmware_dirs = []
+
+        if sys.platform == "darwin":
+            firmware_dirs = [
+                "/usr/local/share/qemu",
+                "/opt/homebrew/share/qemu",
+                "/usr/share/edk2/aarch64",
+                "/usr/share/qemu",
+            ]
+        else:
+            if args.arch == "x86_64":
+                firmware_dirs = [
+                    "~/.local/share/ovmf",
+                    "/usr/share/edk2/ovmf",
+                    "/usr/share/OVMF",
+                ]
+            elif args.arch == "aarch64":
+                firmware_dirs = [
+                    "/usr/share/edk2/aarch64",
+                    "/usr/local/share/qemu",
+                    "/opt/homebrew/share/qemu",
+                    "/usr/share/qemu",
+                ]
+
+        if args.ovmf_dir:
+            firmware_dirs.insert(0, os.path.abspath(args.ovmf_dir))
+
+        # Elements are:
+        #  filename, VARS filename, supports secureboot vars, supports json EFI vars
+        firmware_files = []
+        if args.arch == "x86_64":
+            firmware_files = [
+                ("OVMF_CODE.fd", "OVMF_VARS.fd", False, False),
+                ("OVMF_CODE.secboot.fd", "OVMF_VARS.fd", True, False),
+                ("OVMF.qemuvars.fd", None, False, True),
+            ]
+        elif args.arch == "aarch64":
+            firmware_files = [
+                ("QEMU_EFI-pflash.raw", None, False, False),
+                ("edk2-aarch64-code.fd", "edk2-arm-vars.fd", False, False),
+                ("QEMU_EFI-qemuvars-pflash.raw", None, False, True),
+            ]
+
+        seen = set()
+        for d in firmware_dirs:
+            p = Path(os.path.expanduser(d))
+            for main_file, vars_file, use_secboot_vars, supports_json in firmware_files:
+                main_p = p / main_file
+                if main_p.exists():
+                    canonical = main_p.resolve()
+                    if canonical in seen:
+                        continue
+                    vars_p = None if vars_file is None else p / vars_file
+                    if vars_p is None or vars_p.exists():
+                        seen.add(canonical)
+                        EFIFirmware.available.append(
+                            EFIFirmware(
+                                main_p,
+                                None if vars_p is None else vars_p,
+                                use_secboot_vars,
+                                supports_json,
+                            )
+                        )
+
+    @staticmethod
+    def find_firmware(args):
+        EFIFirmware.enumerate(args)
+
+        for fw in EFIFirmware.available:
+            if args.efi_vars:
+                if fw.supports_json:
+                    return fw
+            elif args.secureboot_vars:
+                if fw.use_secboot_vars:
+                    return fw
+            else:
+                # Only the normal and qemuvars version support non-secureboot
+                if not fw.use_secboot_vars:
+                    return fw
+        return None
 
 
 is_verbose = False
@@ -256,58 +385,6 @@ def run_virtiofs_server(socket, sharedir):
     return virtiod
 
 
-def find_ovmf(args):
-    dirs = [
-        "~/.local/share/ovmf",
-        "/usr/share/OVMF",
-        "/usr/share/edk2/ovmf",
-    ]
-    if args.ovmf_dir:
-        dirs.insert(0, args.ovmf_dir)
-
-    for d in dirs:
-        path = os.path.expanduser(d)
-        if args.secureboot:
-            suffix = ".secboot"
-        else:
-            suffix = ""
-        if os.path.exists(f"{path}/OVMF_CODE{suffix}.fd") and os.path.exists(
-            f"{path}/OVMF_VARS{suffix}.fd"
-        ):
-            return path
-
-    raise RuntimeError("Could not find OMVF")
-
-
-qemu_dirs = [
-    "/usr/local/share/qemu",
-    "/opt/homebrew/share/qemu",
-    "/usr/share/edk2/aarch64",
-    "/usr/share/qemu",
-]
-
-
-# location can differ depending on how qemu is installed
-def find_edk2():
-    for path in qemu_dirs:
-        if os.path.exists(path):
-            return path
-
-    raise RuntimeError("Could not find edk2 directory")
-
-
-def find_edk2_code_fd():
-    files = ["QEMU_EFI.fd", "edk2-aarch64-code.fd"]
-
-    for d in qemu_dirs:
-        for f in files:
-            dir_and_file = os.path.join(d, f)
-            if os.path.exists(dir_and_file):
-                return dir_and_file
-
-    raise RuntimeError("Could not find edk2 code fd file")
-
-
 def qemu_run_command(qmp_socket_path, command):
     sock2 = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock2.connect(qmp_socket_path)
@@ -466,8 +543,21 @@ def main():
         help="Specify directory for OVMF files (Open Virtual Machine Firmware)",
     )
     parser.add_argument(
+        "--efi-vars",
+        dest="efi_vars",
+        action="store",
+        help="Use the qemuvars device with a json file to define EFI variables",
+    )
+    parser.add_argument(
+        "--efi-vars-writable",
+        dest="efi_vars_writable",
+        action="store_true",
+        default=False,
+        help="Update the json file as the vm runs",
+    )
+    parser.add_argument(
         "--secureboot-vars",
-        dest="secureboot",
+        dest="secureboot_vars",
         action="store",
         help="Use the specified vars file for secureboot vars, will be initiated if non-existing",
     )
@@ -542,6 +632,10 @@ def main():
         if not os.path.exists(aboot_bios):
             print(f"Missing file '{aboot_bios}'. Downloading")
             download_aboot_u_boot(args.arch)
+    else:
+        efi_fw = EFIFirmware.find_firmware(args)
+        if efi_fw is None:
+            exit_error("Unable to find EFI firmware")
 
     qemu = find_qemu(args.arch)
     accel_list = qemu_available_accels(qemu)
@@ -550,35 +644,11 @@ def main():
     num_cpus = os.cpu_count()
 
     if args.arch == "x86_64":
-        if args.secureboot:
+        if args.secureboot_vars:
             machine = "q35,smm=on"
         else:
             machine = "q35"
         default_cpu = "qemu64,+ssse3,+sse4.1,+sse4.2,+popcnt"
-
-        ovmf = find_ovmf(args)
-        if args.secureboot:
-            vars_file = args.secureboot
-            if not os.path.exists(vars_file):
-                subprocess.run(
-                    ["cp", os.path.join(ovmf, "OVMF_VARS.fd"), vars_file], check=True
-                )
-            perms_args = (
-                "" if args.secureboot_writeable else ",snapshot=on,readonly=off"
-            )
-            qemu_args += [
-                "-drive",
-                f"file={ovmf}/OVMF_CODE.secboot.fd,if=pflash,format=raw,unit=0,readonly=on",
-                "-drive",
-                f"file={vars_file},if=pflash,format=raw,unit=1{perms_args}",
-            ]
-        else:
-            qemu_args += [
-                "-drive",
-                f"file={ovmf}/OVMF_CODE.fd,if=pflash,format=raw,unit=0,readonly=on",
-                "-drive",
-                f"file={ovmf}/OVMF_VARS.fd,if=pflash,format=raw,unit=1,snapshot=on,readonly=off",
-            ]
     elif args.arch == "aarch64":
         machine = "virt"
         default_cpu = "cortex-a57"
@@ -598,20 +668,6 @@ def main():
                 "-device",
                 "usb-tablet",  # for mouse
             ]
-        if args.aboot:
-            args.memory = "4G"  # this is hardcoded in our dtb files
-            qemu_args += ["-bios", aboot_bios]
-        elif sys.platform == "darwin":
-            edk2 = find_edk2()
-            qemu_args += [
-                "-drive",
-                f"file={edk2}/edk2-aarch64-code.fd,if=pflash,format=raw,unit=0,readonly=on",
-                "-drive",
-                f"file={edk2}/edk2-arm-vars.fd,if=pflash,format=raw,unit=1,snapshot=on,readonly=off",
-            ]
-        else:
-            edk2_file = find_edk2_code_fd()
-            qemu_args += ["-bios", f"{edk2_file}", "-boot", "efi"]
     else:
         exit_error(f"unsupported architecture {args.arch}")
 
@@ -707,6 +763,12 @@ def main():
     runvm_id = random_id()
 
     tmpdir = tempfile.TemporaryDirectory(prefix=f"runvm-{runvm_id}")
+
+    if args.aboot:
+        args.memory = "4G"  # this is hardcoded in our dtb files
+        qemu_args += ["-bios", aboot_bios]
+    else:  # EFI
+        efi_fw.add_qemu_args(args, qemu_args, tmpdir)
 
     watchdog_pid = 0
     if args.watchdog:
