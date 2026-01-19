@@ -66,6 +66,9 @@ mpp-vars:
   installed_rpm:
     mpp-eval: |
       lambda rpm: rpms['rootfs'][rpm] if rpm in rpms['rootfs'] else _error(f"rpm '{rpm}' was unexpectedly not installed in the rootfs")
+  optional_installed_rpm_evr:
+    mpp-eval: |
+      lambda rpm: rpms['rootfs'][rpm].evr if rpm in rpms['rootfs'] else ''
   # Helper to look up by regexp in a dict, default is last item
   regexp_lookup:
     mpp-eval: |
