@@ -27,7 +27,7 @@ stages:
   - deploy
 
 linter:
-  image: python:latest
+  image: python:3.9
   before_script:
     - apt-get update && apt-get install -y shellcheck
     - python3 --version; pip --version
@@ -38,7 +38,7 @@ linter:
     - tox -e lint
 
 yamllint-job:
-  image: python:latest
+  image: python:3.9
   before_script:
     - python3 --version; pip --version
     - python3 -m pip install --upgrade pip
@@ -48,7 +48,7 @@ yamllint-job:
     - tox -e yamllint
 
 crossref-job:
-  image: python:latest
+  image: python:3.11
   before_script:
     - python3 --version; pip --version
     - python3 -m pip install --upgrade pip
@@ -69,7 +69,7 @@ ai-review:
   allow_failure: true
 
 unit-test-job:
-  image: python:latest
+  image: python:3.9
   before_script:
     - python3 --version; pip --version
     - python3 -m pip install --upgrade pip
