@@ -5,7 +5,6 @@ import aib.main  # noqa: F401 - Registers commands
 from aib.arguments import parse_args
 from aib import AIBParameters
 
-
 BASEDIR = "/tmp/automotive-image-builder"
 
 
