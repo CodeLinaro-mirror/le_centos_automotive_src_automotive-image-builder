@@ -61,6 +61,21 @@ pipelines:
               options:
                 from:
                   mpp-format-string: "input://tree{ _boot_aboot_img()}"
+          - mpp-if: use_ukibootpart
+            then:
+              type: org.osbuild.write-device
+              devices:
+                device:
+                  mpp-eval: image_loopdev['ukibootctl']
+              inputs:
+                tree:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - name:extra-tree-content
+              options:
+                from:
+                  mpp-format-string: "input://tree/ukibootctl_init.bin"
           - mpp-if: use_efipart
             then:
               type: org.osbuild.mkfs.fat

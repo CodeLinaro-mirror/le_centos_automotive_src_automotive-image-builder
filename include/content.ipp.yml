@@ -427,6 +427,9 @@ mpp-vars:
             uuid: $ukibootctl_uuid
             size:
               mpp-format-string: '{ukibootctlpart_size * 512}'
+            payload_type: raw
+            payload:
+              source_path: /usr/lib/automotive-image-builder/ukibootctl_init.bin
         # /var
         - mpp-if: _use_separate_var and _varpart_size > 0
           then:
@@ -496,6 +499,22 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['empty']}
               to: tree:///empty_vbmeta
+      - mpp-if: use_ukibootpart
+        then:
+          type: org.osbuild.copy
+          inputs:
+            inlinefile:
+              type: org.osbuild.files
+              origin: org.osbuild.source
+              mpp-embed:
+                id: ukibootctl_init
+                text:
+                  mpp-eval: "'X'*512"
+          options:
+            paths:
+              - from:
+                  mpp-format-string: input://inlinefile/{embedded['ukibootctl_init']}
+                to: tree:///ukibootctl_init.bin
       - type: org.osbuild.copy
         inputs:
           inlinefile:
