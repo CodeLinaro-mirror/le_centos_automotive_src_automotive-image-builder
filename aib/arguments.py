@@ -12,7 +12,7 @@ from typing import Callable, List, Dict, Any
 from enum import Enum
 
 from .utils import DiskFormat
-from .version import __version__
+from .version import get_version
 from . import log
 from .globals import default_distro, default_container_image_name, default_bib_container
 
@@ -195,7 +195,9 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
         )
     elif t == "version":
         # version doesn't need suppress_default handling
-        a = dst.add_argument(name, action="version", version=f"%(prog)s {__version__}")
+        a = dst.add_argument(
+            name, action="version", version=f"%(prog)s {get_version()}"
+        )
     elif t == "str" or t == "path":
         a = dst.add_argument(
             name,
