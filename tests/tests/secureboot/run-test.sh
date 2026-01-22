@@ -25,6 +25,7 @@ sudo podman build signer -t "$EFI_SIGNER"
 # Download EFI firmware that is guaranteed to work with the stored enrolled key
 curl -L https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/releases/1.1.3/downloads/OVMF_CODE.secboot.fd -o OVMF_CODE.secboot.fd
 curl -L https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/releases/1.1.3/downloads/OVMF_VARS.secboot.fd -o OVMF_VARS.secboot.fd
+curl -L https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/releases/1.1.3/downloads/OVMF_VARS.fd -o OVMF_VARS.fd
 
 echo_log "Helpers built"
 
