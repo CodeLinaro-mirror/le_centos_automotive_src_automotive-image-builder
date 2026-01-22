@@ -13,6 +13,7 @@ mpp-vars:
   aboot_kernel_offset: "0x80208000"
   aboot_partition_a: "/dev/disk/by-partlabel/boot_a"
   aboot_partition_b: "/dev/disk/by-partlabel/boot_b"
+  abootpart_size: 131072 # 64MB
   aboot_second_offset: "0x81100000"
   aboot_tags_offset: "0x7d00000"
   aboot_base: "0x1208800"
