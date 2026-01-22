@@ -22,11 +22,6 @@ echo_log "Building helpers..."
 # Build EFI signer helper
 sudo podman build signer -t "$EFI_SIGNER"
 
-# Download EFI firmware that is guaranteed to work with the stored enrolled key
-curl -L https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/releases/1.1.3/downloads/OVMF_CODE.secboot.fd -o OVMF_CODE.secboot.fd
-curl -L https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/releases/1.1.3/downloads/OVMF_VARS.secboot.fd -o OVMF_VARS.secboot.fd
-curl -L https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/releases/1.1.3/downloads/OVMF_VARS.fd -o OVMF_VARS.fd
-
 echo_log "Helpers built"
 
 #########################################
@@ -89,7 +84,7 @@ echo_pass "Built signed bootc update container"
 ################################
 
 echo_log "Running bootc disk image..."
-VM_PID=$(run_vm "$IMG_SIGNED" "serial-console.log" --ovmf-dir=. --secureboot-vars=secboot_vars.fd --sharedir .)
+VM_PID=$(run_vm "$IMG_SIGNED" "serial-console.log" --efi-vars=efivars.json --sharedir .)
 
 PASSWORD="password"
 LOGIN_TIMEOUT=40

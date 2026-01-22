@@ -36,9 +36,4 @@ tag: [virt-required]
 # Tests, which require virtualization, usually take more time to run, so let's
 # increase their priority to run earlier (helps parallel execution time)
 order: 30
-# This test works only in x86_64 platform
-enabled: false
-adjust:
-  - when: arch == x86_64
-    enabled: true
 id: 30bf4a47-2c68-4c18-9381-de090b969108
