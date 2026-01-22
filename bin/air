@@ -137,6 +137,7 @@ class EFIFirmware:
             ]
         elif args.arch == "aarch64":
             firmware_files = [
+                ("QEMU_EFI-silent-pflash.raw", None, False, False),
                 ("QEMU_EFI-pflash.raw", None, False, False),
                 ("edk2-aarch64-code.fd", "edk2-arm-vars.fd", False, False),
                 ("QEMU_EFI-qemuvars-pflash.raw", None, False, True),
