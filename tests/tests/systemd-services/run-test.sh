@@ -19,9 +19,11 @@ tar xvf "$TAR_FILE" > /dev/null
 echo_log "Checking symlinks for content section"
 assert_service_enabled sshd.service content
 assert_service_disabled httpd.service content
+assert_service_masked kdump.service content
 
 echo_log "Checking symlinks for qm section"
 assert_service_enabled crond.service qm
 assert_service_disabled cups.service qm
+assert_service_masked chronyd.service qm
 
 echo_pass "systemd services symlink verification completed!"

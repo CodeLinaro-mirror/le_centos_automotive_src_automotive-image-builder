@@ -150,17 +150,24 @@ assert_symlink_target() {
     fi
 }
 
-resolve_systemd_wants_path() {
+resolve_systemd_path() {
     local service_name="$1"
     local section="$2"
 
     if [ "$section" = "content" ]; then
-        echo "etc/systemd/system/multi-user.target.wants/$service_name"
+        echo "etc/systemd/system/$service_name"
     elif [ "$section" = "qm" ]; then
-        echo "usr/lib/qm/rootfs/etc/systemd/system/multi-user.target.wants/$service_name"
+        echo "usr/lib/qm/rootfs/etc/systemd/system/$service_name"
     else
         fatal "Unknown section: $section"
     fi
+}
+
+resolve_systemd_wants_path() {
+    local service_name="$1"
+    local section="$2"
+
+    resolve_systemd_path "multi-user.target.wants/$service_name" "$section"
 }
 
 assert_service_enabled() {
@@ -189,6 +196,21 @@ assert_service_disabled() {
     else
         echo_pass "$service_name is disabled in $section."
     fi
+}
+
+assert_service_masked() {
+    local service_name="$1"
+    local section="$2"
+    local symlink_path
+    symlink_path=$(resolve_systemd_path "$service_name" "$section")
+
+    if [ -L "$symlink_path" ] && [ "$(readlink $symlink_path)" = "/dev/null" ]; then
+        echo_pass "$service_name is masked in $section."
+    else
+        echo_fail "$service_name should be masked in $section but symlink doesn't exist!"
+        exit 1
+    fi
+
 }
 
 assert_partition_relative_size() {
