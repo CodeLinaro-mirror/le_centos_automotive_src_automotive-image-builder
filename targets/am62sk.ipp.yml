@@ -11,7 +11,6 @@ mpp-vars:
     - aarch64
   kernel_package: 'kernel'
   consoles: 'ttyS2,115200n8'
-  use_boot: grub2 # Currently no ukiboot support, since not using GPT partitioning
   partition_label: dos
   efipart_dos_type: '0c'
   efipart_bootable: true
