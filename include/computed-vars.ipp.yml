@@ -156,11 +156,21 @@ mpp-vars:
     mpp-join:
       - mpp-eval: distro_repos
       - mpp-eval: target_repos
+      - mpp-if: local_repo
+        then:
+          - id: localrepo
+            baseurl: $local_repo
+            priority: $local_repo_prio
   build_repos:
     mpp-join:
       - mpp-eval: distro_repos
       - mpp-eval: target_build_repos
       - mpp-eval: simple_repos
+      - mpp-if: local_repo is not None
+        then:
+          - id: localrepo
+            baseurl: $local_repo
+            priority: $local_repo_prio
   image_devel_repos:
     mpp-join:
       - mpp-eval: distro_devel_repos

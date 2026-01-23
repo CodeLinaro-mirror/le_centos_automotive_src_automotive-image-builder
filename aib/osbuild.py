@@ -196,6 +196,9 @@ def create_osbuild_manifest(args, tmpdir, out, runner):
             defines[k] = []
         defines[k].extend(v)
 
+    if args.local_repo:
+        defines["local_repo"] = os.path.abspath(args.local_repo)
+
     cmdline = [os.path.join(args.base_dir, "mpp/aib-osbuild-mpp")]
     for inc in args.include_dirs:
         cmdline += ["-I", inc]

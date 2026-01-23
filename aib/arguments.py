@@ -340,6 +340,11 @@ BUILD_ARGS = {
         "type": "path",
         "help": "Path to export the generated osbuild manifest that was used when building the image",
     },
+    "--local-repo": {
+        "type": "path",
+        "default": None,
+        "help": "Install rpms from a local repository at the given path",
+    },
     "--define": {
         "type": "append",
         "metavar": "KEY=VALUE",
