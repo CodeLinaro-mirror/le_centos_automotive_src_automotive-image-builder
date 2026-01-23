@@ -19,7 +19,7 @@ mpp-vars:
     heads: 64
     sectors-per-track: 32
   target_rpms:
-    - ti-uboot-images-armv8
+    - k3-upstream-boot
   target_extra_image_stages:
     - type: org.osbuild.copy
       inputs:
@@ -31,13 +31,13 @@ mpp-vars:
       options:
         paths:
           - from:
-              mpp-format-string: input://rootfs//usr/share/uboot/am62x_evm_r5/tiboot3-am62x-gp-evm.bin
+              mpp-format-string: input://rootfs//usr/share/k3-upstream-boot/am62x_evm_gp/tiboot3.bin
             to: tree:///boot/efi/tiboot3.bin
           - from:
-              mpp-format-string: input://rootfs/usr/share/uboot/am62x_evm_a53/tispl.bin
+              mpp-format-string: input://rootfs/usr/share/k3-upstream-boot/am62x_evm_gp/tispl.bin
             to: tree:///boot/efi/tispl.bin
           - from:
-              mpp-format-string: input://rootfs/usr/share/uboot/am62x_evm_a53/u-boot.img
+              mpp-format-string: input://rootfs/usr/share/k3-upstream-boot/am62x_evm_gp/u-boot.img
             to: tree:///boot/efi/u-boot.img
 
 pipelines: []
