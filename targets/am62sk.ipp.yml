@@ -1,42 +1,9 @@
 # Target for the TI SK-AM62 Evaluation Board (https://www.ti.com/tool/SK-AM62)
 version: '2'
 mpp-vars:
-  target_repos:
-    - id: centos-automotive-sig-dui
-      baseurl: https://download.copr.fedorainfracloud.org/results/@centos-automotive-sig/dui/fedora-rawhide-$arch/
-    - id: ti-board-support
-      baseurl: https://download.copr.fedorainfracloud.org/results/@centos-automotive-sig/ti-board-support/$distro_chroot/
-      priority: 1
-  target_supported_arches:
-    - aarch64
-  kernel_package: 'kernel'
-  consoles: 'ttyS2,115200n8'
-  partition_label: dos
-  efipart_dos_type: '0c'
-  efipart_bootable: true
-  efipart_geometry:
-    heads: 64
-    sectors-per-track: 32
-  target_rpms:
-    - k3-upstream-boot
-  target_extra_image_stages:
-    - type: org.osbuild.copy
-      inputs:
-        rootfs:
-          type: org.osbuild.tree
-          origin: org.osbuild.pipeline
-          references:
-            - name:rootfs
-      options:
-        paths:
-          - from:
-              mpp-format-string: input://rootfs//usr/share/k3-upstream-boot/am62x_evm_gp/tiboot3.bin
-            to: tree:///boot/efi/tiboot3.bin
-          - from:
-              mpp-format-string: input://rootfs/usr/share/k3-upstream-boot/am62x_evm_gp/tispl.bin
-            to: tree:///boot/efi/tispl.bin
-          - from:
-              mpp-format-string: input://rootfs/usr/share/k3-upstream-boot/am62x_evm_gp/u-boot.img
-            to: tree:///boot/efi/u-boot.img
+  k3_board: 'am62x_evm_gp'
 
-pipelines: []
+# To derive and override mpp vars we move the overrides to an include file
+pipelines:
+  - mpp-import-pipelines:
+      path: include/k3.ipp.yml
