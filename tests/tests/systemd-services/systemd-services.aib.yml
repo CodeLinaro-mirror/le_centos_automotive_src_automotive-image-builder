@@ -1,17 +1,21 @@
 name: systemd_services
 content:
   rpms:
-    - openssh-server
     - httpd
+    - kdump-utils
+    - openssh-server
   systemd:
     enabled_services:
       - sshd.service
     disabled_services:
       - httpd.service
+    masked_services:
+      - kdump.service
 
 qm:
   content:
     rpms:
+      - chrony
       - cronie
       - cups
     systemd:
@@ -19,3 +23,5 @@ qm:
         - crond.service
       disabled_services:
         - cups.service
+      masked_services:
+        - chronyd.service
