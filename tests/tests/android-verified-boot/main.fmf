@@ -7,7 +7,7 @@ description: |
   container image and ensure the update boots.
 
   This only works on aarch64, because it uses the abootqemukvm target,
-  so it is marked special meaning we can run it manually only.
+  so it is enabled only on aarch64 platform.
 
   NOTE: The inputs like the signing code and keys are copies from
   the contrib/avb directory.

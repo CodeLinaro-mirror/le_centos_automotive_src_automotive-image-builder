@@ -124,9 +124,8 @@ tmt -c arch=$(arch) run -v -eNODE="IP or hostname" -eBUILD_AIB_RPM=yes plan --na
 
 ### Running special tests
 
-We have several tests marked with `special` tag, such as
-[minimal-image-boot](https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/tree/main/tests/tests/minimal-image-boot?ref_type=heads)
-and [qm-container-checksum](https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/tree/main/tests/tests/qm-container-checksum?ref_type=heads),
+We have some tests marked with `special` tag, such as
+[custom-kernel](https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/tree/main/tests/tests/custom-kernel?ref_type=heads),
 which are not run as a part of `connect` or `local` plan execution.
 To run those tests, provide additional parameters on the command line to bypass the default test filter and
 specify the test you want to run:
@@ -135,7 +134,7 @@ specify the test you want to run:
 cd tests
 tmt -c arch=$(arch) run -v -eNODE="IP or hostname" -eBUILD_AIB_RPM=yes \
     plan --name connect \
-    test --name qm-container-checksum \
+    test --name custom-kernel \
     --filter 'tag:special'
 ```
 
