@@ -126,6 +126,7 @@ def container_to_disk_image(args, tmpdir, runner, src_container, fmt, out):
             src_container,
             "raw",
             output_file,
+            args.vm,
             args.verbose,
         )
         if res != 0:

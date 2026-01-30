@@ -344,7 +344,13 @@ def podman_image_info(image):
 
 
 def podman_run_bootc_image_builder(
-    bib_container, build_container, bootc_container, build_type, dest_path, verbose
+    bib_container,
+    build_container,
+    bootc_container,
+    build_type,
+    dest_path,
+    in_vm,
+    verbose,
 ):
     if build_type == "raw":
         src_path = "image/disk.raw"
@@ -376,6 +382,8 @@ def podman_run_bootc_image_builder(
                 build_type,
                 bootc_container,
             ]
+            if in_vm:
+                args.append("--in-vm")
             if use_container:
                 volumes = {
                     "/output": tmpdir,
