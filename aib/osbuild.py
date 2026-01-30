@@ -250,7 +250,7 @@ def extract_rpmlist_json(osbuild_manifest):
     return base64.b64decode(data_b64).decode("utf8")
 
 
-def run_osbuild(args, tmpdir, runner, exports):
+def run_osbuild(args, tmpdir, runner, exports, in_vm=None):
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     if args.osbuild_manifest:
         osbuild_manifest = args.osbuild_manifest
@@ -300,6 +300,10 @@ def run_osbuild(args, tmpdir, runner, exports):
 
         for exp in exports:
             cmdline += ["--export", exp]
+
+        if in_vm:
+            for pipeline in in_vm:
+                cmdline += ["--in-vm", pipeline]
 
         cmdline += [osbuild_manifest]
 

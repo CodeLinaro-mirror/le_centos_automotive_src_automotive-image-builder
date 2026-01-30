@@ -370,6 +370,11 @@ DISK_FORMAT_ARGS = {
     "--separate-partitions": {
         "help": "Split disk images into per-partition files",
     },
+    "--vm": {
+        "type": "bool-optional",
+        "help": "Use VM to build disk image (default off)",
+        "default": False,
+    },
 }
 BIB_ARGS = {
     "--bib-container": {

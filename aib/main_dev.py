@@ -179,7 +179,11 @@ def build(args, tmpdir, runner):
     if not args.dry_run:
         exports.append("image")
 
-    with run_osbuild(args, tmpdir, runner, exports) as outputdir:
+    in_vm = []
+    if args.vm:
+        in_vm.append("image")
+
+    with run_osbuild(args, tmpdir, runner, exports, in_vm=in_vm) as outputdir:
         output_file = os.path.join(outputdir.name, "image/disk.img")
 
         if not args.dry_run:
