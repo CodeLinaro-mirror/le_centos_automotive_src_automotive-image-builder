@@ -23,6 +23,8 @@ RUN  dnf install -y git rpm-build make && \
 
 FROM base as runtime
 
+VOLUME /var/tmp
+VOLUME /var/log
 LABEL name="Automotive Image Builder" \
       usage="This image can be used with rootful privileged containers, https://gitlab.com/CentOS/automotive/src/automotive-image-builder/" \
       summary="Base image for composing Red Hat In-Vehicle Operating System or CentOS Automotive Stream Distribution images"
