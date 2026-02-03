@@ -1,7 +1,8 @@
 FROM quay.io/centos/centos:stream10 AS base
 
 RUN dnf update -y && \
-    dnf install -y 'dnf-command(config-manager)' 'dnf-command(copr)'
+    dnf install -y 'dnf-command(config-manager)' 'dnf-command(copr)' && \
+    dnf clean all
 
 # TODO: If newer osbuild version than the one available in CS10 is required, osbuild-stable COPR needs to be enabled
 #       (osbuild-copr repo needs to provide relevant EPEL10 build)
@@ -20,7 +21,6 @@ COPY --exclude=_build --exclude=*.qcow2 --exclude=*.img . /build
 RUN  dnf install -y git rpm-build make && \
      cd /build && make "$MAKE_WHAT"
 
-
 FROM base as runtime
 
 LABEL name="Automotive Image Builder" \
@@ -29,5 +29,6 @@ LABEL name="Automotive Image Builder" \
 
 COPY --from=builder /build/automotive-image-builder-*.noarch.rpm .
 
-RUN dnf localinstall -y automotive-image-builder-*.noarch.rpm && \
+RUN dnf install -y qemu-kvm-core virtiofsd qemu-img && \
+    dnf localinstall -y automotive-image-builder-*.noarch.rpm && \
     dnf clean all
