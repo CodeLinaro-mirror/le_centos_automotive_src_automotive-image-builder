@@ -16,7 +16,7 @@ FROM base as builder
 
 ARG MAKE_WHAT="rpm_dev"
 
-COPY . /build
+COPY --exclude=_build --exclude=*.qcow2 --exclude=*.img . /build
 RUN  dnf install -y git rpm-build make && \
      cd /build && make "$MAKE_WHAT"
 
