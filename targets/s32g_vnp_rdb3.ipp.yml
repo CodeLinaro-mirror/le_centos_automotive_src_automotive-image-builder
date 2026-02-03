@@ -3,17 +3,6 @@ version: '2'
 mpp-vars:
   target_supported_arches:
     - aarch64
-  target_repos:
-    # The Automotive S32 Linux Kernel (https://github.com/nxp-auto-linux/linux/) is the vendor
-    # kernel provided by NXP.
-    #  - id: vendors
-    #    baseurl: https://download.copr.fedorainfracloud.org/results/eballetbo/vendors/fedora-rawhide-$arch/
-    #    priority: 1
-    # The Fedora and Always Ready kernels is based in the most recent Linux kernel mainline version
-    - id: rawhide
-      baseurl: https://download.copr.fedorainfracloud.org/results/@centos-automotive-sig/nxp-board-support/fedora-rawhide-$arch/
-      priority: 1
-  kernel_package: 'kernel'
   consoles: 'ttyLF0,115200'
   use_boot: grub2-sbl
   partition_label: dos
@@ -22,6 +11,12 @@ mpp-vars:
     mpp-join:
       - mpp-eval: kernel_opts
       - - acpi=off
+        # Without this, the kernel doesn't boot, possibly related to EFI usage.
+        # See:
+        #
+        #     https://community.nxp.com/t5/S32G/s32g3-kernel-configuration-item-clarification/m-p/2188368
+        #
+        - cma=256M@0xf0000000
   dracut_drivers:
     mpp-join:
       - mpp-eval: dracut_drivers
