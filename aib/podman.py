@@ -480,6 +480,11 @@ def podman_run_bootc_image_builder(
                     stdout_pipe=None if verbose else subprocess.DEVNULL,
                 )
             else:
+                storedir = os.path.join(tmpdir, "store")
+                os.mkdir(storedir)
+                rpmmddir = os.path.join(tmpdir, "rpmmd")
+                os.mkdir(rpmmddir)
+                args += ["--store", storedir, "--rpmmd", rpmmddir]
                 res = run_cmd(
                     [bib_container, "--output", tmpdir] + args,
                     stdout_pipe=None if verbose else subprocess.DEVNULL,
