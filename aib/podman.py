@@ -78,6 +78,7 @@ def run_podman_cmd(
     volumes,
     args,
     podman_args=None,
+    with_sudo=True,
     stdout_pipe=None,
     check=False,
 ):
@@ -103,6 +104,7 @@ def run_podman_cmd(
         cmd,
         stdout_pipe=stdout_pipe,
         check=check,
+        with_sudo=with_sudo,
     )
 
 
