@@ -228,6 +228,8 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
         a.required = data["required"]
     if "default" in data and not suppress_default:
         a.default = data["default"]
+    if "default-env" in data and data["default-env"] in os.environ:
+        a.default = os.environ[data["default-env"]]
     if "metavar" in data:
         a.metavar = data["metavar"]
     elif t == "path":
