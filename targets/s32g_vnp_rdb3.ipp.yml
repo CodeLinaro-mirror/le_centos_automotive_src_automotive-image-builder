@@ -4,7 +4,6 @@ mpp-vars:
   target_supported_arches:
     - aarch64
   consoles: 'ttyLF0,115200'
-  use_boot: grub2-sbl
   partition_label: dos
   use_efi_runtime: false
   kernel_opts:
