@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Dict, Any
 from enum import Enum
 
+from .podman import ContainerState
 from .utils import DiskFormat
 from .version import get_version
 from . import log
@@ -376,8 +377,7 @@ DISK_FORMAT_ARGS = {
     },
     "--vm": {
         "type": "bool-optional",
-        "help": "Use VM to build disk image (default off)",
-        "default": False,
+        "help": "Use VM to build disk image",
     },
 }
 BIB_ARGS = {
@@ -476,4 +476,11 @@ def parse_args(args, prog="aib"):
                     subparser, arg_groups, SHAREABLE_ARGS[key], suppress_default=True
                 )
 
-    return parser.parse_args(args)
+    res = parser.parse_args(args)
+
+    # Default to --vm for --user-container and if running in rootless container, because
+    # this is the only way those would ever work anyway.
+    if "vm" in res and res.vm is None:
+        res.vm = res.user_container or ContainerState.query().in_rootless_container
+
+    return res
