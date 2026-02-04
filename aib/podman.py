@@ -1,9 +1,11 @@
+import json
 import os
 import shlex
 import subprocess
 import shutil
 import tempfile
 from pathlib import Path
+from .globals import default_bib_container
 
 from .utils import (
     detect_initrd_compression,
@@ -511,3 +513,70 @@ def podman_bootc_inject_pubkey(
             )
 
         return mount.image_id
+
+
+class ContainerStorageState:
+    _cache_nosudo = None
+    _cache_sudo = None
+
+    def __init__(self, with_sudo):
+        self.with_sudo = with_sudo
+        info_json = run_cmd(
+            ["podman", "info", "--format", "json"],
+            capture_output=True,
+            with_sudo=with_sudo,
+        )
+        info = json.loads(info_json)
+        self.graphroot = info["store"]["graphRoot"]
+        self.runroot = info["store"]["runRoot"]
+        self.driver = info["store"]["graphDriverName"]
+
+    def __str__(self):
+        state_parts = [
+            f"with_sudo={self.with_sudo}",
+            f"graphroot={self.graphroot}",
+            f"runroot={self.runroot}",
+            f"driver={self.driver}",
+        ]
+        return f"ContainerStorageState({', '.join(state_parts)})"
+
+    @classmethod
+    def query(cls, with_sudo):
+        if with_sudo:
+            if not cls._cache_sudo:
+                cls._cache_sudo = cls(with_sudo)
+            return cls._cache_sudo
+        else:
+            if not cls._cache_nosudo:
+                cls._cache_nosudo = cls(with_sudo)
+            return cls._cache_nosudo
+
+
+class ContainerState:
+    _cache = None
+
+    def __init__(self):
+        self.in_container = False
+        self.in_rootless_container = False
+
+        p = Path("/run/.containerenv")
+        if p.exists():
+            self.in_container = True
+            with p.open("r") as f:
+                for line in f.read().splitlines():
+                    if line == "rootless=1":
+                        self.in_rootless_container = True
+                        break
+
+    def __str__(self):
+        state_parts = [
+            f"in_container={self.in_container}",
+            f"in_rootless_container={self.in_rootless_container}",
+        ]
+        return f"ContainerState({', '.join(state_parts)})"
+
+    @classmethod
+    def query(cls):
+        if not cls._cache:
+            cls._cache = cls()
+        return cls._cache
