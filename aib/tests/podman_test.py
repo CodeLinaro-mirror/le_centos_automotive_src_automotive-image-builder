@@ -14,12 +14,12 @@ class TestTemporaryContainer(unittest.TestCase):
         mock_exists.return_value = True
         mock_rm.return_value = True
 
-        with TemporaryContainer("test-container") as container:
+        with TemporaryContainer(None, "test-container") as container:
             self.assertEqual(container, "test-container")
 
         # Should have called cleanup
-        mock_exists.assert_called_once_with("test-container")
-        mock_rm.assert_called_once_with("test-container")
+        mock_exists.assert_called_once_with(None, "test-container")
+        mock_rm.assert_called_once_with(None, "test-container")
 
     @patch("aib.podman.podman_image_exists")
     @patch("aib.podman.podman_image_rm")
@@ -28,18 +28,18 @@ class TestTemporaryContainer(unittest.TestCase):
         mock_exists.return_value = True
         mock_rm.return_value = True
 
-        with TemporaryContainer("test-container", cleanup=True) as container:
+        with TemporaryContainer(None, "test-container", cleanup=True) as container:
             self.assertEqual(container, "test-container")
 
         # Should have called cleanup
-        mock_exists.assert_called_once_with("test-container")
-        mock_rm.assert_called_once_with("test-container")
+        mock_exists.assert_called_once_with(None, "test-container")
+        mock_rm.assert_called_once_with(None, "test-container")
 
     @patch("aib.podman.podman_image_exists")
     @patch("aib.podman.podman_image_rm")
     def test_cleanup_disabled(self, mock_rm, mock_exists):
         """Test that cleanup can be disabled."""
-        with TemporaryContainer("test-container", cleanup=False) as container:
+        with TemporaryContainer(None, "test-container", cleanup=False) as container:
             self.assertEqual(container, "test-container")
 
         # Should NOT have called cleanup
@@ -54,20 +54,20 @@ class TestTemporaryContainer(unittest.TestCase):
         mock_rm.return_value = True
 
         with self.assertRaises(ValueError):
-            with TemporaryContainer("test-container") as container:
+            with TemporaryContainer(None, "test-container") as container:
                 self.assertEqual(container, "test-container")
                 raise ValueError("Test exception")
 
         # Should still have called cleanup
-        mock_exists.assert_called_once_with("test-container")
-        mock_rm.assert_called_once_with("test-container")
+        mock_exists.assert_called_once_with(None, "test-container")
+        mock_rm.assert_called_once_with(None, "test-container")
 
     @patch("aib.podman.podman_image_exists")
     @patch("aib.podman.podman_image_rm")
     def test_no_cleanup_if_disabled_even_on_exception(self, mock_rm, mock_exists):
         """Test that cleanup=False prevents cleanup even on exceptions."""
         with self.assertRaises(ValueError):
-            with TemporaryContainer("test-container", cleanup=False):
+            with TemporaryContainer(None, "test-container", cleanup=False):
                 raise ValueError("Test exception")
 
         # Should NOT have called cleanup
@@ -80,11 +80,11 @@ class TestTemporaryContainer(unittest.TestCase):
         """Test cleanup when container doesn't exist (idempotent)."""
         mock_exists.return_value = False
 
-        with TemporaryContainer("test-container"):
+        with TemporaryContainer(None, "test-container"):
             pass
 
         # Should check existence but not attempt removal
-        mock_exists.assert_called_once_with("test-container")
+        mock_exists.assert_called_once_with(None, "test-container")
         mock_rm.assert_not_called()
 
     @patch("aib.podman.podman_image_exists")
@@ -96,7 +96,7 @@ class TestTemporaryContainer(unittest.TestCase):
         mock_rm.side_effect = Exception("Cleanup failed")
 
         # Should not raise exception
-        with TemporaryContainer("test-container"):
+        with TemporaryContainer(None, "test-container"):
             pass
 
         # Should have logged the warning
@@ -110,19 +110,19 @@ class TestTemporaryContainer(unittest.TestCase):
         mock_exists.return_value = True
         mock_rm.return_value = True
 
-        temp = TemporaryContainer("test-container")
+        temp = TemporaryContainer(None, "test-container")
         temp.cleanup()
         temp.cleanup()  # Second call should be safe
 
         # Should only remove once (idempotent)
-        mock_exists.assert_called_once_with("test-container")
-        mock_rm.assert_called_once_with("test-container")
+        mock_exists.assert_called_once_with(None, "test-container")
+        mock_rm.assert_called_once_with(None, "test-container")
 
     @patch("aib.podman.podman_image_exists")
     @patch("aib.podman.podman_image_rm")
     def test_string_representation(self, mock_rm, mock_exists):
         """Test __str__ returns the container name."""
-        temp = TemporaryContainer("my-container")
+        temp = TemporaryContainer(None, "my-container")
         self.assertEqual(str(temp), "my-container")
 
     @patch("aib.podman.podman_image_exists")
@@ -132,7 +132,7 @@ class TestTemporaryContainer(unittest.TestCase):
         mock_exists.return_value = True
         mock_rm.return_value = True
 
-        with TemporaryContainer("test-name") as name:
+        with TemporaryContainer(None, "test-name") as name:
             self.assertEqual(name, "test-name")
             self.assertIsInstance(name, str)
 
@@ -143,16 +143,18 @@ class TestTemporaryContainer(unittest.TestCase):
         mock_exists.return_value = True
         mock_rm.return_value = True
 
-        with TemporaryContainer("container-1") as c1:
+        with TemporaryContainer(None, "container-1") as c1:
             self.assertEqual(c1, "container-1")
 
-        with TemporaryContainer("container-2") as c2:
+        with TemporaryContainer(None, "container-2") as c2:
             self.assertEqual(c2, "container-2")
 
         # Should have cleaned up both
         self.assertEqual(mock_exists.call_count, 2)
         self.assertEqual(mock_rm.call_count, 2)
-        mock_exists.assert_has_calls([call("container-1"), call("container-2")])
+        mock_exists.assert_has_calls(
+            [call(None, "container-1"), call(None, "container-2")]
+        )
 
     @patch("aib.podman.podman_image_exists")
     @patch("aib.podman.podman_image_rm")
@@ -161,12 +163,12 @@ class TestTemporaryContainer(unittest.TestCase):
         mock_exists.return_value = True
         mock_rm.return_value = True
 
-        with TemporaryContainer("outer") as outer:
+        with TemporaryContainer(None, "outer") as outer:
             self.assertEqual(outer, "outer")
-            with TemporaryContainer("inner") as inner:
+            with TemporaryContainer(None, "inner") as inner:
                 self.assertEqual(inner, "inner")
             # Inner should be cleaned up here
-            mock_rm.assert_called_with("inner")
+            mock_rm.assert_called_with(None, "inner")
 
         # Outer should be cleaned up here
         self.assertEqual(mock_rm.call_count, 2)
@@ -180,7 +182,7 @@ class TestTemporaryContainer(unittest.TestCase):
 
         # Test with True
         should_cleanup = True
-        with TemporaryContainer("container-1", cleanup=should_cleanup):
+        with TemporaryContainer(None, "container-1", cleanup=should_cleanup):
             pass
         self.assertEqual(mock_rm.call_count, 1)
 
@@ -190,7 +192,7 @@ class TestTemporaryContainer(unittest.TestCase):
 
         # Test with False
         should_cleanup = False
-        with TemporaryContainer("container-2", cleanup=should_cleanup):
+        with TemporaryContainer(None, "container-2", cleanup=should_cleanup):
             pass
         mock_rm.assert_not_called()
 

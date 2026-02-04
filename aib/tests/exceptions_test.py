@@ -34,7 +34,9 @@ def test_create_manifest(tmp_path):
         base_dir=BASE_DIR,
     )
     with pytest.raises(exceptions.ManifestParseError) as manifest_err:
-        create_osbuild_manifest(args, tmpdir="/tmp", out="output", runner=None)
+        create_osbuild_manifest(
+            args, tmpdir="/tmp", out="output", storage=None, runner=None
+        )
     assert manifest_file.as_posix() in str(manifest_err)
 
 

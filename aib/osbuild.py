@@ -94,7 +94,7 @@ def validate_policy_args(args, target):
             )
 
 
-def create_osbuild_manifest(args, tmpdir, out, runner):
+def create_osbuild_manifest(args, tmpdir, out, runner, storage):
     with open(args.manifest) as f:
         try:
             manifest = yaml.safe_load(f)
@@ -230,7 +230,17 @@ def create_osbuild_manifest(args, tmpdir, out, runner):
 
     cmdline += [os.path.join(args.base_dir, "include/main.ipp.yml"), out]
 
-    runner.run_as_user(cmdline)
+    # mpp-osbuild only looks in the default (host or user depending on uid) container store
+    # so we need to use env-vars to override it.
+    volumes = {}
+    if storage:
+        cmdline = [
+            "env",
+            f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
+        ] + cmdline
+        volumes[storage.storage] = storage.storage
+
+    runner.run_in_container(cmdline, extra_volumes=volumes, need_selinux_privs=True)
 
 
 def extract_rpmlist_json(osbuild_manifest):
@@ -250,12 +260,12 @@ def extract_rpmlist_json(osbuild_manifest):
     return base64.b64decode(data_b64).decode("utf8")
 
 
-def run_osbuild(args, tmpdir, runner, exports, in_vm=None):
+def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     if args.osbuild_manifest:
         osbuild_manifest = args.osbuild_manifest
 
-    create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner)
+    create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage=storage)
 
     builddir = tmpdir
     if args.build_dir:
@@ -307,12 +317,21 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None):
 
         cmdline += [osbuild_manifest]
 
+        volumes = {}
+        if storage:
+            cmdline = [
+                "env",
+                f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
+            ] + cmdline
+            volumes[storage.storage] = storage.storage
+
         runner.run_in_container(
             cmdline,
             need_osbuild_privs=True,
             progress=args.progress,
             verbose=args.verbose,
             log_file=args.log_file(tmpdir),
+            extra_volumes=volumes,
         )
 
         return outputdir.detach()

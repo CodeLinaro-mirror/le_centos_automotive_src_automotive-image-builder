@@ -264,11 +264,10 @@ SHAREABLE_ARGS = {
     "container": {
         "--container": "Run build commands in a container (see --container-image)",
         "--user-container": "Use rootless containerized build",
-        "--user-storage": {
-            "help": (
-                "Avoid sudo for storage operations (podman/skopeo). "
-                "Use when CONTAINERS_STORAGE_CONF points to user-owned storage."
-            ),
+        "--container-storage": {
+            "type": "path",
+            "help": "Use custom container storage directory for input/output",
+            "default-env": "AIB_CONTAINER_STORAGE",
         },
         "--container-image": {
             "type": "str",

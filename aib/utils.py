@@ -724,7 +724,8 @@ class DiskFormat(Enum):
     def convert_image(self, runner, src, dest):
         if self.convert:
             runner.run_in_container(self.convert + [src, dest], need_selinux_privs=True)
-            runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", dest])
+            if runner.container_needs_root:
+                runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", dest])
         else:
             if self == DiskFormat.SIMG:
                 convert_to_simg(src, dest)
