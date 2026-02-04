@@ -360,7 +360,7 @@ def get_build_container_for(container):
 @command(
     group=CommandGroup.BOOTC,
     help="Build a physical disk image based on a bootc container",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         DISK_FORMAT_ARGS,
         BIB_ARGS,
@@ -391,7 +391,7 @@ def to_disk_image(args, tmpdir, runner):
 @command(
     group=CommandGroup.BOOTC,
     help="Extract files for secure-boot signing",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         {
             "src_container": "Bootc container name",
@@ -468,7 +468,7 @@ def do_reseal_image(args, runner, tmpdir, privkey, src_container, dst_container)
 @command(
     group=CommandGroup.BOOTC,
     help="Inject files that were signed for secure-boot",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         SHARED_RESEAL_ARGS,
         {
@@ -535,7 +535,7 @@ def inject_signed(args, tmpdir, runner):
 @command(
     group=CommandGroup.BOOTC,
     help="Seal bootc image after it has been modified",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         SHARED_RESEAL_ARGS,
         {
@@ -593,7 +593,7 @@ def reseal(args, tmpdir, runner):
 @command(
     group=CommandGroup.BOOTC,
     help="Do the initial step of sealing and image, allowing further changes before actually sealing",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         SHARED_RESEAL_ARGS,
         {
