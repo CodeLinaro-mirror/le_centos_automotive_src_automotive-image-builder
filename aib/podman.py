@@ -4,6 +4,7 @@ import shlex
 import subprocess
 import shutil
 import tempfile
+import textwrap
 from pathlib import Path
 from .globals import default_bib_container
 
@@ -103,6 +104,70 @@ def run_podman_cmd(
         stdout_pipe=stdout_pipe,
         check=check,
     )
+
+
+class ContainerStorage:
+    def __init__(self, storage=None, tmpdir="/tmp", user_container=False):
+        self.with_sudo = not user_container
+        state = ContainerStorageState.query(not user_container)
+        if storage:
+            self.storage = storage
+        else:
+            self.storage = state.graphroot
+        self.runroot = state.runroot
+        self.driver = state.driver
+        self.tmpdir = tmpdir
+        self.tmp_storage = os.path.join(tmpdir, "aib-containers-store")
+        self.tmp_runroot = os.path.join(tmpdir, "aib-containers-store-run")
+        self.config_path = None
+
+    @classmethod
+    def from_args(cls, args, tmpdir):
+        return ContainerStorage(args.container_storage, tmpdir, args.user_container)
+
+    def args(self):
+        return [f"--root={self.tmp_storage}", f"--imagestore={self.storage}"]
+
+    def podman(self):
+        return ["podman", f"--root={self.tmp_storage}", f"--imagestore={self.storage}"]
+
+    def skopeo(self, image_name):
+        return f"containers-storage:[{self.driver}@{self.storage}+{self.runroot}]{image_name}"
+
+    def get_config_path(self):
+        if self.config_path is None:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                dir=self.tmpdir,
+                prefix="storage-",
+                suffix=".conf",
+                delete=False,
+            ) as tmpfile:
+                config_content = textwrap.dedent(
+                    f"""\
+                    [storage]
+                    driver = "{self.driver}"
+                    graphroot = "{self.tmp_storage}"
+                    runroot = "{self.tmp_runroot}"
+
+                    [storage.options]
+                    additionalimagestores = [
+                    "{self.storage}"
+                    ]
+                    """
+                )
+                tmpfile.write(config_content)
+
+            self.config_path = tmpfile.name
+
+        return self.config_path
+
+    def __str__(self):
+        parts = []
+        parts.append(f"storage={self.storage}")
+        parts.append(f"tmp_storage={self.tmp_storage}")
+        parts.append(f"with_sudo={self.with_sudo}")
+        return f"ContainerStorage({', '.join(parts)})"
 
 
 class PodmanImageMount:
