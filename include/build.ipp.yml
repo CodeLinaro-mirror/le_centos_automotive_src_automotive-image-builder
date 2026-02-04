@@ -121,8 +121,8 @@ mpp-vars:
       mpp-eval: "partition_type_var if partition_label == 'gpt' else '83'"
     uuid: $varpart_uuid
   separate_qm_var_partition:
-    id: qm_var
-    name: qm_var
+    id: $qm_varpart_label
+    name: $qm_varpart_label
     size:
       mpp-eval: _qm_varpart_size
     type:

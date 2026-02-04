@@ -119,11 +119,12 @@ pipelines:
               type: org.osbuild.mkfs.ext4
               devices:
                 device:
-                  mpp-eval: image_loopdev['qm_var']
+                  mpp-eval: image_loopdev[qm_varpart_label]
               options:
                 uuid:
                   mpp-eval: qm_varfs_uuid
-                label: qm_var
+                label:
+                  mpp-eval: qm_varpart_label
                 lazy_init: false
         - mpp-if: use_luks
           then:
@@ -230,7 +231,7 @@ pipelines:
               qm_var:
                 mpp-if: _qm_use_separate_var and _qm_varpart_size > 0
                 then:
-                  mpp-eval: image_loopdev['qm_var']
+                  mpp-eval: image_loopdev[qm_varpart_label]
               root:
                 mpp-eval: root_dev
               root-raw:
@@ -254,7 +255,7 @@ pipelines:
                   target: /var
               - mpp-if: _qm_use_separate_var and _qm_varpart_size > 0
                 then:
-                  name: qm_var
+                  name: $qm_varpart_label
                   type: org.osbuild.ext4
                   source: qm_var
                   target: /var/qm
@@ -410,7 +411,8 @@ pipelines:
           options:
             uuid:
               mpp-eval: qm_varfs_uuid
-            label: qm_var
+            label:
+              mpp-eval: qm_varpart_label
             verity: true
             lazy_init: true
 

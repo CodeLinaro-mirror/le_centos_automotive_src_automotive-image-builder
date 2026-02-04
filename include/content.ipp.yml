@@ -438,7 +438,7 @@ mpp-vars:
         # /var/qm
         - mpp-if: _qm_use_separate_var and _qm_varpart_size > 0
           then:
-            label: qm_var
+            label: $qm_varpart_label
             type:
               mpp-eval: "partition_type_var_qm if partition_label == 'gpt' else '83'"
             uuid: $qm_varpart_uuid
@@ -448,7 +448,7 @@ mpp-vars:
             payload:
               type: ext4
               uuid: $qm_varfs_uuid
-              label: qm_var
+              label: $qm_varpart_label
               mountpoint: /var/qm
         # rootfs
         - label: $rootpart_label

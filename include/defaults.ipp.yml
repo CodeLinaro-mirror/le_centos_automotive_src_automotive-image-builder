@@ -178,6 +178,7 @@ mpp-vars:
   use_autoinit: false
   use_autoinit_root: false
   aboot_partlabel: system_a
+  qm_varpart_label: qm_var
   vbmeta_partlabel: vbmeta_a
   use_composefs: true
   systemd_timeout: 30s
