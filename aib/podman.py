@@ -82,6 +82,7 @@ def run_podman_cmd(
     cmd_prefix=None,
     stdout_pipe=None,
     check=False,
+    storage=None,
 ):
     cmd = [
         "podman",
@@ -91,6 +92,8 @@ def run_podman_cmd(
         "label=type:unconfined_t",
         "-ti",
     ]
+    if storage:
+        cmd += storage.args()
     if cmd_prefix:
         cmd = cmd_prefix + cmd
     if podman_args:
