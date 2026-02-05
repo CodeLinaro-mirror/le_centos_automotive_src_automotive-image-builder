@@ -27,6 +27,7 @@ def run_cmd(
     return_pipe=False,
     stdin_pipe=None,
     stdout_pipe=None,
+    stderr_pipe=None,
     check=False,
 ):
     allowed_env_vars = [
@@ -62,7 +63,11 @@ def run_cmd(
             )
         else:
             r = subprocess.run(
-                cmdline, stdin=stdin_pipe, stdout=stdout_pipe, check=should_check
+                cmdline,
+                stdin=stdin_pipe,
+                stdout=stdout_pipe,
+                stderr=stderr_pipe,
+                check=should_check,
             )
     except subprocess.CalledProcessError as e:
         error_msg = (e.stderr or b"").decode("utf-8").rstrip() if e.stderr else ""
@@ -232,13 +237,16 @@ class PodmanImageMount:
         given_path = Path(path)
         return str(Path(self.mount_path) / given_path.relative_to(given_path.anchor))
 
-    def run(self, cmd, stdin_pipe=None, stdout_pipe=None, check=False):
+    def run(
+        self, cmd, stdin_pipe=None, stdout_pipe=None, stderr_pipe=None, check=False
+    ):
         return run_cmd(
             cmd,
             False,
             with_sudo=self.with_sudo,
             stdin_pipe=stdin_pipe,
             stdout_pipe=stdout_pipe,
+            stderr_pipe=stderr_pipe,
             check=check,
         )
 
