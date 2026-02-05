@@ -79,6 +79,7 @@ def run_podman_cmd(
     args,
     podman_args=None,
     with_sudo=True,
+    cmd_prefix=None,
     stdout_pipe=None,
     check=False,
 ):
@@ -90,6 +91,8 @@ def run_podman_cmd(
         "label=type:unconfined_t",
         "-ti",
     ]
+    if cmd_prefix:
+        cmd = cmd_prefix + cmd
     if podman_args:
         cmd += podman_args
 
