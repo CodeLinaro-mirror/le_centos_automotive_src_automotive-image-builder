@@ -53,7 +53,12 @@ class Runner:
             self.add_volume(d)
 
     def _collect_podman_args(
-        self, rootless, as_user_in_container, need_osbuild_privs, need_selinux_privs
+        self,
+        rootless,
+        as_user_in_container,
+        need_osbuild_privs,
+        need_selinux_privs,
+        extra_volumes,
     ):
         podman_args = [
             "--rm",
@@ -65,6 +70,11 @@ class Runner:
         for v in sorted(self.volumes):
             podman_args.append("-v")
             podman_args.append(f"{v}:{v}")
+
+        if extra_volumes:
+            for k, v in sorted(extra_volumes.items()):
+                podman_args.append("-v")
+                podman_args.append(f"{k}:{v}")
 
         if self.container_autoupdate:
             podman_args.append("--pull=newer")
@@ -112,7 +122,12 @@ class Runner:
         self.volumes.add_volume_for(file)
 
     def _add_container_cmd(
-        self, rootless, as_user_in_container, need_osbuild_privs, need_selinux_privs
+        self,
+        rootless,
+        as_user_in_container,
+        need_osbuild_privs,
+        need_selinux_privs,
+        extra_volumes,
     ):
         return (
             [
@@ -120,7 +135,11 @@ class Runner:
                 "run",
             ]
             + self._collect_podman_args(
-                rootless, as_user_in_container, need_osbuild_privs, need_selinux_privs
+                rootless,
+                as_user_in_container,
+                need_osbuild_privs,
+                need_selinux_privs,
+                extra_volumes,
             )
             + [self.container_image]
         )
@@ -156,6 +175,7 @@ class Runner:
         use_container=False,
         as_root=False,
         as_user_in_container=False,
+        extra_volumes=None,
         need_osbuild_privs=False,
         need_selinux_privs=False,
         with_progress=False,
@@ -171,6 +191,7 @@ class Runner:
                     as_user_in_container,
                     need_osbuild_privs,
                     need_selinux_privs,
+                    extra_volumes,
                 )
                 + cmdline
             )
@@ -258,6 +279,7 @@ class Runner:
         stdout_to_devnull=False,
         verbose=False,
         log_file=None,
+        extra_volumes=None,
     ):
         use_container = self.use_container
         if use_container:
@@ -275,6 +297,7 @@ class Runner:
             stdout_to_devnull=stdout_to_devnull,
             verbose=verbose,
             log_file=log_file,
+            extra_volumes=extra_volumes,
         )
 
     # Run commandline as user, either directly, or in a container, it
