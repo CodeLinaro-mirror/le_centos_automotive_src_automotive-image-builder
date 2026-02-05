@@ -7,12 +7,26 @@ IMG_NAME="test.img"
 MANIFEST=minimal-image-boot.aib.yml
 LOGFILE=serial-console.log
 
+test_check_sysusers_uid_collision() {
+    local collisions
+    collisions=$(grep -E "Suggested (user|group) ID [0-9]+ for [a-zA-Z]+ already used" "${IMG_BUILD_LOG_BOOTC}" || true)
+
+    if [[ -n "$collisions" ]]; then
+        echo "${collisions}" > sysusers-uidgid-collisions.txt
+        save_to_tmt_data sysusers-uidgid-collisions.txt
+        exit 1
+    fi
+}
+
 # Update cleanup function parameters on each test artifact change
 trap 'cleanup_path "$IMG_NAME"' 'EXIT'
 
 # Build the image
 echo_log "Building image from $MANIFEST..."
 build "$MANIFEST" "$NO_CTR_NAME" "$IMG_NAME"
+
+# Verify no UID collision happened during the build
+test_check_sysusers_uid_collision
 
 # Check if image was created
 assert_image_exists "$IMG_NAME"
@@ -60,7 +74,7 @@ fi
 
 if [ -n "$TMT_TEST_DATA" ] && [ -f "$LOGFILE" ]; then
     echo_log "Saving serial console log to TMT test data..."
-    save_to_tmt_test_data "$LOGFILE"
+    save_to_tmt_data "$LOGFILE"
 fi
 
 # Clean up air process
