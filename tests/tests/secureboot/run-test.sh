@@ -93,7 +93,7 @@ if ! wait_for_vm_up "$LOGIN_TIMEOUT" "$PASSWORD"; then
     exit 1
 fi
 
-assert_file_has_content serial-console.log "UEFI Secure Boot is enabled"
+assert_file_has_content serial-console.log "secureboot: Secure boot enabled"
 
 run_vm_command "rpm-ostree status"
 

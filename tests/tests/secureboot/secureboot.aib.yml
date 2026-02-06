@@ -1,6 +1,7 @@
 name: secureboot
 
 kernel:
+  debug_logging: true
   cmdline:
     - systemd.log_target=console
     - systemd.journald.forward_to_console=1
