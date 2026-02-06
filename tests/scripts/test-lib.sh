@@ -3,6 +3,9 @@
 # To simplify image build process don't store bootc container
 export NO_CTR_NAME="-"
 
+# Default name for serial console log file
+SERIAL_CONSOLE_LOG="serial-console.log"
+
 echo_log() {
     echo "INFO: $1"
 }
@@ -446,7 +449,7 @@ assert_image_exists() {
 run_vm() {
     local image="$1"
     shift
-    log_file="serial-console.log"
+    log_file="$SERIAL_CONSOLE_LOG"
     if [[ $# -ge 1 ]]; then
         log_file="$1"
         shift
@@ -462,15 +465,17 @@ run_vm() {
 # Wait until VM console is available
 wait_for_vm_up() {
     local login_timeout=${1:-0}
-    local password=${5:-password}
+    local password="${2:-password}"
+    local log_file="${3:-$SERIAL_CONSOLE_LOG}"
 
     sleep 2 # Ensure console.sock is created by qemu start
-    if "$(dirname ${BASH_SOURCE[0]})"/login.exp console.sock $password $login_timeout 60; then
-        return 0;
-    else
+    res=0
+    if ! "$(dirname ${BASH_SOURCE[0]})"/login.exp console.sock $password $login_timeout 60; then
         echo_fail "Failed to connect to virtual console"
-        return 1
+        res=1
     fi
+    save_to_tmt_data "$log_file"
+    return $res
 }
 
 # Run a command inside the VM
@@ -483,13 +488,12 @@ run_vm_command() {
 # Kill the given VM by PID
 stop_vm() {
     local pid="$1"
-    local log_file=${2:-"serial-console.log"}
+    local log_file=${2:-"$SERIAL_CONSOLE_LOG"}
     if ps -p "$pid" > /dev/null; then
         /usr/bin/kill --timeout 2000 TERM --timeout 1000 KILL "$pid"
         wait "$pid" 2>/dev/null || true
     fi
     if [ -f "$log_file" ]; then
-        # Save serial-console.log into tmt data
         save_to_tmt_data "$log_file"
     fi
 }
