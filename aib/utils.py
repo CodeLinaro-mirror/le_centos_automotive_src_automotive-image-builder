@@ -243,6 +243,45 @@ def rm_rf(path):
         pass
 
 
+def get_current_mounts():
+    """Read and parse /proc/mounts to get list of all mount points.
+
+    Returns a list of mount point paths with escape sequences decoded.
+    """
+    mountpoints = []
+    try:
+        with open("/proc/mounts", "r") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) >= 2:
+                    mount_point = parts[1].replace("\\040", " ")
+                    mountpoints.append(mount_point)
+    except (OSError, IOError):
+        pass
+    return mountpoints
+
+
+def find_mountpoints_under(path):
+    """Find all mountpoints under the given path.
+
+    Returns a list of mount points sorted by depth (deepest first),
+    so they can be unmounted in the correct order.
+    """
+    try:
+        path_str = str(Path(path).resolve())
+    except FileNotFoundError:
+        return []
+
+    all_mounts = get_current_mounts()
+    mountpoints = [
+        mp for mp in all_mounts if mp.startswith(path_str + "/") or mp == path_str
+    ]
+
+    # Sort in reverse order (deepest first) to unmount child mounts before parents
+    mountpoints.sort(reverse=True)
+    return mountpoints
+
+
 # This is compatible with tempdir.TemporaryDirectory, but falls back to sudo rm -rf on permission errors
 class SudoTemporaryDirectory:
     def __init__(self, suffix=None, prefix=None, dir=None, use_sudo_fallback=True):
@@ -292,6 +331,29 @@ class SudoTemporaryDirectory:
         # Require minimum length to avoid deleting very short critical paths
         return len(str(rp)) > len(str(self._base)) + 3
 
+    def _unmount_subdirs(self, path):
+        """Find and unmount any mountpoints under the given directory."""
+        mountpoints = find_mountpoints_under(path)
+
+        for mount_point in mountpoints:
+            try:
+                if self._use_sudo and os.getuid() != 0:
+                    subprocess.run(
+                        ["sudo", "umount", mount_point],
+                        check=False,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                else:
+                    subprocess.run(
+                        ["umount", mount_point],
+                        check=False,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+            except Exception:
+                pass
+
     def cleanup(self):
         if self._closed:
             return
@@ -300,6 +362,9 @@ class SudoTemporaryDirectory:
         p = self._path
         if not p.exists():
             return
+
+        # Check for and unmount any mountpoints under this directory
+        self._unmount_subdirs(p)
 
         # Try normal deletion first
         try:
