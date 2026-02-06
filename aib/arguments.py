@@ -273,6 +273,7 @@ SHAREABLE_ARGS = {
         "--container-image-name": {
             "type": "str",
             "metavar": "IMAGE",
+            "default-env": "AIB_CONTAINER_IMAGE",
             "default": default_container_image_name,
             "help": f"Container image user for --container (default: {default_container_image_name})",
         },
@@ -386,6 +387,7 @@ BIB_ARGS = {
     "--bib-container": {
         "type": "str",
         "metavar": "IMAGE",
+        "default-env": "AIB_BIB_CONTAINER_IMAGE",
         "default": default_bib_container,
         "help": f"bootc-image-builder image to use (default: {default_bib_container})",
     },
