@@ -13,7 +13,6 @@ mpp-vars:
     - aarch64
   kernel_package: 'kernel'
   consoles: "ttyLP0,115200"
-  use_boot: grub2-sbl
   partition_label: dos
   use_efi_runtime: false
   kernel_opts:
