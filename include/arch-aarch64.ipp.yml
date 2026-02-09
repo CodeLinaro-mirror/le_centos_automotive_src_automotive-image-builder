@@ -3,14 +3,4 @@ mpp-vars:
   efibootfile: BOOTAA64.EFI
   efiarch: aa64
   goarch: arm64
-  arch_rpms:
-    - mpp-if: "'grub2' in use_boot"
-      then: grub2-efi-aa64
-  arch_build_rpms:
-    mpp-join:
-      - mpp-if: "'grub2' in use_boot"
-        then:
-          - grub2-efi-aa64
-          - grub2-efi-aa64-cdboot
-          - shim-aa64
 pipelines: []

@@ -96,10 +96,6 @@ mpp-vars:
     mpp-eval: use_boot == "aboot"
   use_ukiboot:
     mpp-eval: use_boot == "ukiboot"
-  use_grub2:
-    mpp-eval: use_boot == "grub2" or use_boot == "grub2-sbl"
-  use_sbl:
-    mpp-eval: use_boot == "grub2-sbl"
   use_aboot_like:
     mpp-eval: use_aboot or use_ukiboot
   # Compressed kernel doesn't work with ukiboot on aarch64
@@ -123,18 +119,14 @@ mpp-vars:
     mpp-if: not "use_efipart" in locals()
     then:
       # TODO-BOOTC: aboot doesn't need a /boot/efi, but bc-t-i currently fails in bootupd stage if this is missing
-      mpp-eval: use_grub2 or use_ukiboot or (use_aboot and use_bootc)
+      mpp-eval: use_ukiboot or (use_aboot and use_bootc)
   use_efipart_mount:
     # TODO-BOOTC: We don't need to mount it even though we added it above for aboot (in particular with --separate-partitions)
     mpp-eval: use_efipart and not (use_aboot and use_bootc)
   use_bootpart:
-    mpp-if: not "use_bootpart" in locals()
-    then:
-      mpp-eval: use_grub2
+    mpp-eval: locals().get('use_bootpart', False)
   use_sblpart:
-    mpp-if: not "use_sblpart" in locals()
-    then:
-      mpp-eval: use_sbl
+    mpp-eval: locals().get('use_sblpart', False)
   use_biospart:
     # TODO-BOOTC: bootupd fails if there is no bios boot partition
     mpp-if: not "use_biospart" in locals()

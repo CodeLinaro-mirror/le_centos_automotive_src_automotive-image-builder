@@ -4,16 +4,5 @@ mpp-vars:
   efiarch: x64
   goarch: amd64
   arch_rpms:
-    - mpp-if: "'grub2' in use_boot"
-      then: grub2-efi-x64
     - microcode_ctl
-  arch_build_rpms:
-    mpp-join:
-      - mpp-if: "'grub2' in use_boot"
-        then:
-          - grub2-efi-x64
-          - grub2-efi-x64-cdboot
-          - grub2-tools-efi
-          - shim-x64
-      - []
 pipelines: []
