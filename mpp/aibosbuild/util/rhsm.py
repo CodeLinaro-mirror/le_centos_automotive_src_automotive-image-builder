@@ -9,23 +9,38 @@ import contextlib
 import glob
 import os
 import re
+from typing import List
 
 
 class Subscriptions:
+    DEFAULT_SSL_CA_CERT = "/etc/rhsm/ca/redhat-uep.pem"
+    DEFAULT_ENTITLEMENT_DIR = "/etc/pki/entitlement"
+    DEFAULT_REPO_FILE = "/etc/yum.repos.d/redhat.repo"
+
     def __init__(self, repositories):
         self.repositories = repositories
         # These are used as a fallback if the repositories don't
         # contain secrets for a requested URL.
         self.secrets = None
 
+        if self.is_container_with_rhsm_secrets():
+            self.DEFAULT_SSL_CA_CERT = "/run/secrets/rhsm/ca/redhat-uep.pem"
+            self.DEFAULT_ENTITLEMENT_DIR = "/run/secrets/etc-pki-entitlement"
+            self.DEFAULT_REPO_FILE = "/run/secrets/redhat.repo"
+
+    @staticmethod
+    def is_container_with_rhsm_secrets():
+        """Detect if we are running inside a podman container and RHSM secrets are available."""
+        return os.path.exists("/run/.containerenv") and os.path.exists("/run/secrets")
+
     def get_fallback_rhsm_secrets(self):
         rhsm_secrets = {
-            'ssl_ca_cert': "/etc/rhsm/ca/redhat-uep.pem",
+            'ssl_ca_cert': self.DEFAULT_SSL_CA_CERT,
             'ssl_client_key': "",
             'ssl_client_cert': ""
         }
 
-        keys = glob.glob("/etc/pki/entitlement/*-key.pem")
+        keys = glob.glob(f"{self.DEFAULT_ENTITLEMENT_DIR}/*-key.pem")
         for key in keys:
             # The key and cert have the same prefix
             cert = key.rstrip("-key.pem") + ".pem"
@@ -40,7 +55,10 @@ class Subscriptions:
 
     @staticmethod
     def get_consumer_secrets():
-        """Returns the consumer identity certificate which uniquely identifies the system"""
+        """Returns the consumer identity certificate which uniquely identifies the system.
+
+        Will fail when running in a container. Used by ostree.
+        """
         key = "/etc/pki/consumer/key.pem"
         cert = "/etc/pki/consumer/cert.pem"
 
@@ -57,7 +75,7 @@ class Subscriptions:
         """Read redhat.repo file and process the list of repositories in there."""
         ret = cls(None)
         with contextlib.suppress(FileNotFoundError):
-            with open("/etc/yum.repos.d/redhat.repo", "r", encoding="utf8") as fp:
+            with open(cls.DEFAULT_REPO_FILE, "r", encoding="utf8") as fp:
                 ret = cls.parse_repo_file(fp)
 
         with contextlib.suppress(RuntimeError):
@@ -98,26 +116,46 @@ class Subscriptions:
             current = {
                 "matchurl": cls._process_baseurl(parser.get(section, "baseurl"))
             }
-            for parameter in ["sslcacert", "sslclientkey", "sslclientcert"]:
+
+            # On RHEL systems registered to Insights, the redhat.repo exists and contains entitlement
+            # certificates, however, "sslcacert" is unset and rhsm dnf plugin automatically sets that
+            # to /etc/rhsm/ca/redhat-uep.pem or /run/secrets/rhsm/ca/redhat-uep.pem respectively.
+            current["sslcacert"] = parser.get(section, "sslcacert", fallback=cls.DEFAULT_SSL_CA_CERT)
+
+            # Entitlement certificates are always present in redhat.repo
+            for parameter in ["sslclientkey", "sslclientcert"]:
                 current[parameter] = parser.get(section, parameter)
 
             repositories[section] = current
 
         return cls(repositories)
 
-    def get_secrets(self, url):
+    def get_secrets(self, urls: List[str]):
+        """
+        Get the RHSM secrets for a list of URLs.
+
+        The URLs can be a baseurl, metalink, or mirrorlist. The list can
+        even combine all types of URLs. The function will iterate over the list
+        and try to find a matching URL in the redhat.repo file. The function
+        returns secrets for the first matching URL.
+
+        If no matching URL is found, the function will try the fallback
+        secrets. If no fallback secrets are found, the function will raise
+        a RuntimeError.
+        """
         # Try to find a matching URL from redhat.repo file first
         if self.repositories is not None:
             for parameters in self.repositories.values():
-                if parameters["matchurl"].match(url) is not None:
-                    return {
-                        "ssl_ca_cert": parameters["sslcacert"],
-                        "ssl_client_key": parameters["sslclientkey"],
-                        "ssl_client_cert": parameters["sslclientcert"]
-                    }
+                for url in urls:
+                    if parameters["matchurl"].match(url) is not None:
+                        return {
+                            "ssl_ca_cert": parameters["sslcacert"],
+                            "ssl_client_key": parameters["sslclientkey"],
+                            "ssl_client_cert": parameters["sslclientcert"]
+                        }
 
         # In case there is no matching URL, try the fallback
         if self.secrets:
             return self.secrets
 
-        raise RuntimeError(f"There are no RHSM secret associated with {url}")
+        raise RuntimeError(f"There are no RHSM secret associated with {urls}")
