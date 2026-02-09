@@ -262,7 +262,7 @@ COMMON_ARGS = {
 # Shareable argument groups that can be used before or after subcommands (for historical reasons)
 SHAREABLE_ARGS = {
     "container": {
-        "--container": "Run build commands in a container (see --container-image-name)",
+        "--container": "Run build commands in a container (see --container-image)",
         "--user-container": "Use rootless containerized build",
         "--user-storage": {
             "help": (
@@ -270,12 +270,13 @@ SHAREABLE_ARGS = {
                 "Use when CONTAINERS_STORAGE_CONF points to user-owned storage."
             ),
         },
-        "--container-image-name": {
+        "--container-image": {
             "type": "str",
             "metavar": "IMAGE",
             "default-env": "AIB_CONTAINER_IMAGE",
             "default": default_container_image_name,
             "help": f"Container image user for --container (default: {default_container_image_name})",
+            "aliases": ["--container-image-name"],
         },
         "--container-autoupdate": "Automatically pull new container image if available",
     },
@@ -384,9 +385,10 @@ DISK_FORMAT_ARGS = {
     },
 }
 BIB_ARGS = {
-    "--bib-container": {
+    "--bib-container-image": {
         "type": "str",
         "metavar": "IMAGE",
+        "aliases": ["--bib-container"],
         "default-env": "AIB_BIB_CONTAINER_IMAGE",
         "default": default_bib_container,
         "help": f"bootc-image-builder image to use (default: {default_bib_container})",

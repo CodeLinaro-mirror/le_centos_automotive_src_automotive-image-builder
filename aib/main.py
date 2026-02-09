@@ -121,7 +121,7 @@ def container_to_disk_image(args, tmpdir, runner, src_container, fmt, out):
         output_file = os.path.join(outputdir.name, "image.raw")
 
         res = podman_run_bootc_image_builder(
-            args.bib_container,
+            args.bib_container_image,
             args.build_container or get_build_container_for(src_container),
             src_container,
             "raw",
@@ -375,7 +375,7 @@ def to_disk_image(args, tmpdir, runner):
     Converts a bootc container image to a disk image that can be flashed on a board
 
     Internally this uses the bootc-image-builder tool from a container image.
-    The --bib-container option can be used to specify a different version of this tool
+    The --bib-container-image option can be used to specify a different version of this tool
 
     Also, to build the image we need a container with tools. See the build-builder
     command for how to build one.
