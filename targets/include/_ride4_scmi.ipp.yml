@@ -1,16 +1,9 @@
 # Implementation of ridesx4_scmi.ipp.yml, but loaded after derived target
 version: "2"
 mpp-vars:
-  target_repos:
-    - id: qcom-board-support-downstream
-      baseurl: https://download.copr.fedorainfracloud.org/results/echanude/qcom-board-support/$distro_chroot/
-      priority: 5
-  target_build_repos:
-    - id: qcom-board-support-downstream
-      baseurl: https://download.copr.fedorainfracloud.org/results/echanude/qcom-board-support/$distro_chroot/
-      priority: 5
   target_rpms:
     mpp-join:
       - mpp-eval: target_rpms
       - - downstream-dtbs
       - - kmod-qcom-scmi
+  kernel_package: kernel-ivos-qualcomm
