@@ -221,8 +221,7 @@ def build(args, tmpdir, runner):
                 )
 
             runner.add_volume_for(args.out)
-            runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", output_file])
-            runner.run_as_root(["mv", output_file, args.out])
+            runner.move_chown(output_file, args.out)
         else:
             # "-" to not store result in store
             if args.out != "-":
@@ -335,8 +334,7 @@ def build_builder(args, tmpdir, runner):
 
         if args.oci_archive:
             runner.add_volume_for(args.out)
-            runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", output_file])
-            runner.run_as_root(["mv", output_file, args.out])
+            runner.move_chown(output_file, args.out)
         else:
             bootc_archive_to_store(runner, output_file, dest_image)
 

@@ -331,7 +331,7 @@ def partition_is_safe_to_truncate(p):
 def export_disk_image_file(runner, args, tmpdir, image_file, out, fmt):
     runner.add_volume_for(out)
     if args.separate_partitions:
-        runner.run_as_root(["rm", "-rf", out])
+        runner.rm_rf(out)
         os.mkdir(out)
 
         disk_json = runner.run_in_container(

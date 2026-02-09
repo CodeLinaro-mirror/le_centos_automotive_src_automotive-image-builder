@@ -297,3 +297,30 @@ class Runner:
             as_user_in_container=as_user_in_container,
             capture_output=capture_output,
         )
+
+    # Tries to remove a path, if needed (and allowed) with sudo
+    def rm_rf(self, path):
+        if not os.path.exists(path):
+            return
+
+        try:
+            shutil.rmtree(path)
+            return
+        except (OSError, PermissionError) as e:
+            last_err = e
+
+        # If allowed (not user-container) and useful (not already root), try sudo:
+        if self.container_needs_root and self.use_sudo_for_root:
+            self.run_as_root(["rm", "-rf", path])
+            return  # Above will exit on error
+
+        raise last_err
+
+    # Move a file (possibly root owned) to a destination and chown it to the
+    # current user
+    def move_chown(self, src, dst):
+        if not self.container_needs_root:
+            subprocess.run(["mv", src, dst], check=True)
+        else:
+            self.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", src])
+            self.run_as_root(["mv", src, dst])
