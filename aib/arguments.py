@@ -180,14 +180,18 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
     else:
         default = None
 
+    names = [name]
+    if "aliases" in data:
+        names = names + data["aliases"]
+
     if t == "bool":
-        a = dst.add_argument(name, default=default, action="store_true")
+        a = dst.add_argument(*names, default=default, action="store_true")
     elif t == "bool-optional":
         # bool-optional doesn't need suppress_default handling
-        a = dst.add_argument(name, action=argparse.BooleanOptionalAction)
+        a = dst.add_argument(*names, action=argparse.BooleanOptionalAction)
     elif t == "diskformat":
         a = dst.add_argument(
-            name,
+            *names,
             action="store",
             type=str,
             choices=[f.value for f in DiskFormat],
@@ -196,18 +200,18 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
     elif t == "version":
         # version doesn't need suppress_default handling
         a = dst.add_argument(
-            name, action="version", version=f"%(prog)s {get_version()}"
+            *names, action="version", version=f"%(prog)s {get_version()}"
         )
     elif t == "str" or t == "path":
         a = dst.add_argument(
-            name,
+            *names,
             action="store",
             type=str,
             default=default,
         )
     elif t == "append":
         a = dst.add_argument(
-            name,
+            *names,
             action="append",
             type=str,
             default=default,
