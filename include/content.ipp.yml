@@ -314,12 +314,6 @@ mpp-vars:
             label: sbl
             type:
               mpp-eval: "'00000000-0000-0000-0000-000000000000' if partition_label == 'gpt' else '0'"
-        - mpp-if: use_biospart
-          then:
-            size: "1 MiB"
-            bootable: true
-            type: $partition_type_bios
-            uuid: $biospart_uuid
         - mpp-if: use_efipart
           then:
             label: efi

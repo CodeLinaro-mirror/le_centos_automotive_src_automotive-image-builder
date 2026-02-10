@@ -127,11 +127,6 @@ mpp-vars:
     mpp-eval: locals().get('use_bootpart', False)
   use_sblpart:
     mpp-eval: locals().get('use_sblpart', False)
-  use_biospart:
-    # TODO-BOOTC: bootupd fails if there is no bios boot partition
-    mpp-if: not "use_biospart" in locals()
-    then:
-      mpp-eval: use_bootc
 
   aboot_boot_type:
     mpp-eval: "'ukiboot' if use_ukiboot else aboot_boot_type"
