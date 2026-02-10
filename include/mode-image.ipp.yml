@@ -161,6 +161,21 @@ pipelines:
               etc_group_members:
                 - wheel
                 - docker
+          # TODO-BOOTC: bootupd 0.2.32 needs to have at least two EFI# modules or it asserts,
+          # so we create a fake (empty) one until a new version is available
+          - mpp-if: use_bootc
+            then:
+              type: org.osbuild.mkdir
+              options:
+                paths:
+                  - path:
+                      mpp-format-string: "/usr/lib/efi/fake-component/0.0.1/EFI/{uefi_vendor}"
+                    parents: true
+                    exist_ok: true
+                  - path:
+                      mpp-format-string: "/usr/lib/efi/other-fake-component/0.0.2/EFI/{uefi_vendor}"
+                    parents: true
+                    exist_ok: true
           # TODO-BOOTC: For now we only do this for bootc targets, but its is not ideal
           # to differ vs regular ostree like this. This should be fixed.
           - mpp-if: use_bootc

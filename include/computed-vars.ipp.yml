@@ -974,10 +974,6 @@ mpp-vars:
         # TODO-BOOTC: bootupd needs this for generate-update-metadata
         - mpp-if: use_bootc
           then: shim
-        # TODO-BOOTC: bootupd 0.2.32 needs to have at least two EFI modules or it asserts
-        - mpp-if: use_bootc and use_aboot
-          then:
-            mpp-format-string: "grub2-efi-{efiarch}"
         # TODO-BOOTC: bootupd needs this for generate-update-metadata
         - mpp-if: use_bootc
           then: grub2-tools
