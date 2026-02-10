@@ -247,16 +247,11 @@ mpp-vars:
   # Compute where the packaged efi files end up when bootupd is used
   # Note: To avoid build problems, handle the case where these are not
   # installed without breaking
-  _shim_evr:
-    mpp-eval: |
-      _Lazy(lambda: optional_installed_rpm_evr('shim-' + efiarch))
   _ukiboot_evr:
     mpp-eval: |
       _Lazy(lambda: optional_installed_rpm_evr('ukiboot'))
   _ukiboot_efi_dir:
     mpp-eval: "'/usr/lib/efi/ukiboot/' + _ukiboot_evr"
-  _shim_efi_dir:
-    mpp-eval: "'/usr/lib/efi/shim/' + _shim_evr"
   signing_info:
     signed_files:
       mpp-join:
@@ -271,8 +266,8 @@ mpp-vars:
                 mpp-format-string: ukiboot{efiarch}.efi
               paths:
                 - mpp-eval: "_ukiboot_efi_dir + f'/EFI/{uefi_vendor}/ukiboot{efiarch}.efi'"
-                - mpp-eval: "_shim_efi_dir + f'/EFI/{uefi_vendor}/shim{efiarch}.efi'"
-                - mpp-eval: "_shim_efi_dir + f'/EFI/BOOT/{efibootfile}'"
+                - mpp-eval: "_ukiboot_efi_dir + f'/EFI/{uefi_vendor}/shim{efiarch}.efi'"
+                - mpp-eval: "_ukiboot_efi_dir + f'/EFI/BOOT/{efibootfile}'"
             - type: efi
               filename: slot_a.addon.efi
               paths:

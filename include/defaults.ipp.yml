@@ -382,5 +382,4 @@ mpp-vars:
     - rootfiles
     - systemd-udev
     - dracut-config-generic
-    - grub2-tools-minimal
     - lz4

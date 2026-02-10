@@ -634,30 +634,6 @@ mpp-vars:
             options:
               profiles:
                 - realtime
-      - mpp-if: use_ukiboot
-        then:
-          - type: org.osbuild.copy
-            inputs:
-              tree:
-                type: org.osbuild.tree
-                origin: org.osbuild.pipeline
-                references:
-                  - name:build
-            options:
-              paths:
-                # When using bootc, bootc filesystem install always copies in the shim binary
-                # So, we rename ukiboot to the shim binary to have it be installed instead.
-                #
-                # Copy to both EFI/centos and EFI/BOOT paths, to ensure that the default boot
-                # behavior will also work in the case that no boot entries are present.
-                - from:
-                    mpp-format-string: input://tree/usr/libexec/ukiboot/efi/ukiboot{efiarch}.efi
-                  to:
-                    mpp-format-string: tree:///boot/efi/EFI/{uefi_vendor}/shim{efiarch}.efi
-                - from:
-                    mpp-format-string: input://tree/usr/libexec/ukiboot/efi/ukiboot{efiarch}.efi
-                  to:
-                    mpp-format-string: tree:///boot/efi/EFI/BOOT/{efibootfile}
       - mpp-if: use_aboot_like
         then:
           - type: org.osbuild-auto.aboot.conf
@@ -906,6 +882,7 @@ mpp-vars:
       - mpp-if: use_ukiboot
         then:
           - ukiboot
+          - ukiboot-default-efi
           - systemd-ukify
           - systemd-boot
 
@@ -918,8 +895,7 @@ mpp-vars:
 
   package_mode_rpms:
     mpp-join:
-      - - shim
-        - dnf
+      - - dnf
       - mpp-if: use_aboot_like
         then:
           - aboot-update # This is needed for kernel package updates to work
@@ -957,6 +933,8 @@ mpp-vars:
           then: aboot-deploy
         - mpp-if: use_ukiboot
           then: ukiboot
+        - mpp-if: use_ukiboot
+          then: ukiboot-default-efi
         - mpp-if: use_tuned_realtime
           then: tuned
         - mpp-if: use_tuned_realtime
@@ -971,12 +949,6 @@ mpp-vars:
           then: qm
         - mpp-if: use_qm and qm_wayland_enable
           then: qm-oci-hooks
-        # TODO-BOOTC: bootupd needs this for generate-update-metadata
-        - mpp-if: use_bootc
-          then: shim
-        # TODO-BOOTC: bootupd needs this for generate-update-metadata
-        - mpp-if: use_bootc
-          then: grub2-tools
 
   _debug_output:
     mpp-eval: "locals().get('print_variables') and print( _json.dumps({k: v for k, v in locals().items() if not k.startswith('_')}, default=lambda o: '<not serializable>', sort_keys=True, indent=2))"
