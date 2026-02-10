@@ -167,7 +167,7 @@ mpp-vars:
     - 53 # remaining tries 0x7
 
   # Possible values:
-  # aboot, ukiboot, grub2, grub2-sbl, none
+  # aboot, ukiboot, none
   use_boot: ukiboot
   skip_root_on_cmdline: false
   qm_pipeline: qm_rootfs

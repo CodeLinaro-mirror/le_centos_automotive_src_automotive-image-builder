@@ -386,18 +386,3 @@ pipelines:
             osname:
               mpp-eval: osname
             ref: ostree/1/1/0
-      - mpp-if: use_grub2
-        then:
-          type: org.osbuild.grub2
-          options:
-            rootfs:
-              label: root
-            bootfs:
-              label: boot
-            uefi:
-              vendor:
-                mpp-eval: uefi_vendor
-              unified: true
-              install: true
-            legacy: false
-            write_defaults: false
