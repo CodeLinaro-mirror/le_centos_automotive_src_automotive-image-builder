@@ -32,10 +32,17 @@ mpp-vars:
   # think about how to handle this better in the long run.
   # - ttyS2 is for the TI K3 platforms
   # - ttySC0 is for the Renesas R-car S4 platform.
-  consoles: 'ttyS2,115200n8 ttySC0,1843200'
+  # - ttyLF0 is for the NXP S32G VNP RDB3 platform.
+  consoles: 'ttyS2,115200n8 ttySC0,1843200 ttyLF0,115200'
   kernel_opts:
     mpp-join:
       - mpp-eval: kernel_opts
       # That's actually a debug helper to get early kernel messages on those
       # platforms that support it in their device tree.
       - - earlycon
+      - - mpp-if: is_autoinit_supported and use_autoinit
+          then: rd.modules-load=sdhci_esdhc_imx
+  dracut_drivers:
+    mpp-join:
+      - mpp-eval: dracut_drivers
+      - - "sdhci_esdhc_imx"
