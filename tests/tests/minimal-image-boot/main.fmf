@@ -1,8 +1,9 @@
 summary: Verify that a minimal AIB image boots successfully and passes basic runtime checks
 description: |
-  Builds a minimal Automotive Image Builder (AIB) bootc image and verifies that it boots correctly in a QEMU virtual
-  machine.   The test monitors the serial console output to ensure the system reaches the expected boot target and that
-  basic   post-boot checks (dmesg, SELinux, and systemd) all pass successfully.
+  Builds a minimal Automotive Image Builder (AIB) bootc image and verifies that no sysusers UID/GID
+  collisions happened as well as that the built image boots correctly in a QEMU virtual machine.
+  The test monitors the serial console output to ensure the system reaches the expected boot target and that
+  basic post-boot checks (dmesg, SELinux, and systemd) all pass successfully.
 
   Test inputs:
     Custom AIB manifest defining a minimal bootable image

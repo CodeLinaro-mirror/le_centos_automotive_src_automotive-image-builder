@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+IMG_BUILD_LOG_BOOTC="build-bootc.log"
+IMG_BUILD_LOG_BUILDER="build-builder.log"
+
 # To simplify image build process don't store bootc container
 export NO_CTR_NAME="-"
 
@@ -343,7 +346,7 @@ trybuild() {
         --build-dir "$BUILDDIR" $FAST_OPTIONS \
         --define reproducible_image=true \
         --verbose \
-        "$@" > build-bootc.log
+        "$@" > "${IMG_BUILD_LOG_BOOTC}"
     result=$?
 
     return $result
@@ -353,12 +356,12 @@ build() {
    if ! trybuild "$@"; then
       echo FAILED to build bootc container
       # only show last 50 lines in
-      tail -n 50 build-bootc.log
+      tail -n 50 "${IMG_BUILD_LOG_BOOTC}"
       # save build log to tmt test data
-      save_to_tmt_data build-bootc.log
+      save_to_tmt_data "${IMG_BUILD_LOG_BOOTC}"
       exit 1
    fi
-   save_to_tmt_data build-bootc.log
+   save_to_tmt_data "${IMG_BUILD_LOG_BOOTC}"
 }
 
 trybootc_to_disk_image() {
@@ -392,7 +395,7 @@ trybuild_bootc_builder() {
         --cache $OUTDIR/dnf-cache \
         --build-dir "$BUILDDIR" $FAST_OPTIONS \
         --define reproducible_image=true \
-        "$@" > build-builder.log
+        "$@" > "${IMG_BUILD_LOG_BUILDER}"
     result=$?
 
     return $result
@@ -402,12 +405,12 @@ build_bootc_builder() {
    if ! trybuild_bootc_builder "$@"; then
       echo FAILED to build image
       # only show last 50 lines in
-      tail -n 50 build-builder.log
+      tail -n 50 "${IMG_BUILD_LOG_BUILDER}"
       # save build log to tmt test data
-      save_to_tmt_data build-builder.log
+      save_to_tmt_data "${IMG_BUILD_LOG_BUILDER}"
       exit 1
    fi
-   save_to_tmt_data build-builder.log
+   save_to_tmt_data "${IMG_BUILD_LOG_BUILDER}"
 }
 
 trybuild_dev() {
