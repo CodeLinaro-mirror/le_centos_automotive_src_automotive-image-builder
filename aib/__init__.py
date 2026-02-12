@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 import time
-import warnings
 
 from dataclasses import dataclass
 from functools import cached_property
@@ -90,17 +89,10 @@ class AIBParameters:
           3. {base_dir}/files/policies/
         """
 
-        if self.args.fusa:
-            warnings.warn(
-                "The --fusa argument is deprecated, use --policy instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            policy_input = "hardened"
-        elif self.args.policy:
-            policy_input = self.args.policy
-        else:
+        if not self.args.policy:
             return None
+
+        policy_input = self.args.policy
 
         # If policy input contains path separators, treat as full path
         if os.path.sep in policy_input:

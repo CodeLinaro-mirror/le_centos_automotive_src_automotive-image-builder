@@ -285,11 +285,6 @@ POLICY_ARGS = {
     "--policy": {
         "type": "str",
         "help": "Specify a policy file that restricts what build options are used",
-        "exclusive-group": "policy",
-    },
-    "--fusa": {
-        "help": argparse.SUPPRESS,
-        "exclusive-group": "policy",
     },
 }
 TARGET_ARGS = {
