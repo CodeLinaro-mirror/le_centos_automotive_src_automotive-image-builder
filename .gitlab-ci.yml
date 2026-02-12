@@ -127,6 +127,13 @@ prepare-image-x86-job:
     AIB_DISTRO: "autosd10"
     MANIFEST: "examples/complex.aib.yml"
     DISK_IMAGE_NAME: "auto.img"
+  before_script:
+    # Set up container storage in a non-overlay locateion (in $CI_PROJECT_DIR)
+    - mkdir -p "$CI_PROJECT_DIR/_containers/var" "$CI_PROJECT_DIR/_containers/run"
+    - rm -rf /var/lib/containers /run/containers
+    - mkdir -p /var/lib/containers /run/containers
+    - mount --bind "$CI_PROJECT_DIR/_containers/var" /var/lib/containers
+    - mount --bind "$CI_PROJECT_DIR/_containers/run" /run/containers
   script:
     - ./bin/aib-dev build --verbose --build-dir _build --cache _build/cache --distro "$AIB_DISTRO" "$MANIFEST"  "$DISK_IMAGE_NAME"
 

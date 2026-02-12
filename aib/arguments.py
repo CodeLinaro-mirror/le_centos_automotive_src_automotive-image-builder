@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Dict, Any
 from enum import Enum
 
+from .podman import ContainerState
 from .utils import DiskFormat
 from .version import get_version
 from . import log
@@ -180,14 +181,18 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
     else:
         default = None
 
+    names = [name]
+    if "aliases" in data:
+        names = names + data["aliases"]
+
     if t == "bool":
-        a = dst.add_argument(name, default=default, action="store_true")
+        a = dst.add_argument(*names, default=default, action="store_true")
     elif t == "bool-optional":
         # bool-optional doesn't need suppress_default handling
-        a = dst.add_argument(name, action=argparse.BooleanOptionalAction)
+        a = dst.add_argument(*names, action=argparse.BooleanOptionalAction)
     elif t == "diskformat":
         a = dst.add_argument(
-            name,
+            *names,
             action="store",
             type=str,
             choices=[f.value for f in DiskFormat],
@@ -196,18 +201,18 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
     elif t == "version":
         # version doesn't need suppress_default handling
         a = dst.add_argument(
-            name, action="version", version=f"%(prog)s {get_version()}"
+            *names, action="version", version=f"%(prog)s {get_version()}"
         )
     elif t == "str" or t == "path":
         a = dst.add_argument(
-            name,
+            *names,
             action="store",
             type=str,
             default=default,
         )
     elif t == "append":
         a = dst.add_argument(
-            name,
+            *names,
             action="append",
             type=str,
             default=default,
@@ -223,6 +228,8 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
         a.required = data["required"]
     if "default" in data and not suppress_default:
         a.default = data["default"]
+    if "default-env" in data and data["default-env"] in os.environ:
+        a.default = os.environ[data["default-env"]]
     if "metavar" in data:
         a.metavar = data["metavar"]
     elif t == "path":
@@ -255,19 +262,20 @@ COMMON_ARGS = {
 # Shareable argument groups that can be used before or after subcommands (for historical reasons)
 SHAREABLE_ARGS = {
     "container": {
-        "--container": "Run build commands in a container (see --container-image-name)",
+        "--container": "Run build commands in a container (see --container-image)",
         "--user-container": "Use rootless containerized build",
-        "--user-storage": {
-            "help": (
-                "Avoid sudo for storage operations (podman/skopeo). "
-                "Use when CONTAINERS_STORAGE_CONF points to user-owned storage."
-            ),
+        "--container-storage": {
+            "type": "path",
+            "help": "Use custom container storage directory for input/output",
+            "default-env": "AIB_CONTAINER_STORAGE",
         },
-        "--container-image-name": {
+        "--container-image": {
             "type": "str",
             "metavar": "IMAGE",
+            "default-env": "AIB_CONTAINER_IMAGE",
             "default": default_container_image_name,
             "help": f"Container image user for --container (default: {default_container_image_name})",
+            "aliases": ["--container-image-name"],
         },
         "--container-autoupdate": "Automatically pull new container image if available",
     },
@@ -367,14 +375,15 @@ DISK_FORMAT_ARGS = {
     },
     "--vm": {
         "type": "bool-optional",
-        "help": "Use VM to build disk image (default off)",
-        "default": False,
+        "help": "Use VM to build disk image",
     },
 }
 BIB_ARGS = {
-    "--bib-container": {
+    "--bib-container-image": {
         "type": "str",
         "metavar": "IMAGE",
+        "aliases": ["--bib-container"],
+        "default-env": "AIB_BIB_CONTAINER_IMAGE",
         "default": default_bib_container,
         "help": f"bootc-image-builder image to use (default: {default_bib_container})",
     },
@@ -467,4 +476,11 @@ def parse_args(args, prog="aib"):
                     subparser, arg_groups, SHAREABLE_ARGS[key], suppress_default=True
                 )
 
-    return parser.parse_args(args)
+    res = parser.parse_args(args)
+
+    # Default to --vm for --user-container and if running in rootless container, because
+    # this is the only way those would ever work anyway.
+    if "vm" in res and res.vm is None:
+        res.vm = res.user_container or ContainerState.query().in_rootless_container
+
+    return res

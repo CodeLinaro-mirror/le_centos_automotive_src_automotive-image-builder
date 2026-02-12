@@ -29,6 +29,7 @@ from .exceptions import (
 from . import AIBParameters
 from . import log
 from .podman import (
+    ContainerStorage,
     podman_image_exists,
     podman_image_info,
     podman_run_bootc_image_builder,
@@ -83,50 +84,48 @@ def listrpms(args, tmpdir, runner):
     """List the rpms that a manifest would use when build"""
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
 
-    create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner)
+    storage = ContainerStorage.from_args(args, tmpdir)
+
+    create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage)
 
     data = extract_rpmlist_json(osbuild_manifest)
 
     print(data)
 
 
-def bootc_archive_to_store(
-    runner, archive_file, container_name, user=False, user_storage=False
-):
+def bootc_archive_to_store(runner, archive_file, storage, container_name):
     """
     Copy a bootc OCI archive to container storage.
-
-    Args:
-        user: Write to user storage (run without sudo)
-        user_storage: Avoid sudo to prevent permission issues with user-owned storage
     """
     cmdline = [
         "skopeo",
         "copy",
         "--quiet",
         "oci-archive:" + archive_file,
-        "containers-storage:" + container_name,
+        storage.skopeo(container_name),
     ]
 
-    if user or user_storage:
-        subprocess.run(cmdline, check=True)
-    else:
+    if storage.with_sudo:
         runner.run_as_root(cmdline)
+    else:
+        subprocess.run(cmdline, check=True)
 
 
-def container_to_disk_image(args, tmpdir, runner, src_container, fmt, out):
+def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, out):
     with SudoTemporaryDirectory(
         prefix="bib-out--", dir=os.path.dirname(out)
     ) as outputdir:
         output_file = os.path.join(outputdir.name, "image.raw")
 
         res = podman_run_bootc_image_builder(
-            args.bib_container,
-            args.build_container or get_build_container_for(src_container),
+            args.bib_container_image,
+            storage,
+            args.build_container or get_build_container_for(storage, src_container),
             src_container,
             "raw",
             output_file,
             args.vm,
+            args.user_container,
             args.verbose,
         )
         if res != 0:
@@ -145,9 +144,6 @@ def random_container_name():
     shared_args=["container", "include"],
     args=[
         {
-            "--user": {
-                "help": "Export container to per-user container storage (default: system storage)",
-            },
             "--oci-archive": {
                 "help": "Build an oci container archive file instead of a container image",
             },
@@ -187,6 +183,10 @@ def build(args, tmpdir, runner):
     if not args.dry_run:
         exports.append("bootc-tar" if args.tar else "bootc-archive")
 
+    in_vm = []
+    if args.vm:
+        in_vm.append("image")
+
     if args.disk and args.tar:
         raise IncompatibleOptions(
             option1="--tar",
@@ -197,10 +197,14 @@ def build(args, tmpdir, runner):
     # This is the container name we use in the root container store.
     # It may be a random temporary name if the user didn't want the result in the
     # root container store (i.e. user store or oci archive file)
-    root_containername = None
+    containername = None
     remove_container = False
 
-    with run_osbuild(args, tmpdir, runner, exports) as outputdir:
+    storage = ContainerStorage.from_args(args, tmpdir)
+
+    with run_osbuild(
+        args, tmpdir, runner, exports, in_vm=in_vm, storage=storage
+    ) as outputdir:
         if args.tar:
             output_file = os.path.join(outputdir.name, "bootc-tar/rootfs.tar")
         else:
@@ -213,43 +217,36 @@ def build(args, tmpdir, runner):
             pass
         elif args.tar or args.oci_archive:
             if args.disk and args.oci_archive:
-                # We need it in the root store, to convert it
+                # We need it in the store, to convert it
                 remove_container = True
-                root_containername = random_container_name()
-                bootc_archive_to_store(
-                    runner, output_file, root_containername, user=False
-                )
+                containername = random_container_name()
+                bootc_archive_to_store(runner, output_file, storage, containername)
 
             runner.add_volume_for(args.out)
-            runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", output_file])
-            runner.run_as_root(["mv", output_file, args.out])
+            runner.move_chown(output_file, args.out)
         else:
             # "-" to not store result in store
             if args.out != "-":
+                containername = args.out
+            elif args.disk:
+                # We need it in the store anyway to convert it, but use a random name
+                remove_container = True
+                containername = random_container_name()
+
+            if containername:
                 bootc_archive_to_store(
                     runner,
                     output_file,
-                    args.out,
-                    user=args.user,
-                    user_storage=getattr(args, "user_storage", False),
+                    storage,
+                    containername,
                 )
-
-            if args.disk and (args.user or args.out == "-"):
-                # We need it in the root store anyway to convert it
-                remove_container = True
-                root_containername = random_container_name()
-                bootc_archive_to_store(
-                    runner, output_file, root_containername, user=False
-                )
-            else:
-                root_containername = args.out
 
     if args.disk and not args.dry_run:
-        assert root_containername is not None
+        assert containername is not None
         fmt = DiskFormat.from_string(args.format) or DiskFormat.from_filename(args.disk)
-        with TemporaryContainer(root_containername, cleanup=remove_container):
+        with TemporaryContainer(storage, containername, cleanup=remove_container):
             container_to_disk_image(
-                args, tmpdir, runner, root_containername, fmt, args.disk
+                args, tmpdir, runner, storage, containername, fmt, args.disk
             )
 
 
@@ -324,8 +321,10 @@ def build_builder(args, tmpdir, runner):
 
     dest_image = args.out or aib_build_container_name(args.distro)
 
+    storage = ContainerStorage.from_args(args, tmpdir)
+
     if args.if_needed:
-        info = podman_image_info(dest_image)
+        info = podman_image_info(storage, dest_image)
         if info:
             print(f"Image {dest_image} already exists, doing nothing.")
             return
@@ -335,16 +334,15 @@ def build_builder(args, tmpdir, runner):
 
         if args.oci_archive:
             runner.add_volume_for(args.out)
-            runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", output_file])
-            runner.run_as_root(["mv", output_file, args.out])
+            runner.move_chown(output_file, args.out)
         else:
-            bootc_archive_to_store(runner, output_file, dest_image)
+            bootc_archive_to_store(runner, output_file, storage, dest_image)
 
         print(f"Built image {dest_image}")
 
 
-def get_build_container_for(container):
-    info = podman_image_info(container)
+def get_build_container_for(storage, container):
+    info = podman_image_info(storage, container)
     if not info:
         raise ContainerNotFound(container)
 
@@ -354,7 +352,7 @@ def get_build_container_for(container):
         distro = info.build_info.get("DISTRO", distro)
 
     build_container = aib_build_container_name(distro)
-    if not podman_image_exists(build_container):
+    if not podman_image_exists(storage, build_container):
         raise BuildContainerNotFound(build_container, distro)
     return build_container
 
@@ -362,7 +360,7 @@ def get_build_container_for(container):
 @command(
     group=CommandGroup.BOOTC,
     help="Build a physical disk image based on a bootc container",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         DISK_FORMAT_ARGS,
         BIB_ARGS,
@@ -377,23 +375,28 @@ def to_disk_image(args, tmpdir, runner):
     Converts a bootc container image to a disk image that can be flashed on a board
 
     Internally this uses the bootc-image-builder tool from a container image.
-    The --bib-container option can be used to specify a different version of this tool
+    The --bib-container-image option can be used to specify a different version of this tool
 
     Also, to build the image we need a container with tools. See the build-builder
     command for how to build one.
     """
-    if not podman_image_exists(args.src_container):
+
+    storage = ContainerStorage.from_args(args, tmpdir)
+
+    if not podman_image_exists(storage, args.src_container):
         raise ContainerNotFound(args.src_container)
 
     fmt = DiskFormat.from_string(args.format) or DiskFormat.from_filename(args.out)
 
-    container_to_disk_image(args, tmpdir, runner, args.src_container, fmt, args.out)
+    container_to_disk_image(
+        args, tmpdir, runner, storage, args.src_container, fmt, args.out
+    )
 
 
 @command(
     group=CommandGroup.BOOTC,
     help="Extract files for secure-boot signing",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         {
             "src_container": "Bootc container name",
@@ -410,11 +413,13 @@ def extract_for_signing(args, tmpdir, runner):
     often involves sending them to a 3rd party. Once these files are signed, the modified
     file can then be injected using inject-signed.
     """
-    if not podman_image_exists(args.src_container):
+    storage = ContainerStorage(args.container_storage, tmpdir, args.user_container)
+
+    if not podman_image_exists(storage, args.src_container):
         raise ContainerNotFound(args.src_container)
     rm_rf(args.out)
     os.makedirs(args.out)
-    with PodmanImageMount(args.src_container) as mount:
+    with PodmanImageMount(storage, args.src_container) as mount:
         if mount.has_file("/etc/signing_info.json"):
             content = mount.read_file("/etc/signing_info.json")
             info = json.loads(content)
@@ -439,19 +444,27 @@ def extract_for_signing(args, tmpdir, runner):
                 dest = os.path.join(destdir, filename)
                 mount.copy_out_file(src, dest)
         else:
-            log.info("No /etc/signing-info.json, nothing to sign")
+            log.info("No /etc/signing_info.json, nothing to sign")
             sys.exit(0)
 
 
-def do_reseal_image(args, runner, tmpdir, privkey, src_container, dst_container):
+def do_reseal_image(
+    args, runner, tmpdir, privkey, storage, src_container, dst_container
+):
     privkey_file = os.path.join(tmpdir, "pkey")
     with os.fdopen(
         os.open(privkey_file, os.O_CREAT | os.O_WRONLY, mode=0o600), "w"
     ) as f:
         f.write(privkey)
 
+    # rpm-ostree only looks in the default (host or user depending on uid) container store
+    # so we need to use env-vars to override it.
+    volumes = {storage.storage: storage.storage}
+
     runner.run_in_container(
         [
+            "env",
+            f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
             "rpm-ostree",
             "experimental",
             "compose",
@@ -461,16 +474,18 @@ def do_reseal_image(args, runner, tmpdir, privkey, src_container, dst_container)
             "--bootc",
             "--format-version=1",
             f"--from={src_container}",
-            f"--output=containers-storage:{dst_container}",
+            f"--output={storage.skopeo(dst_container)}",
         ],
+        extra_volumes=volumes,
         stdout_to_devnull=not args.verbose,
+        need_osbuild_privs=True,
     )
 
 
 @command(
     group=CommandGroup.BOOTC,
     help="Inject files that were signed for secure-boot",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         SHARED_RESEAL_ARGS,
         {
@@ -494,10 +509,13 @@ def inject_signed(args, tmpdir, runner):
     in a complex way with sealing. See the help for reseal for how to re-seal
     the modified image so that it boots again.
     """
-    if not podman_image_exists(args.src_container):
+    storage = ContainerStorage.from_args(args, tmpdir)
+
+    if not podman_image_exists(storage, args.src_container):
         raise ContainerNotFound(args.src_container)
 
     with PodmanImageMount(
+        storage,
         args.src_container,
         writable=True,
         commit_image=None if args.reseal_with_key else args.new_container,
@@ -523,21 +541,27 @@ def inject_signed(args, tmpdir, runner):
                 for dest_path in f["paths"]:
                     mount.copy_in_file(src, dest_path)
         else:
-            log.info("No /etc/signing-info.json, nothing needed signing")
+            log.info("No /etc/signing_info.json, nothing needed signing")
             sys.exit(0)
 
     if args.reseal_with_key:
         _pubkey, privkey = read_keys(args.reseal_with_key, args.passwd)
-        with TemporaryContainer(mount.image_id) as temp_container:
+        with TemporaryContainer(storage, mount.image_id) as temp_container:
             do_reseal_image(
-                args, runner, tmpdir, privkey, temp_container, args.new_container
+                args,
+                runner,
+                tmpdir,
+                privkey,
+                storage,
+                temp_container,
+                args.new_container,
             )
 
 
 @command(
     group=CommandGroup.BOOTC,
     help="Seal bootc image after it has been modified",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         SHARED_RESEAL_ARGS,
         {
@@ -568,7 +592,8 @@ def reseal(args, tmpdir, runner):
     in prepare-reseal to reseal with the --key option. See the help for
     prepare-reseal for more details
     """
-    if not podman_image_exists(args.src_container):
+    storage = ContainerStorage.from_args(args, tmpdir)
+    if not podman_image_exists(storage, args.src_container):
         raise ContainerNotFound(args.src_container)
 
     if args.key:
@@ -583,19 +608,27 @@ def reseal(args, tmpdir, runner):
 
         build_container = args.build_container
         if not build_container:
-            build_container = get_build_container_for(args.src_container)
+            build_container = get_build_container_for(storage, args.src_container)
 
         src_container = podman_bootc_inject_pubkey(
-            args.src_container, None, pubkey_file, build_container, args.verbose
+            storage,
+            args.src_container,
+            None,
+            pubkey_file,
+            build_container,
+            args.user_container,
+            args.verbose,
         )
 
-    do_reseal_image(args, runner, tmpdir, privkey, src_container, args.new_container)
+    do_reseal_image(
+        args, runner, tmpdir, privkey, storage, src_container, args.new_container
+    )
 
 
 @command(
     group=CommandGroup.BOOTC,
     help="Do the initial step of sealing and image, allowing further changes before actually sealing",
-    shared_args=[],
+    shared_args=["container"],
     args=[
         SHARED_RESEAL_ARGS,
         {
@@ -622,12 +655,13 @@ def prepare_reseal(args, tmpdir, runner):
     Optionally, `-aes-256-cbc` can be added to encrypt the private key with a password (which
     then has to be supplied when using it).
     """
-    if not podman_image_exists(args.src_container):
+    storage = ContainerStorage.from_args(args, tmpdir)
+    if not podman_image_exists(storage, args.src_container):
         raise ContainerNotFound(args.src_container)
 
     build_container = args.build_container
     if not build_container:
-        build_container = get_build_container_for(args.src_container)
+        build_container = get_build_container_for(storage, args.src_container)
 
     pubkey = read_public_key(args.key, args.passwd)
     pubkey_file = os.path.join(tmpdir, "pubkey")
@@ -636,10 +670,12 @@ def prepare_reseal(args, tmpdir, runner):
         f.write(pubkey)
 
     podman_bootc_inject_pubkey(
+        storage,
         args.src_container,
         args.new_container,
         pubkey_file,
         build_container,
+        args.user_container,
         args.verbose,
     )
 

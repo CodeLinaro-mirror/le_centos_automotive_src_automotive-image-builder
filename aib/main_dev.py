@@ -23,6 +23,9 @@ from .arguments import (
     DISK_FORMAT_ARGS,
     CommandGroup,
 )
+from .podman import (
+    ContainerStorage,
+)
 from .osbuild import (
     create_osbuild_manifest,
     extract_rpmlist_json,
@@ -183,7 +186,11 @@ def build(args, tmpdir, runner):
     if args.vm:
         in_vm.append("image")
 
-    with run_osbuild(args, tmpdir, runner, exports, in_vm=in_vm) as outputdir:
+    storage = ContainerStorage(args.container_storage, tmpdir, args.user_container)
+
+    with run_osbuild(
+        args, tmpdir, runner, exports, in_vm=in_vm, storage=storage
+    ) as outputdir:
         output_file = os.path.join(outputdir.name, "image/disk.img")
 
         if not args.dry_run:

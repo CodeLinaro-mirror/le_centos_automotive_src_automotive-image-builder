@@ -1,9 +1,12 @@
+import json
 import os
 import shlex
 import subprocess
 import shutil
 import tempfile
+import textwrap
 from pathlib import Path
+from .globals import default_bib_container
 
 from .utils import (
     detect_initrd_compression,
@@ -24,6 +27,7 @@ def run_cmd(
     return_pipe=False,
     stdin_pipe=None,
     stdout_pipe=None,
+    stderr_pipe=None,
     check=False,
 ):
     allowed_env_vars = [
@@ -59,7 +63,11 @@ def run_cmd(
             )
         else:
             r = subprocess.run(
-                cmdline, stdin=stdin_pipe, stdout=stdout_pipe, check=should_check
+                cmdline,
+                stdin=stdin_pipe,
+                stdout=stdout_pipe,
+                stderr=stderr_pipe,
+                check=should_check,
             )
     except subprocess.CalledProcessError as e:
         error_msg = (e.stderr or b"").decode("utf-8").rstrip() if e.stderr else ""
@@ -75,8 +83,11 @@ def run_podman_cmd(
     volumes,
     args,
     podman_args=None,
+    with_sudo=True,
+    cmd_prefix=None,
     stdout_pipe=None,
     check=False,
+    storage=None,
 ):
     cmd = [
         "podman",
@@ -86,6 +97,10 @@ def run_podman_cmd(
         "label=type:unconfined_t",
         "-ti",
     ]
+    if storage:
+        cmd += storage.args()
+    if cmd_prefix:
+        cmd = cmd_prefix + cmd
     if podman_args:
         cmd += podman_args
 
@@ -100,52 +115,139 @@ def run_podman_cmd(
         cmd,
         stdout_pipe=stdout_pipe,
         check=check,
+        with_sudo=with_sudo,
     )
+
+
+class ContainerStorage:
+    def __init__(self, storage=None, tmpdir="/tmp", user_container=False):
+        self.with_sudo = not user_container
+        state = ContainerStorageState.query(not user_container)
+        if storage:
+            self.storage = storage
+        else:
+            self.storage = state.graphroot
+        self.runroot = state.runroot
+        self.driver = state.driver
+        self.tmpdir = tmpdir
+        self.tmp_storage = os.path.join(tmpdir, "aib-containers-store")
+        self.tmp_runroot = os.path.join(tmpdir, "aib-containers-store-run")
+        self.config_path = None
+
+    @classmethod
+    def from_args(cls, args, tmpdir):
+        return ContainerStorage(args.container_storage, tmpdir, args.user_container)
+
+    def args(self):
+        return [f"--root={self.tmp_storage}", f"--imagestore={self.storage}"]
+
+    def podman(self):
+        return ["podman", f"--root={self.tmp_storage}", f"--imagestore={self.storage}"]
+
+    def skopeo(self, image_name):
+        return f"containers-storage:[{self.driver}@{self.storage}+{self.runroot}]{image_name}"
+
+    def get_config_path(self):
+        if self.config_path is None:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                dir=self.tmpdir,
+                prefix="storage-",
+                suffix=".conf",
+                delete=False,
+            ) as tmpfile:
+                config_content = textwrap.dedent(
+                    f"""\
+                    [storage]
+                    driver = "{self.driver}"
+                    graphroot = "{self.tmp_storage}"
+                    runroot = "{self.tmp_runroot}"
+
+                    [storage.options]
+                    additionalimagestores = [
+                    "{self.storage}"
+                    ]
+                    """
+                )
+                tmpfile.write(config_content)
+
+            self.config_path = tmpfile.name
+
+        return self.config_path
+
+    def __str__(self):
+        parts = []
+        parts.append(f"storage={self.storage}")
+        parts.append(f"tmp_storage={self.tmp_storage}")
+        parts.append(f"with_sudo={self.with_sudo}")
+        return f"ContainerStorage({', '.join(parts)})"
 
 
 class PodmanImageMount:
     """Context manager for mounting and unmounting podman images."""
 
-    def __init__(self, image, with_sudo=True, writable=False, commit_image=None):
+    def __init__(self, storage, image, writable=False, commit_image=None):
+        self.mount_count = 0
+        self.storage = storage
+        self.podman = storage.podman()
+        self.unshared = [] if storage.with_sudo else ["podman", "unshare"]
+        self.unshared_podman = self.unshared + self.podman
+        self.with_sudo = storage.with_sudo
         self.image = image
         self.mount_path = None
-        self.with_sudo = with_sudo
         self.writable = writable
         self.commit_image = commit_image
         self.container_id = None
         self.image_id = None
 
-    def __enter__(self):
+    def _mount(self):
         if self.writable:
-            # Create a container from the image
-            self.container_id = self.capture(["podman", "create", self.image]).strip()
-            # Mount the container
+            assert self.container_id is not None
             self.mount_path = self.capture(
-                ["podman", "mount", self.container_id]
+                self.unshared_podman + ["mount", self.container_id]
             ).strip()
         else:
             # Mount the image directly (read-only)
             self.mount_path = self.capture(
-                ["podman", "image", "mount", self.image]
+                self.unshared_podman + ["image", "mount", self.image]
             ).strip()
+        self.mount_count += 1
+
+    def __enter__(self):
+        if self.writable:
+            # Create a container from the image
+            self.container_id = self.capture(
+                self.podman + ["create", self.image]
+            ).strip()
+        self._mount()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.mount_path:
             if self.writable and self.container_id:
                 # Unmount the container
-                self.capture(["podman", "unmount", self.container_id])
+                while self.mount_count > 0:
+                    self.run(
+                        self.unshared_podman + ["unmount", self.container_id],
+                        # For some reason this sometimes fails, hide the warning
+                        stderr_pipe=subprocess.DEVNULL,
+                    )
+                    self.mount_count -= 1
                 # Commit the container to a new image if requested
                 if not exc_type:
-                    cmd = ["podman", "commit", self.container_id]
+                    cmd = self.podman + ["commit", self.container_id]
                     if self.commit_image:
                         cmd = cmd + [self.commit_image]
                     self.image_id = self.capture(cmd)
                 # Remove the container
-                self.capture(["podman", "rm", self.container_id])
+                self.capture(self.podman + ["rm", self.container_id])
             else:
                 # Unmount the image
-                self.capture(["podman", "image", "unmount", self.image])
+                while self.mount_count > 0:
+                    self.capture(
+                        self.unshared_podman + ["image", "unmount", self.image]
+                    )
+                    self.mount_count -= 1
 
     def _ensure_mounted(self):
         """Ensure the image is mounted, raise RuntimeError if not."""
@@ -157,36 +259,46 @@ class PodmanImageMount:
         given_path = Path(path)
         return str(Path(self.mount_path) / given_path.relative_to(given_path.anchor))
 
-    def run(self, cmd, stdin_pipe=None, stdout_pipe=None, check=False):
+    def run(
+        self, cmd, stdin_pipe=None, stdout_pipe=None, stderr_pipe=None, check=False
+    ):
         return run_cmd(
             cmd,
             False,
             with_sudo=self.with_sudo,
             stdin_pipe=stdin_pipe,
             stdout_pipe=stdout_pipe,
+            stderr_pipe=stderr_pipe,
             check=check,
         )
 
     def capture(self, cmd):
         return run_cmd(cmd, True, with_sudo=self.with_sudo)
 
+    def capture_unshared(self, cmd):
+        return run_cmd(self.unshared + cmd, True, with_sudo=self.with_sudo)
+
     def read_file(self, path):
         """Read a file from the mounted image."""
         self._ensure_mounted()
         file_path = self._get_full_path(path)
-        return self.capture(["cat", file_path])
+        return self.capture_unshared(["cat", file_path])
 
     def has_file(self, path):
         """Check if a file exists at the given path in the mounted image."""
         self._ensure_mounted()
         file_path = self._get_full_path(path)
-        return self.run(["test", "-f", file_path]) == 0
+        return self.run(self.unshared + ["test", "-f", file_path]) == 0
 
     def open_file(self, path):
         """Open a file from the mounted image and return a byte stream."""
         self._ensure_mounted()
         file_path = self._get_full_path(path)
-        return run_cmd(["cat", file_path], with_sudo=self.with_sudo, return_pipe=True)
+        return run_cmd(
+            self.unshared + ["cat", file_path],
+            with_sudo=self.with_sudo,
+            return_pipe=True,
+        )
 
     def copy_out_file(self, source_path, dest_path):
         """Copy a file from the mounted image to a destination path on disk."""
@@ -200,7 +312,7 @@ class PodmanImageMount:
         """List files in a directory within the mounted image."""
         self._ensure_mounted()
         dir_path = self._get_full_path(path)
-        output = self.capture(["ls", "-1", dir_path])
+        output = self.capture_unshared(["ls", "-1", dir_path])
         return output.split("\n") if output.strip() else []
 
     def get_kernel_subdir(self):
@@ -232,7 +344,7 @@ class PodmanImageMount:
 
         with open(source_path, "rb") as source_file:
             self.run(
-                ["tee", dest_file_path],
+                self.unshared + ["tee", dest_file_path],
                 stdin_pipe=source_file,
                 stdout_pipe=subprocess.DEVNULL,
                 check=True,
@@ -246,17 +358,25 @@ class PodmanImageMount:
         dest_file_path = self._get_full_path(dest_path)
 
         self.run(
-            ["ln", "-f", source_file_path, dest_file_path],
+            self.unshared + ["ln", "-f", source_file_path, dest_file_path],
             check=True,
         )
 
 
-def podman_image_exists(image):
-    return run_cmd(["podman", "image", "exists", image]) == 0
+def podman_image_exists(storage, image):
+    return (
+        run_cmd(
+            storage.podman() + ["image", "exists", image], with_sudo=storage.with_sudo
+        )
+        == 0
+    )
 
 
-def podman_image_rm(image):
-    return run_cmd(["podman", "image", "rm", image]) == 0
+def podman_image_rm(storage, image):
+    return (
+        run_cmd(storage.podman() + ["image", "rm", image], with_sudo=storage.with_sudo)
+        == 0
+    )
 
 
 def parse_shvars(content):
@@ -283,14 +403,16 @@ class TemporaryContainer:
         # Container is automatically removed here
     """
 
-    def __init__(self, name, cleanup=True):
+    def __init__(self, storage, name, cleanup=True):
         """Initialize temporary container context manager.
 
         Args:
+            storage: Where the container image is stored
             name: The container image name/tag to track
             cleanup: If True, remove the container on exit. If False, leave it.
                      Defaults to True.
         """
+        self.storage = storage
         self.name = name
         self.cleanup_enabled = cleanup
         self._removed = False
@@ -310,9 +432,9 @@ class TemporaryContainer:
             return
 
         try:
-            if podman_image_exists(self.name):
+            if podman_image_exists(self.storage, self.name):
                 log.debug("Removing temporary container: %s", self.name)
-                podman_image_rm(self.name)
+                podman_image_rm(self.storage, self.name)
             self._removed = True
         except Exception as e:
             log.warning("Failed to remove temporary container %s: %s", self.name, e)
@@ -330,12 +452,12 @@ class ContainerInfo:
         return f"{self.name}({self.build_info})"
 
 
-def podman_image_info(image):
-    if not podman_image_exists(image):
+def podman_image_info(storage, image):
+    if not podman_image_exists(storage, image):
         return None
     build_info = None
     try:
-        with PodmanImageMount(image) as mount:
+        with PodmanImageMount(storage, image) as mount:
             content = mount.read_file("/etc/build-info")
             build_info = parse_shvars(content)
     except (PodmanCommandFailed, RuntimeError, ValueError) as e:
@@ -345,13 +467,25 @@ def podman_image_info(image):
 
 def podman_run_bootc_image_builder(
     bib_container,
+    storage,
     build_container,
     bootc_container,
     build_type,
     dest_path,
     in_vm,
+    user_container,
     verbose,
 ):
+    state = ContainerState.query()
+
+    # If we're in an a-i-b container and bc-i-b exists there, lets not launch nested containers.
+    if (
+        state.in_container
+        and bib_container == default_bib_container
+        and os.path.exists("/usr/bin/bootc-image-builder")
+    ):
+        bib_container = "/usr/bin/bootc-image-builder"
+
     if build_type == "raw":
         src_path = "image/disk.raw"
     elif build_type == "qcow2":
@@ -372,6 +506,7 @@ def podman_run_bootc_image_builder(
             # To easily test non-containerized bc-i-b builds, parse
             # absolute paths as binary name:
             use_container = not bib_container.startswith("/")
+            output_need_sudo = True
 
             args = [
                 "--build-container",
@@ -385,18 +520,25 @@ def podman_run_bootc_image_builder(
             if in_vm:
                 args.append("--in-vm")
             if use_container:
+                output_need_sudo = not user_container
                 volumes = {
                     "/output": tmpdir,
-                    "/var/lib/containers/storage": "/var/lib/containers/storage",
+                    "/var/lib/containers/storage": storage.storage,
                 }
                 res = run_podman_cmd(
                     bib_container,
                     volumes,
                     args,
                     podman_args=["--privileged", "--network=none"],
+                    with_sudo=not user_container,
                     stdout_pipe=None if verbose else subprocess.DEVNULL,
                 )
             else:
+                storedir = os.path.join(tmpdir, "store")
+                os.mkdir(storedir)
+                rpmmddir = os.path.join(tmpdir, "rpmmd")
+                os.mkdir(rpmmddir)
+                args += ["--store", storedir, "--rpmmd", rpmmddir]
                 res = run_cmd(
                     [bib_container, "--output", tmpdir] + args,
                     stdout_pipe=None if verbose else subprocess.DEVNULL,
@@ -405,16 +547,22 @@ def podman_run_bootc_image_builder(
             if res == 0:
                 src = os.path.join(tmpdir, src_path)
                 log.debug("Copying: %s to %s", src, dest_path)
-                run_cmd(["cp", src, dest_path])
+                run_cmd(["cp", src, dest_path], with_sudo=output_need_sudo)
             return res
 
         finally:
             # Need sudo to have permissions to clean up the tmpdir
-            run_cmd(["rm", "-rf", tmpdir])
+            run_cmd(["rm", "-rf", tmpdir], with_sudo=output_need_sudo)
 
 
 def podman_bootc_inject_pubkey(
-    src_container, dest_container, pub_key, build_container, verbose
+    storage,
+    src_container,
+    dest_container,
+    pub_key,
+    build_container,
+    user_container,
+    verbose,
 ):
     with tempfile.TemporaryDirectory(prefix="initrd-append-") as td:
         td = Path(td)
@@ -422,7 +570,7 @@ def podman_bootc_inject_pubkey(
         # Extract the initrd
         extracted_initrd = td / "initrd"
 
-        with PodmanImageMount(src_container) as mount:
+        with PodmanImageMount(storage, src_container) as mount:
             # Collect info on src_container
             kdir = mount.get_kernel_subdir()
             src_is_aboot = mount.has_file(f"/usr/lib/modules/{kdir}/aboot.img")
@@ -446,7 +594,9 @@ def podman_bootc_inject_pubkey(
                     "-d",
                     "/sysroot/initrd",
                 ],
+                storage=storage,
                 check=True,
+                with_sudo=not user_container,
                 stdout_pipe=None if verbose else subprocess.DEVNULL,
             )
 
@@ -480,7 +630,7 @@ def podman_bootc_inject_pubkey(
                 shutil.copyfileobj(f_in, f_out)
 
         with PodmanImageMount(
-            src_container, writable=True, commit_image=dest_container
+            storage, src_container, writable=True, commit_image=dest_container
         ) as mount:
             # Copy in the new pubkey and modified initrd
             mount.copy_in_file(pub_key, "etc/ostree/initramfs-root-binding.key")
@@ -499,8 +649,14 @@ def podman_bootc_inject_pubkey(
                         kdir,
                     ],
                     check=True,
+                    cmd_prefix=mount.unshared,
+                    with_sudo=not user_container,
+                    storage=storage,
                     stdout_pipe=None if verbose else subprocess.DEVNULL,
                 )
+
+            # For whatever reason, the above podman run sometimes unmounts the mount so we remount
+            mount._mount()
 
             # Hardlink updated initramfs in /usr/lib/ostree-boot to the copy
             # in /usr/lib/modules.
@@ -511,3 +667,70 @@ def podman_bootc_inject_pubkey(
             )
 
         return mount.image_id
+
+
+class ContainerStorageState:
+    _cache_nosudo = None
+    _cache_sudo = None
+
+    def __init__(self, with_sudo):
+        self.with_sudo = with_sudo
+        info_json = run_cmd(
+            ["podman", "info", "--format", "json"],
+            capture_output=True,
+            with_sudo=with_sudo,
+        )
+        info = json.loads(info_json)
+        self.graphroot = info["store"]["graphRoot"]
+        self.runroot = info["store"]["runRoot"]
+        self.driver = info["store"]["graphDriverName"]
+
+    def __str__(self):
+        state_parts = [
+            f"with_sudo={self.with_sudo}",
+            f"graphroot={self.graphroot}",
+            f"runroot={self.runroot}",
+            f"driver={self.driver}",
+        ]
+        return f"ContainerStorageState({', '.join(state_parts)})"
+
+    @classmethod
+    def query(cls, with_sudo):
+        if with_sudo:
+            if not cls._cache_sudo:
+                cls._cache_sudo = cls(with_sudo)
+            return cls._cache_sudo
+        else:
+            if not cls._cache_nosudo:
+                cls._cache_nosudo = cls(with_sudo)
+            return cls._cache_nosudo
+
+
+class ContainerState:
+    _cache = None
+
+    def __init__(self):
+        self.in_container = False
+        self.in_rootless_container = False
+
+        p = Path("/run/.containerenv")
+        if p.exists():
+            self.in_container = True
+            with p.open("r") as f:
+                for line in f.read().splitlines():
+                    if line == "rootless=1":
+                        self.in_rootless_container = True
+                        break
+
+    def __str__(self):
+        state_parts = [
+            f"in_container={self.in_container}",
+            f"in_rootless_container={self.in_rootless_container}",
+        ]
+        return f"ContainerState({', '.join(state_parts)})"
+
+    @classmethod
+    def query(cls):
+        if not cls._cache:
+            cls._cache = cls()
+        return cls._cache
