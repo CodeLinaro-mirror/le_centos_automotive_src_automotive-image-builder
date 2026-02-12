@@ -155,18 +155,6 @@ pipelines:
           product:
             name: /var/lib/selinux
 
-      - type: org.osbuild.lorax-script
-        options:
-          path: auto/move
-          product:
-            name: /var/lib/rpm /usr/share/rpm
-
-      - type: org.osbuild.lorax-script
-        options:
-          path: auto/symlink
-          product:
-            name: ../../usr/share/rpm /var/lib/rpm
-
       - type: org.osbuild.locale
         options:
           language:
