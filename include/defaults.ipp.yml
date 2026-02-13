@@ -269,8 +269,8 @@ mpp-vars:
   container_cmd:
     - "/usr/bin/bash"
   container_entrypoint: []
-  containers_extra_store: /usr/share/containers/storage
-  qm_containers_extra_store: /usr/share/containers/storage
+  containers_extra_store: /usr/lib/containers/storage
+  qm_containers_extra_store: /usr/lib/containers/storage
   containers_transient_store: true
   containers_read_only: true
   tmp_is_tmpfs: true
