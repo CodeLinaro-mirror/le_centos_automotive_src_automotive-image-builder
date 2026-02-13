@@ -1,0 +1,7 @@
+name: container_image
+content:
+  container_images:
+    - source: localhost/auto-apps
+      tag: latest
+      name: localhost/auto-apps
+      containers-transport: containers-storage
