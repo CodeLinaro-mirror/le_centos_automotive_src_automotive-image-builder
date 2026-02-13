@@ -456,6 +456,8 @@ mpp-vars:
     mpp-if: use_qm
     then: "qm"
     else: "empty"
+  enable_oom_protection:
+    mpp-eval: locals().get("enable_oom_protection", use_qm)
   image_enabled_services:
     mpp-join:
       - mpp-eval: image_enabled_services
