@@ -87,7 +87,7 @@ if [ "$(uname -o)" = "Darwin" ] || [ "$(cat /sys/devices/virtual/dmi/id/product_
   SHARE_PODMAN_MACHINE_ROOT="-v /root:/root"
   BUILDDIR=/root/aib-work
 fi
-AIB_LOCAL_CONTAINER_STORAGE=${AIB_LOCAL_CONTAINER_STORAGE:=$(sudo -u "${SUDO_USER:=root}" bash -c "$PODMAN system info -f json" | jq -r .store.graphRoot)}
+AIB_LOCAL_CONTAINER_STORAGE=${AIB_LOCAL_CONTAINER_STORAGE:=$($PODMAN system info -f json | jq -r .store.graphRoot)}
 
 # For SELinux to work correctly the osbuild binary needs extra privileges and files need to be on suitable filesystem
 # OSBUILD_BUILDDIR with podman machine is on local non-overlayfs filesystem /root, with native podman it needs to be on host's filesystem (shared volume /host)
