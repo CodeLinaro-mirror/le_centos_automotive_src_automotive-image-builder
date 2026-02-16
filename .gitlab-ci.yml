@@ -249,13 +249,11 @@ trigger-pipeline:
       changes:
         - "**/*.py"
         - "**/*.yml"
+        - "bin/*"
         - automotive-image-builder
         - mpp/aib-osbuild-mpp
         - files/*
-        - tests/*
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: never
-    - !reference [.trigger-template, rules]
+    - when: never
 
 .prepare-aws-setup: &prepare-aws-setup
   - echo -e "\e[0Ksection_start:$(date +%s):aws_setup[collapsed=true]\r\e[0KPreparing AWS"
