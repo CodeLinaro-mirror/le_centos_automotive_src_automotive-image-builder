@@ -1,0 +1,14 @@
+summary: Verify that --container-storage works
+description: |
+    This builds a bootc image that embeds an image from the containers-storage
+    transport. We call this with --container-storage, supplying a custom container
+    storage directory. We verify that both reading the image to be embedded and
+    the output bootc container end up using the custom storage.
+
+    Expected results:
+      - PASS: 'Container build with custom container store worked'
+
+    Results location:
+      output.txt
+duration: 60m
+id: 778ec5de-1892-4a1a-94e8-040983d7b74f
