@@ -139,10 +139,14 @@ class ContainerStorage:
         return ContainerStorage(args.container_storage, tmpdir, args.user_container)
 
     def args(self):
-        return [f"--root={self.tmp_storage}", f"--imagestore={self.storage}"]
+        return [
+            f"--root={self.tmp_storage}",
+            f"--runroot={self.tmp_runroot}",
+            f"--imagestore={self.storage}",
+        ]
 
     def podman(self):
-        return ["podman", f"--root={self.tmp_storage}", f"--imagestore={self.storage}"]
+        return ["podman"] + self.args()
 
     def skopeo(self, image_name):
         return f"containers-storage:[{self.driver}@{self.storage}+{self.runroot}]{image_name}"
