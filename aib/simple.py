@@ -588,6 +588,7 @@ class ManifestLoader:
                 if "size" in part:
                     part_size = parse_size(part["size"])
                     self.set(k + "part_size", int(part_size / 512))
+        self.set_from("enable_oom_protection", image, "enable_oom_protection")
         self.set_from("hostname", image, "hostname")
         self.set_from("ostree_ref", image, "ostree_ref")
         self.set_from("use_composefs_signed", image, "sealed")
