@@ -9,7 +9,7 @@ content:
     - dosfstools # mkfs.fat needed for bc-i-b
     - e2fsprogs # mkfs.ext4 needed for bc-i-b
     - bootupd # needed for bootc
-    - shim # needed for bootupd
+    # TODO-BOOTC: We need this, or bootc-image-builder breaks on "Installing static GRUB configs"
     - grub2
     - aboot-deploy # Needed if aboot is enabled
     - aboot-update
