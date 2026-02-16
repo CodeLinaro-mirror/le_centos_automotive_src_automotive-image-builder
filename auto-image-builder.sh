@@ -75,11 +75,6 @@ for i in "$@"; do
     fi
 done
 
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root"
-  exit 1
-fi
-
 SHARE_PODMAN_MACHINE_ROOT=
 BUILDDIR=_build
 # running on Mac OS X bare metal or inside podman machine
