@@ -139,10 +139,14 @@ class ContainerStorage:
         return ContainerStorage(args.container_storage, tmpdir, args.user_container)
 
     def args(self):
-        return [f"--root={self.tmp_storage}", f"--imagestore={self.storage}"]
+        return [
+            f"--root={self.tmp_storage}",
+            f"--runroot={self.tmp_runroot}",
+            f"--imagestore={self.storage}",
+        ]
 
     def podman(self):
-        return ["podman", f"--root={self.tmp_storage}", f"--imagestore={self.storage}"]
+        return ["podman"] + self.args()
 
     def skopeo(self, image_name):
         return f"containers-storage:[{self.driver}@{self.storage}+{self.runroot}]{image_name}"
@@ -187,7 +191,6 @@ class PodmanImageMount:
     """Context manager for mounting and unmounting podman images."""
 
     def __init__(self, storage, image, writable=False, commit_image=None):
-        self.mount_count = 0
         self.storage = storage
         self.podman = storage.podman()
         self.unshared = [] if storage.with_sudo else ["podman", "unshare"]
@@ -200,9 +203,13 @@ class PodmanImageMount:
         self.container_id = None
         self.image_id = None
 
-    def _mount(self):
+    def __enter__(self):
         if self.writable:
-            assert self.container_id is not None
+            # Create a container from the image
+            self.container_id = self.capture(
+                self.podman + ["create", self.image]
+            ).strip()
+            # Mount the container
             self.mount_path = self.capture(
                 self.unshared_podman + ["mount", self.container_id]
             ).strip()
@@ -211,28 +218,17 @@ class PodmanImageMount:
             self.mount_path = self.capture(
                 self.unshared_podman + ["image", "mount", self.image]
             ).strip()
-        self.mount_count += 1
-
-    def __enter__(self):
-        if self.writable:
-            # Create a container from the image
-            self.container_id = self.capture(
-                self.podman + ["create", self.image]
-            ).strip()
-        self._mount()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.mount_path:
             if self.writable and self.container_id:
                 # Unmount the container
-                while self.mount_count > 0:
-                    self.run(
-                        self.unshared_podman + ["unmount", self.container_id],
-                        # For some reason this sometimes fails, hide the warning
-                        stderr_pipe=subprocess.DEVNULL,
-                    )
-                    self.mount_count -= 1
+                self.run(
+                    self.unshared_podman + ["unmount", self.container_id],
+                    # For some reason this sometimes fails, hide the warning
+                    stderr_pipe=subprocess.DEVNULL,
+                )
                 # Commit the container to a new image if requested
                 if not exc_type:
                     cmd = self.podman + ["commit", self.container_id]
@@ -243,11 +239,7 @@ class PodmanImageMount:
                 self.capture(self.podman + ["rm", self.container_id])
             else:
                 # Unmount the image
-                while self.mount_count > 0:
-                    self.capture(
-                        self.unshared_podman + ["image", "unmount", self.image]
-                    )
-                    self.mount_count -= 1
+                self.capture(self.unshared_podman + ["image", "unmount", self.image])
 
     def _ensure_mounted(self):
         """Ensure the image is mounted, raise RuntimeError if not."""
@@ -654,9 +646,6 @@ def podman_bootc_inject_pubkey(
                     storage=storage,
                     stdout_pipe=None if verbose else subprocess.DEVNULL,
                 )
-
-            # For whatever reason, the above podman run sometimes unmounts the mount so we remount
-            mount._mount()
 
             # Hardlink updated initramfs in /usr/lib/ostree-boot to the copy
             # in /usr/lib/modules.
