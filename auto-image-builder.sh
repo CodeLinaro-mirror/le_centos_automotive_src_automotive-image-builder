@@ -91,7 +91,7 @@ AIB_LOCAL_CONTAINER_STORAGE=${AIB_LOCAL_CONTAINER_STORAGE:=$(sudo -u "${SUDO_USE
 
 # For SELinux to work correctly the osbuild binary needs extra privileges and files need to be on suitable filesystem
 # OSBUILD_BUILDDIR with podman machine is on local non-overlayfs filesystem /root, with native podman it needs to be on host's filesystem (shared volume /host)
-EXEC="cd /host; mkdir -p $BUILDDIR; cp -f /usr/bin/osbuild $BUILDDIR/osbuild; chcon system_u:object_r:install_exec_t:s0 $BUILDDIR/osbuild; export PATH=$BUILDDIR:\$PATH; export OSBUILD_BUILDDIR=$BUILDDIR; $AIB"
+EXEC="mkdir -p $BUILDDIR; cp -f /usr/bin/osbuild $BUILDDIR/osbuild; chcon system_u:object_r:install_exec_t:s0 $BUILDDIR/osbuild; export PATH=$BUILDDIR:\$PATH; export OSBUILD_BUILDDIR=$BUILDDIR; $AIB"
 
 # shellcheck disable=SC2086
-$PODMAN run -v /dev:/dev -v "$PWD":/host -v $AIB_LOCAL_CONTAINER_STORAGE:/var/lib/containers/storage $SHARE_PODMAN_MACHINE_ROOT $SHARE_AIB_DIR --rm --privileged $PULL_ARG --security-opt label=type:unconfined_t --read-only=true $AIB_PODMAN_OPTIONS ${IMAGE_NAME:-$IMAGE_NAME_DEFAULT} /bin/bash -c "$EXEC"
+$PODMAN run -v /dev:/dev -v "$PWD":/host --workdir /host -v $AIB_LOCAL_CONTAINER_STORAGE:/var/lib/containers/storage $SHARE_PODMAN_MACHINE_ROOT $SHARE_AIB_DIR --rm --privileged $PULL_ARG --security-opt label=type:unconfined_t --read-only=true $AIB_PODMAN_OPTIONS ${IMAGE_NAME:-$IMAGE_NAME_DEFAULT} /bin/bash -c "$EXEC"
