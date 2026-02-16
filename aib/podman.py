@@ -121,14 +121,27 @@ def run_podman_cmd(
 
 class ContainerStorage:
     def __init__(self, storage=None, tmpdir="/tmp", user_container=False):
-        self.with_sudo = not user_container
-        state = ContainerStorageState.query(not user_container)
+        state = ContainerState.query()
+
+        if state.in_rootless_container:
+            # Typically we in a rootless container the user store is
+            # mapped at /var/lib/containers/storage and we have to explicitly
+            # name it or podman fails with an error of it being in the wrong place.
+            uid = os.getuid()
+            self.with_sudo = False
+            self.storage = "/var/lib/containers/storage"
+            self.runroot = f"/run/user/{uid}/containers"
+            self.driver = "overlay"
+        else:
+            self.with_sudo = not user_container
+            state = ContainerStorageState.query(self.with_sudo)
+            self.storage = state.graphroot
+            self.runroot = state.runroot
+            self.driver = state.driver
+
         if storage:
             self.storage = storage
-        else:
-            self.storage = state.graphroot
-        self.runroot = state.runroot
-        self.driver = state.driver
+
         self.tmpdir = tmpdir
         self.tmp_storage = os.path.join(tmpdir, "aib-containers-store")
         self.tmp_runroot = os.path.join(tmpdir, "aib-containers-store-run")
@@ -193,7 +206,12 @@ class PodmanImageMount:
     def __init__(self, storage, image, writable=False, commit_image=None):
         self.storage = storage
         self.podman = storage.podman()
-        self.unshared = [] if storage.with_sudo else ["podman", "unshare"]
+        state = ContainerState.query()
+        self.unshared = (
+            []
+            if storage.with_sudo or state.in_rootless_container
+            else ["podman", "unshare"]
+        )
         self.unshared_podman = self.unshared + self.podman
         self.with_sudo = storage.with_sudo
         self.image = image
