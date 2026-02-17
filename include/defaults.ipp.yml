@@ -337,6 +337,8 @@ mpp-vars:
   distro_devel_repos: []
   distro_debug_repos: []
   distro_build_rpms: []
+  distro_root_dir: ""
+  distro_enabled_repo_ids: []
 
   # These are overridden by the target file
   target_repos: []
