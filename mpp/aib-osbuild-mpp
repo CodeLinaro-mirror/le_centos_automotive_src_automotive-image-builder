@@ -1744,15 +1744,11 @@ class ManifestFileV2(ManifestFile):
         refs = element_enter(inputs_images, "references", {})
         manifest_lists = []
 
-        default_containers_transport = None
-        if inputs_images_type == "org.osbuild.containers-storage":
-            default_containers_transport = 'containers-storage'
-
         for image in element_enter(mpp, "images", []):
             source = image["source"]
             digest = image.get("digest", None)
             tag = image.get("tag", None)
-            transport = image.get("containers-transport", default_containers_transport)
+            transport = image.get("containers-transport", None)
             index = image.get("index", False)
             # If not specified by the user the default "name" we use for
             # the installed container will be source:tag.
@@ -1772,21 +1768,16 @@ class ManifestFileV2(ManifestFile):
 
             image_id = resolved_manifest.get_config_digest()
 
-            if transport == 'containers-storage':
-                container_image_source = element_enter(self.sources, "org.osbuild.containers-storage", {})
-                items = element_enter(container_image_source, "items", {})
-                items[image_id] = {}
-            else:
-                container_image_source = element_enter(self.sources, "org.osbuild.skopeo", {})
-                items = element_enter(container_image_source, "items", {})
-                items[image_id] = {
-                    "image": {
-                        "name": source,
-                        "digest": resolved_manifest.digest,
-                    }
+            container_image_source = element_enter(self.sources, "org.osbuild.skopeo", {})
+            items = element_enter(container_image_source, "items", {})
+            items[image_id] = {
+                "image": {
+                    "name": source,
+                    "digest": resolved_manifest.digest,
                 }
-                if transport:
-                    items[image_id]["image"]["containers-transport"] = transport
+            }
+            if transport:
+                items[image_id]["image"]["containers-transport"] = transport
 
             refs[image_id] = {
                 "name": name

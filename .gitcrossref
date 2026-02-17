@@ -15,7 +15,7 @@ files:
       transform:
         - "s/osbuild\\.util/aibosbuild.util/g"
 
-    - source: "tools/osbuild-mpp"
-      destination: "mpp/aib-osbuild-mpp"
-      transform:
-        - "s/osbuild\\.util/aibosbuild.util/g"
+    #- source: "tools/osbuild-mpp"
+    #  destination: "mpp/aib-osbuild-mpp"
+    #  transform:
+    #    - "s/osbuild\\.util/aibosbuild.util/g"
