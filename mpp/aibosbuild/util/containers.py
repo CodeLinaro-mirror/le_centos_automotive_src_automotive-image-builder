@@ -1,10 +1,17 @@
 import json
 import os
+import random
+import string
 import subprocess
 import tempfile
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 
 from aibosbuild.util.mnt import MountGuard, MountPermissions
+
+# use `/run/osbuild/containers/storage` for the host's containers-storage bind mount
+HOST_CONTAINERS_STORAGE = os.path.join(os.sep, "run", "osbuild", "containers", "storage")
+# use `/run/osbuild/containers/storage2` for and empty containers-storage
+HOST_CONTAINERS_STORAGE2 = os.path.join(os.sep, "run", "osbuild", "containers", "storage2")
 
 
 def is_manifest_list(data):
@@ -116,10 +123,8 @@ def containers_storage_source(image, image_filepath, container_format):
     storage_conf = image["data"]["storage"]
     driver = storage_conf.get("driver", "overlay")
 
-    # use `/run/osbuild/containers/storage` for the containers-storage bind mount
-    # since this ostree-compatible and the stage that uses this will be run
-    # inside a ostree-based build-root in `bootc-image-builder`
-    storage_path = os.path.join(os.sep, "run", "osbuild", "containers", "storage")
+    storage_path = HOST_CONTAINERS_STORAGE
+    storage_path_empty = HOST_CONTAINERS_STORAGE2
     os.makedirs(storage_path, exist_ok=True)
 
     with MountGuard() as mg:
@@ -132,8 +137,25 @@ def containers_storage_source(image, image_filepath, container_format):
         mg.mount(image_filepath, storage_path, remount=True, permissions=MountPermissions.READ_WRITE)
 
         image_id = image["checksum"].split(":")[1]
-        image_source = f"{container_format}:[{driver}@{storage_path}+/run/containers/storage]{image_id}"
-        yield image_source
+
+        # Only the overlayfs backend supoorts additional image store
+        use_additional_image_store = driver == "overlay"
+
+        if use_additional_image_store:
+            # If additional image store is available, then we use a setup where the base graphroot is an
+            # empty storage directory, and then we access the host via a separate directory (--imagestore
+            # or additional image store). This allows us to support accessing the host storage via virtiofsd
+            # mounts. Virtiofs mounts don't supoprt being used as an overlayfs upper dir, but when we set it
+            # up like this, the upper directory ends up being in the empty graphroot which is on tmpfs, so
+            # things work.
+            podman_opts = [f"--root={storage_path_empty}", f"--imagestore={storage_path}"]
+            image_source = f"{container_format}:[{driver}@{storage_path_empty}+/run/containers/storage:additionalimagestore={storage_path}]{image_id}"
+        else:
+            # On vfs backends, we use the traditional setup
+            podman_opts = [f"--imagestore={storage_path}"]
+            image_source = f"{container_format}:[{driver}@{storage_path}+/run/containers/storage]{image_id}"
+
+        yield image_source, podman_opts
 
         if driver == "overlay":
             # NOTE: the overlay sub-directory isn't always released,
@@ -159,7 +181,7 @@ def dir_oci_archive_source(image, image_filepath, container_format):
             os.symlink(image_filepath, tmp_source)
 
         image_source = f"{container_format}:{tmp_source}"
-        yield image_source
+        yield image_source, None
 
 
 @contextmanager
@@ -182,5 +204,49 @@ def container_source(image):
     # thozza: As far as I can tell, the problematic use case is when the ctx manager is used inside a generator.
     # However, this is not the case here. The ctx manager is used inside another ctx manager with the expectation
     # that the inner ctx manager won't be cleaned up until the execution returns to this ctx manager.
-    with container_source_fn(image, image_filepath, container_format) as image_source:
-        yield image_name, image_source
+    with container_source_fn(image, image_filepath, container_format) as (image_source, podman_opts):
+        yield (image_name, image_source, podman_opts)
+
+
+@contextmanager
+def container_mount(image):
+    # Helper function for doing the `podman image mount`
+    @contextmanager
+    def _mount_container(img, podman_opts):
+        cmd = ["podman"] + (podman_opts or [])
+
+        result = subprocess.run(cmd + ["image", "mount", img], encoding="utf-8",
+                                check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            code = result.returncode
+            msg = result.stderr.strip()
+            raise RuntimeError(f"Failed to mount image ({code}): {msg}")
+        try:
+            yield result.stdout.strip()
+        finally:
+            subprocess.run(cmd + ["image", "umount", img], check=True)
+
+    with container_source(image) as (_, source, podman_opts):
+        with ExitStack() as cm:
+            img = ""
+            if image["data"]["format"] == 'containers-storage':
+                # In the case where we are container storage we don't need to
+                # skopeo copy. We already have access to a mounted container storage
+                # that has the image ready to use.
+                image_id = image["checksum"].split(":")[1]
+                img = image_id
+            else:
+                # We cannot use a tmpdir as storage here because of
+                # https://github.com/containers/storage/issues/1779 so instead
+                # just pick a random suffix. This runs inside bwrap which gives a
+                # tmp /var so it does not really matter much.
+                tmp_image_name = "tmp-container-mount-" + "".join(random.choices(string.digits, k=14))
+                cm.callback(subprocess.run, ["podman", "rmi", tmp_image_name], check=True)
+                # skopeo needs /var/tmp but the bwrap env is minimal and may not have it
+                os.makedirs("/var/tmp", mode=0o1777, exist_ok=True)
+                cmd = ["skopeo", "copy", source, f"containers-storage:{tmp_image_name}"]
+                subprocess.run(cmd, check=True)
+                img = tmp_image_name
+
+            with _mount_container(img, podman_opts) as container_mountpoint:
+                yield container_mountpoint

@@ -3,7 +3,7 @@ version: '2'
 mpp-vars:
   distro_name: RHIVOS
   distro_version: 2
-  # distro_baseurl needs to be provided via parameters to the a-i-b
+  # distro_baseurl can be provided via parameters to a-i-b, otherwise RHSM is used
   distro_baseurl: ""
   distro_baseurl_repo: $distro_baseurl/RHIVOS/$arch/os/
   distro_chroot: centos-stream-10-$arch
@@ -11,15 +11,37 @@ mpp-vars:
   release_rpm: redhat-release
   selinux_policy: automotive
   rpmdb_in_usr: true
+  distro_root_dir:
+    mpp-if: distro_baseurl
+    then: ""
+    else: "/"
+  distro_enabled_repo_ids:
+    mpp-if: distro_baseurl
+    then: []
+    else:
+      - rhivos-2-for-$arch-rpms
+      - rhivos-2-for-$arch-debug-rpms
   distro_repos:
-    - id: rhivos
-      baseurl: $distro_baseurl_repo
-      priority: 10
+    - mpp-if: distro_baseurl
+      then:
+        id: rhivos
+        baseurl: $distro_baseurl_repo
+        priority: 10
+      else:
+        id: rhivos-2-for-$arch-rpms
+        system-repo: true
+        rhsm: true
   distro_devel_repos: []
   distro_debug_repos:
-    - id: rhivos-debug
-      baseurl: $distro_baseurl/RHIVOS/$arch/debug/tree/
-      priority: 10
+    - mpp-if: distro_baseurl
+      then:
+        id: rhivos-debug
+        baseurl: $distro_baseurl/RHIVOS/$arch/debug/tree/
+        priority: 10
+      else:
+        id: rhivos-2-for-$arch-debug-rpms
+        system-repo: true
+        rhsm: true
   distro_module_id: platform:el10
   distro_gpg_keys:
     mpp-format-string: |
