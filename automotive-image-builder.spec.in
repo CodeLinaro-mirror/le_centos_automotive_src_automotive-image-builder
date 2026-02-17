@@ -22,6 +22,7 @@ Requires:       python3-pyyaml
 Requires:       lz4
 Requires:       gzip
 Requires:       cpio
+Requires:       zstd
 Requires:       openssl
 Recommends:     python3-rich
 
