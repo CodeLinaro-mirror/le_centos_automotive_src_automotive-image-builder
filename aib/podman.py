@@ -471,12 +471,10 @@ def podman_run_bootc_image_builder(
     state = ContainerState.query()
 
     # If we're in an a-i-b container and bc-i-b exists there, lets not launch nested containers.
-    if (
-        state.in_container
-        and bib_container == default_bib_container
-        and os.path.exists("/usr/bin/bootc-image-builder")
-    ):
-        bib_container = "/usr/bin/bootc-image-builder"
+    if state.in_container and bib_container == default_bib_container:
+        bcib_path = shutil.which("bootc-image-builder")
+        if bcib_path:
+            bib_container = bcib_path
 
     if build_type == "raw":
         src_path = "image/disk.raw"
