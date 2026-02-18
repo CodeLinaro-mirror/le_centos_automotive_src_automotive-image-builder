@@ -3,6 +3,13 @@
 """Argument parsing structures and utilities for automotive-image-builder."""
 
 import argparse
+
+try:
+    import argcomplete
+
+    HAS_ARGCOMPLETE = True
+except ImportError:
+    HAS_ARGCOMPLETE = False
 import collections
 import os
 import platform
@@ -475,6 +482,18 @@ def parse_args(args, prog="aib"):
                 add_args(
                     subparser, arg_groups, SHAREABLE_ARGS[key], suppress_default=True
                 )
+
+    # Handle argcomplete when basedir was inserted into sys.argv[1]
+    # If we have the original argv saved, use it for argcomplete
+    if HAS_ARGCOMPLETE:
+        if hasattr(sys, "_orig_argv"):
+            # Temporarily restore original argv for argcomplete
+            saved_argv = sys.argv
+            sys.argv = sys._orig_argv
+            argcomplete.autocomplete(parser)
+            sys.argv = saved_argv
+        else:
+            argcomplete.autocomplete(parser)
 
     res = parser.parse_args(args)
 

@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
 
 import argparse
+
+try:
+    import argcomplete
+
+    HAS_ARGCOMPLETE = True
+except ImportError:
+    HAS_ARGCOMPLETE = False
 import atexit
 import binascii
 import http.server
@@ -615,6 +623,8 @@ def main():
         help="extra qemu arguments",
     )
 
+    if HAS_ARGCOMPLETE:
+        argcomplete.autocomplete(parser)
     args = parser.parse_args(sys.argv[1:])
 
     global is_verbose
