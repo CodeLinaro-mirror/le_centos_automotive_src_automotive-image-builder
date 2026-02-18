@@ -23,6 +23,8 @@ Requires:       lz4
 Requires:       gzip
 Requires:       cpio
 Requires:       zstd
+Requires:       qemu-kvm-core
+Requires:       virtiofsd
 Requires:       openssl
 Recommends:     python3-rich
 
