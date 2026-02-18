@@ -4,6 +4,7 @@ mpp-vars:
   target_supported_arches:
     - aarch64
   use_boot: aboot
+  qm_varpart_label: system_b
   skip_root_on_cmdline: true # This uses ABL bootloader which appends root= cmdline
   use_efi_runtime: false
   use_autoinit: true
