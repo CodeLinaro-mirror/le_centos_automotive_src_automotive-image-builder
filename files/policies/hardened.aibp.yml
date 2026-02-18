@@ -21,6 +21,7 @@ restrictions:
     force:
       disable_ipv6: true
       ld_so_cache_protected: true
+      enable_oom_protection: true
       policy_require_qm_digest: true
       policy_require_qm_separate_partition: true
       policy_disable_efi_features: true

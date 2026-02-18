@@ -174,7 +174,7 @@ mpp-vars:
       DefaultTimeoutAbortSec={systemd_timeout}
       DefaultRestartSec={systemd_timeout}
       DefaultDeviceTimeoutSec={systemd_timeout}
-      DefaultOOMScoreAdjust={oom_score_adjust}
+      { "DefaultOOMScoreAdjust=-1000" if enable_oom_protection else "" }
   coredump_conf:
     mpp-format-string: |
       [Coredump]
