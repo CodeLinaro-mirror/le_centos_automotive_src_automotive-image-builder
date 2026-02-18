@@ -1,5 +1,20 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
 
-BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
+import sys
+from pathlib import Path
 
-PYTHONPATH="${BASEDIR}/" exec python3 -m aib.main_dev "${BASEDIR}" "$@"
+# Get the base directory (parent of bin/)
+script_path = Path(__file__).resolve()
+basedir = script_path.parent.parent
+
+# Add basedir to Python path
+sys.path.insert(0, str(basedir))
+
+# Insert basedir as sys.argv[1] (the module expects it there)
+sys.argv.insert(1, str(basedir))
+
+# Import and run the main module
+from aib import main_dev
+
+if __name__ == "__main__":
+    sys.exit(main_dev.main())
