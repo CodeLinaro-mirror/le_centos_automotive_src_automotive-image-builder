@@ -230,7 +230,7 @@ mpp-vars:
       WantedBy=default.target
   nmstate_bootcheck:
     mpp-format-string: |
-      ip {static_ip} {static_ip_prefixlen}
+      ip {static_ip} {static_ip_prefixlen}  --noipv6 {"--iface " + static_ip_iface if static_ip_iface else ""}
       default_gw {static_gw}
       nameserver {static_dns}
   bootcheck_dropin:
