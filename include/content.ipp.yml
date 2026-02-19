@@ -237,6 +237,7 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       {"After=qm.service" if _boot_check_qm_digest else ""}
+      {"After=main-nmstate.service" if use_static_ip else ""}
   root_sshd_authorized_keys_conf:
     mpp-format-string: |
       AuthorizedKeysFile /etc/ssh/authorized_keys/%u .ssh/authorized_keys
