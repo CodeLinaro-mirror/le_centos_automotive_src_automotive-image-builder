@@ -2,7 +2,7 @@
 version: '2'
 mpp-vars:
   use_autoinit: true
-  static_ip_iface: "enp0s2"
+  static_ip_iface: "enp0s1"
   static_ip_modules:
     - "virtio_net"
   consoles:
