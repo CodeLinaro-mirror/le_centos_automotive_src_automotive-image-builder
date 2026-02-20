@@ -1,0 +1,9 @@
+# RHIVOS 2.0 release
+version: '2'
+mpp-vars:
+  rhivos_rpms_id: rhivos-2.0-for-$arch-rpms
+  rhivos_debug_rpms_id: rhivos-2.0-for-$arch-debug-rpms
+
+pipelines:
+  - mpp-import-pipelines:
+      path: include/rhivos-2-common.ipp.yml
