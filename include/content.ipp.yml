@@ -175,6 +175,16 @@ mpp-vars:
       DefaultRestartSec={systemd_timeout}
       DefaultDeviceTimeoutSec={systemd_timeout}
       { "DefaultOOMScoreAdjust=-1000" if enable_oom_protection else "" }
+  systemd_system_slice_conf:
+    mpp-format-string: |
+      [Slice]
+      MemoryMin={cg_memory_min}
+      DefaultMemoryMin={cg_memory_min}
+  systemd_user_slice_conf:
+    mpp-format-string: |
+      [Slice]
+      MemoryMin={cg_memory_min}
+      DefaultMemoryMin={cg_memory_min}
   coredump_conf:
     mpp-format-string: |
       [Coredump]
@@ -635,6 +645,32 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['systemd_system.conf']}
               to: tree:///systemd-system.conf
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: systemd-system.slice.conf
+              text: $systemd_system_slice_conf
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['systemd-system.slice.conf']}
+              to: tree:///systemd-system.slice.conf
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: systemd-user.slice.conf
+              text: $systemd_user_slice_conf
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['systemd-user.slice.conf']}
+              to: tree:///systemd-user.slice.conf
       - type: org.osbuild.copy
         inputs:
           inlinefile:

@@ -589,7 +589,12 @@ class ManifestLoader:
                 if "size" in part:
                     part_size = parse_size(part["size"])
                     self.set(k + "part_size", int(part_size / 512))
+        cg_memory_min_value = parse_size(image.get("cg_memory_min", "64MiB"))
+        if cg_memory_min_value == 0:
+            raise exceptions.AIBException("cg_memory_min must be > 0")
+        self.set("cg_memory_min", cg_memory_min_value)
         self.set_from("enable_oom_protection", image, "enable_oom_protection")
+        self.set_from("enable_reclaim_protection", image, "enable_reclaim_protection")
         self.set_from("hostname", image, "hostname")
         self.set_from("ostree_ref", image, "ostree_ref")
         self.set_from("use_composefs_signed", image, "sealed")

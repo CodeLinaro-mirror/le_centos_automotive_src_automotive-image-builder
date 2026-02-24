@@ -458,6 +458,10 @@ mpp-vars:
     else: "empty"
   enable_oom_protection:
     mpp-eval: locals().get("enable_oom_protection", use_qm)
+  enable_reclaim_protection:
+    mpp-eval: locals().get("enable_reclaim_protection", use_qm)
+  cg_memory_min:
+    mpp-eval: locals().get("cg_memory_min", "64MiB")
   image_enabled_services:
     mpp-join:
       - mpp-eval: image_enabled_services
@@ -698,6 +702,16 @@ mpp-vars:
     - path: /usr/lib/systemd/system.conf.d
       parents: true
       exist_ok: true
+    - mpp-if: enable_reclaim_protection
+      then:
+        path: /usr/lib/systemd/system/system.slice.d
+        parents: true
+        exist_ok: true
+    - mpp-if: enable_reclaim_protection
+      then:
+        path: /usr/lib/systemd/system/user.slice.d
+        parents: true
+        exist_ok: true
     - path: /usr/lib/systemd/coredump.conf.d
       parents: true
       exist_ok: true
@@ -752,6 +766,14 @@ mpp-vars:
         to: tree:///usr/lib/repart.d/10-root.conf
     - from: input://extra-tree/systemd-system.conf
       to: tree:///usr/lib/systemd/system.conf.d/10-automotive.conf
+    - mpp-if: enable_reclaim_protection
+      then:
+        from: input://extra-tree/systemd-system.slice.conf
+        to: tree:///usr/lib/systemd/system/system.slice.d/10-automotive.conf
+    - mpp-if: enable_reclaim_protection
+      then:
+        from: input://extra-tree/systemd-user.slice.conf
+        to: tree:///usr/lib/systemd/system/user.slice.d/10-automotive.conf
     - from: input://extra-tree/coredump.conf
       to: tree:///usr/lib/systemd/coredump.conf.d/10-automotive.conf
     - from: input://extra-tree/rcu-normal.service
