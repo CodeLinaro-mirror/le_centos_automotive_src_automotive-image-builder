@@ -139,6 +139,9 @@ mpp-vars:
   local_repo: null
   local_repo_prio: 15
 
+  # Enabling system boot check, installing sysboot
+  system_boot_check: false
+
   ########################################
   ### Internal stuff, here be dragons ####
   ########################################

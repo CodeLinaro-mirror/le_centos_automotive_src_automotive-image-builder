@@ -951,6 +951,8 @@ mpp-vars:
           then: qm
         - mpp-if: use_qm and qm_wayland_enable
           then: qm-oci-hooks
+        - mpp-if: system_boot_check
+          then: sysboot
 
   _debug_output:
     mpp-eval: "locals().get('print_variables') and print( _json.dumps({k: v for k, v in locals().items() if not k.startswith('_')}, default=lambda o: '<not serializable>', sort_keys=True, indent=2))"

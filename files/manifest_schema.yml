@@ -472,6 +472,35 @@ $defs:
       ostree_ref:
         description: The name of the ostree ref (defaults to $distro_name/$arch/$target-$naem)
         type: string
+      boot_checks:
+        description: Configure a list of system boot checks to verify a successful boot.
+        type: object
+        additionalProperties: false
+        properties:
+          commands:
+            description: List of individual commands for verifying a successful boot.
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              required:
+                - name
+                - cmd
+              properties:
+                name:
+                  description: Unique name of the system boot check
+                  type: string
+                  minLength: 1
+                  pattern: "^[a-zA-Z0-9-_]+$"
+                cmd:
+                  description: Command of the system boot check
+                  type: string
+          systemd:
+            description: List of systemd units used to verify a successful boot.
+            type: array
+            items:
+              type: string
+              pattern: "\\.(service|target|mount|socket|device)$"
 
   qm:
     type: object

@@ -393,6 +393,7 @@ class Contents:
     def set_defines(self):
         for file in self.add_files:
             self.extra_include.add_file_copy(self, file)
+
         self.set_define("simple_copy", self.file_content_copy)
 
         self.set_define("simple_mkdir", self.make_dirs)
@@ -600,6 +601,69 @@ class ManifestLoader:
                 "selinux_booleans", [f"{k}={json_bool(v)}" for (k, v) in bools.items()]
             )
 
+    def handle_sysboot_checks(self, content, image):
+
+        # System boot checks building on
+        # https://gitlab.com/CentOS/automotive/src/sysboot
+        #
+        # For each boot_checks entry a respective systemd drop-in
+        # directory for the instance (defined by name) is created,
+        # the drop-in file with the command placed and the systemd
+        # template service instance enabled
+        boot_checks = image.get("boot_checks", {})
+        if not boot_checks:
+            return
+
+        commands = boot_checks.get("commands", [])
+        systemd_units = boot_checks.get("systemd", [])
+
+        for boot_check in commands:
+            boot_check_name = boot_check.get("name", "")
+            boot_check_cmd = boot_check.get("cmd", "")
+
+            service_name = f"sysboot-check@{boot_check_name}.service"
+            dropin_dir = f"/usr/lib/systemd/system/{service_name}.d"
+            dropin_file = f"{dropin_dir}/{boot_check_name}.conf"
+
+            content.make_dirs.append(
+                {
+                    "path": dropin_dir,
+                    "mode": 0o755,
+                    "parents": True,
+                    "exist_ok": True,
+                }
+            )
+            content.add_files.append(
+                {"path": dropin_file, "text": f"[Service]\nExecStart={boot_check_cmd}"}
+            )
+
+            if "enabled_services" not in content.systemd:
+                content.systemd["enabled_services"] = []
+            content.systemd["enabled_services"].append(service_name)
+
+        for unit in systemd_units:
+            dropin_dir = f"/usr/lib/systemd/system/{unit}.d"
+            dropin_file = f"{dropin_dir}/sysboot.conf"
+
+            content.make_dirs.append(
+                {
+                    "path": dropin_dir,
+                    "mode": 0o755,
+                    "parents": True,
+                    "exist_ok": True,
+                }
+            )
+            content.add_symlinks.append(
+                {
+                    "link": dropin_file,
+                    "target": "/usr/share/sysboot/service.d/sysboot.conf",
+                }
+            )
+
+        if commands or systemd_units:
+            content.systemd["enabled_services"].append("sysboot-health.target")
+            content.set_define("system_boot_check", True)
+
     def handle_experimental(self, experimental):
         internal_defines = experimental.get("internal_defines", {})
         for k in internal_defines:
@@ -634,6 +698,13 @@ class ManifestLoader:
         self.set_from("target", manifest, "target")
 
         content = Contents(self, manifest.get("content", {}), extra_include)
+
+        # Handling the sysboot check before the calling of set_defines()
+        # since handling the sysboot check entries adds additional, required
+        # directories and files to the content
+        image = manifest.get("image", {})
+        self.handle_sysboot_checks(content, image)
+
         content.set_defines()
 
         if "qm" in manifest:
@@ -642,7 +713,7 @@ class ManifestLoader:
         self.handle_network(manifest.get("network", {}))
         self.handle_auth(manifest.get("auth", {}))
         self.handle_kernel(manifest.get("kernel", {}))
-        self.handle_image(manifest.get("image", {}))
+        self.handle_image(image)
         self.handle_experimental(manifest.get("experimental", {}))
 
         # Write out extra_include mpp file for file content
