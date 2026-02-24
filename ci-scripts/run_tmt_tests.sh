@@ -63,6 +63,9 @@ EOF
 # Copy the SRPM to the remote AWS instance (provisioned with Duffy)
 scp -o StrictHostKeyChecking=no -i $PWD/automotive_sig.ssh *.src.rpm root@$ip:/var/tmp/aib-srpm/
 
+# Make sure libsepol is up to date
+ssh -o StrictHostKeyChecking=no -i $PWD/automotive_sig.ssh root@$ip dnf upgrade -y libsepol
+
 section_end duffy_setup
 
 # Run tests with 5 parallel test executions
