@@ -18,6 +18,9 @@ session_id=$(jq '.session.id' duffy.session)
 session_id=$(echo $session_id | sed -e 's|"||g')
 echo "Session: $session_id"
 
+# Make sure libsepol is up to date
+ssh -o StrictHostKeyChecking=no -i $PWD/automotive_sig.ssh root@$ip dnf upgrade -y libsepol
+
 # shellcheck disable=SC2087 # CI_REPOSITORY_URL and CI_MERGE_REQUEST_REF_PATH need to be expanded before execution on AWS host
 ssh \
     -o " UserKnownHostsFile=/dev/null" \
