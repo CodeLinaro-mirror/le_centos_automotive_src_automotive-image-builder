@@ -8,16 +8,16 @@ content:
     - debug
   repos:
     - id: epel
-      baseurl: https://dl.fedoraproject.org/pub/epel/9/Everything/$arch/
+      baseurl: https://mirrors.hostiserver.com/fedora/epel/10/Everything/$arch/
 
 qm:
   content:
     rpms:
       - less
       - rpm-debuginfo
-      - neofetch
+      - readline7
     enable_repos:
       - debug
     repos:
       - id: epel
-        baseurl: https://dl.fedoraproject.org/pub/epel/9/Everything/$arch/
+        baseurl: https://mirrors.hostiserver.com/fedora/epel/10/Everything/$arch/
