@@ -188,10 +188,10 @@ mpp-vars:
   _kernel_evr:
     mpp-eval: |
       _Lazy(lambda: installed_rpm(kernel_package).evr)
-  # Sign the modules by default only for kernel-automotive in image mode.
+  # Sign the modules by default only for kernel-automotive or kernel-ivos-* in image mode.
   # Honor sign_kernel_modules override in all other cases.
   sign_kernel_modules:
-    mpp-if: kernel_package.startswith('kernel-automotive')
+    mpp-if: kernel_package.startswith('kernel-automotive') or kernel_package.startswith('kernel-ivos')
     then:
       mpp-eval: locals().get('sign_kernel_modules', use_ostree)
     else:
