@@ -129,4 +129,3 @@ tests/                   # TMT-based integration tests
 - **Manifest variables on command line**: `--define VAR=VALUE` allows overriding internal osbuild-mpp variables. Not stable API — prefer manifest options when possible.
 - **Image size calculation**: Partition sizes auto-calculated from content + 10% overhead. Manual `image_size` variable available for override but rarely needed.
 - **Transient /etc mode**: `use_transient_etc=true` makes /etc changes persist across bootc updates. Contradicts immutability model — only for testing, never production.
-- **Legacy build-deprecated command**: `aib-dev build-deprecated` provides automotive-image-builder 1.0 compatibility with `--mode` and `--export` flags. Deprecated in favor of format-based commands.
