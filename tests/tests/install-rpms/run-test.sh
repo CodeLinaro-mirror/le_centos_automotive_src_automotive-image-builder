@@ -39,10 +39,10 @@ cat out.json | jq '.qm_rootfs_base|has("rpm-debuginfo")' > qm_has_rpm_debuginfo.
 assert_file_has_content qm_has_rpm_debuginfo.txt true
 echo_log "Assertion completed for rpm-debuginfo."
 
-# Check if qm_rootfs_base contains 'neofetch'
-echo_log "Checking if qm_rootfs_base contains 'neofetch'..."
-cat out.json | jq '.qm_rootfs_base|has("neofetch")' > qm_has_neofetch.txt
-assert_file_has_content qm_has_neofetch.txt true
-echo_log "Assertion completed for neofetch."
+# Check if qm_rootfs_base contains 'readline7'
+echo_log "Checking if qm_rootfs_base contains 'readline7'..."
+cat out.json | jq '.qm_rootfs_base|has("readline7")' > qm_has_readline7.txt
+assert_file_has_content qm_has_readline7.txt true
+echo_log "Assertion completed for readline7."
 
 echo_pass "All package installation checks completed successfully."
