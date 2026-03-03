@@ -362,6 +362,13 @@ $defs:
       enable_oom_protection:
         description: Enable OOM Killer protection. This will set DefaultOOMScoreAdjust=-1000 in systemd configuration.
         type: boolean
+      enable_reclaim_protection:
+        description: Enable reclaim protection (MemoryMin) on system and user slices.
+        type: boolean
+      cg_memory_min:
+        description: Minimum memory value to set for system and user slices. Only used if enable_reclaim_protection is true. Defaults to 64M.
+        type: string
+        pattern: "^[0-9]+ *(kB|KiB|MB|MiB|GB|GiB|TB|TiB)$"
       selinux_mode:
         description: The selinux mode (enforcing or permissive)
         default: enforcing
