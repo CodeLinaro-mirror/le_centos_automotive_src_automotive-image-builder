@@ -1,6 +1,6 @@
 [Unit]
 Description=Demo engine service container
-Requires=routingmanagerd.socket
+Requires=routingmanagerd.service
 
 [Container]
 Image=localhost/auto-apps

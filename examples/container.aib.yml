@@ -6,7 +6,7 @@ content:
   # The container service depends on vsomeip3-routingmanager from this repo
   repos:
     - id: copr-sample-apps
-      baseurl: https://download.copr.fedorainfracloud.org/results/alexl/cs9-sample-images/centos-stream-9-$arch/
+      baseurl: https://download.copr.fedorainfracloud.org/results/alexl/cs10-sample-images/centos-stream-10-$arch/
   rpms:
     - podman
     - auto-apps
