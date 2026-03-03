@@ -230,13 +230,14 @@ mpp-vars:
       WantedBy=default.target
   nmstate_bootcheck:
     mpp-format-string: |
-      ip {static_ip} {static_ip_prefixlen}
+      ip {static_ip} {static_ip_prefixlen}  --noipv6 {"--iface " + static_ip_iface if static_ip_iface else ""}
       default_gw {static_gw}
       nameserver {static_dns}
   bootcheck_dropin:
     mpp-format-string: |
       [Unit]
       {"After=qm.service" if _boot_check_qm_digest else ""}
+      {"After=main-nmstate.service" if use_static_ip else ""}
   root_sshd_authorized_keys_conf:
     mpp-format-string: |
       AuthorizedKeysFile /etc/ssh/authorized_keys/%u .ssh/authorized_keys
