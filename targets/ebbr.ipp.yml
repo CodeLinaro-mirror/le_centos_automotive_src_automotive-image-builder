@@ -1,22 +1,23 @@
 # Target for systems compliant with the EBBR Specification
 #
+# This target defines a generic "ebbr" target fragment for boards that
+# follow the Embedded Base Boot Requirements (EBBR) specification.
+#
 # References
 #   EBBR specification: https://arm-software.github.io/ebbr/
 #   U-Boot: https://www.denx.de/wiki/U-Boot
 #
-# This target defines a generic "ebbr" target fragment for boards that
-# follow the Embedded Base Boot Requirements (EBBR) specification.
+# PURPOSE: Production
+# This is the recommended target for production environments. It produces
+# a standardized, hardware-agnostic OS image that can boot on any
+# EBBR-compliant board (TI, NXP, Renesas, etc.).
 #
-# Note that many ARM boards use a hybrid boot layout: firmware and bootloader
-# (e.g. U-Boot) are flashed to a non-removable device such as SPI/NOR
-# flash or a separate firmware partition, while the OS image (kernel,
-# initramfs/rootfs) lives on another device like eMMC, SD, or NVMe.
+# REQUIREMENTS:
+# This image does NOT include low-level bootloaders. Before use:
+# 1. Flash the board-specific firmware (U-Boot/SPL) to the board's
+#    internal memory (SPI NOR or eMMC boot partitions).
+# 2. Set board DIP switches to "Internal Flash" or "SPI" boot mode.
 #
-# This split layout is compatible with EBBR and the recommended for
-# "ebbr" target. When using U-Boot as a bootloader, a widely-used
-# bootloader on ARM platforms, making the U-Boot deployment
-# "EBBR-compliant" depends on the specific U-Boot build, configuration,
-#  platform initialization and the provided boot scripts/firmware support.
 # U-Boot itself provides the features (device tree handling, kernel boot
 # chaining, console selection, boot scripts, environment) that allow a
 # platform to meet EBBR requirements, but compliance is not automatic
