@@ -302,7 +302,7 @@ integration_tests_10:
     - *prepare-cs-tmt-setup
     - *prepare-aws-setup
   script:
-    - sh ci-scripts/run_tmt_tests.sh autosd10-sig
+    - sh ci-scripts/run_tmt_tests.sh
   artifacts:
     when: always
     paths:

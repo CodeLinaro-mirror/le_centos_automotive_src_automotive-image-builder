@@ -213,7 +213,7 @@ Ensure all packages listed in the [Prerequisites](#prerequisites) section are in
 ## Setting up a VM to run integration tests
 
 The following sections provide a detailed guide to preparing a VM to run integration tests against your local machine.
-Currently, it's possible to run tests on CS9 or CS10 VMs. The overall steps are similar for both versions;
+Currently, it's possible to run tests on CS10 VMs. The overall steps are similar for both versions;
 differences are noted.
 
 ### Generating SSH keys to access the VM
@@ -243,7 +243,7 @@ ssh:
 yum_repos:
   aib-base-repo:
     name: AIB Base Repository
-    baseurl: @AIB BASE REPO URL@
+    baseurl: https://autosd.sig.centos.org/AutoSD-10/nightly/repos/AutoSD/compose/AutoSD/${arch}/os/
     enabled: true
     gpgcheck: false
 
@@ -274,22 +274,15 @@ power_state:
 Save the content from the cloud-init user data file into `/tmp/user-data.yml` and replace the following values:
 
 - `@PUBLIC SSH KEY@` with the content of `~/.ssh/aib-tests.pub` file created in the previous section.
-- `@AIB BASE REPO URL@` depending on the OS version used
-   - CS9: `https://autosd.sig.centos.org/AutoSD-9/nightly/repos/AutoSD/compose/AutoSD/${arch}/os/`
-   - CS10: `https://autosd.sig.centos.org/AutoSD-10/nightly/repos/AutoSD/compose/AutoSD/${arch}/os/`
 
 
 ### Creating the VM
 
-Download the CentOS Stream base image:
+Download the CentOS Stream base image (update architecture as needed):
 
 ```shell
-sudo curl -o /var/lib/libvirt/images/aib-tests.qcow2 @IMAGE URL@
+sudo curl -o /var/lib/libvirt/images/aib-tests.qcow2 https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-x86_64-10-latest.x86_64.qcow2
 ```
-
-Replace `@IMAGE URL@` with the real URL depending on the OS version used:
-- CS9: `https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-x86_64-9-latest.x86_64.qcow2`
-- CS10: `https://cloud.centos.org/centos/10-stream/x86_64/images/CentOS-Stream-GenericCloud-x86_64-10-latest.x86_64.qcow2`
 
 Resize the default 10G disk for all tests to pass successfully:
 
@@ -303,17 +296,13 @@ Create the VM:
 sudo virt-install  \
      --name aib-tests \
      --memory 16384  --cpu host-model --vcpus 8 --graphics none \
-     --os-variant @OS VARIANT@ \
+     --os-variant centos-stream10 \
      --import \
      --disk /var/lib/libvirt/images/aib-tests.qcow2,format=qcow2,bus=virtio \
      --network default  \
      --cloud-init disable=on,user-data=/tmp/user-data.yml \
      --noreboot
 ```
-
-Please replace `@OS VARIANT@` depending on the OS version used:
-- CS9: `centos-stream9`
-- CS10: `centos-stream10`
 
 The VM stops after it is created.
 

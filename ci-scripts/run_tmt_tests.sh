@@ -16,23 +16,13 @@ function section_end () {
   echo -e "section_end:`date +%s`:${section_title}\r\e[0K"
 }
 
-AIB_DISTRO=${1:-autosd10-sig}
-# Base repository for AIB packages needs to be aligned with requested distro
-if [[ "${AIB_DISTRO}" == *"autosd9"* ]]; then
-    AIB_BASE_REPO="https://autosd.sig.centos.org/AutoSD-9/nightly/repos/AutoSD/compose/AutoSD/\$arch/os/"
-    CS_VERSION=9
-else
-    AIB_BASE_REPO="https://autosd.sig.centos.org/AutoSD-10/nightly/repos/AutoSD/compose/AutoSD/\$arch/os/"
-    CS_VERSION=10
-fi
-
 section_start duffy_setup "Attaching to AWS"
 
 export SESSION_FILE="$PWD/duffy.session"
 
 if [ ! -f "$SESSION_FILE" ]; then
     echo "Retrieving an AWS host ..."
-    get_aws_session "metal-ec2-c5n-centos-${CS_VERSION}s-x86_64" "$SESSION_FILE"
+    get_aws_session "metal-ec2-c5n-centos-10s-x86_64" "$SESSION_FILE"
     if [ $? -ne 0 ]; then
         exit 1
     fi
@@ -73,8 +63,6 @@ export TMT_RUN_OPTIONS="-q \
   -eNODE=$ip \
   -eNODE_SSH_KEY=$PWD/automotive_sig.ssh \
   -eBUILD_AIB_RPM=yes \
-  -eAIB_DISTRO=$AIB_DISTRO \
-  -eAIB_BASE_REPO=$AIB_BASE_REPO \
   plan --name connect"
 ( cd tests && ../ci-scripts/parallel-test-runner.sh 5 )
 
