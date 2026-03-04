@@ -26,7 +26,7 @@ FROM quay.io/centos-bootc/bootc-image-builder:latest as bootc-i-b
 FROM base as runtime
 
 # We need bc-i-b in the main container for rootless builds to work
-COPY --from=bootc-i-b /usr/bin/bootc-image-builder /usr/bin/
+COPY --from=bootc-i-b /usr/bin/bootc-image-builder /usr/bin/bootc-image-builder-local
 
 VOLUME /var/tmp
 VOLUME /var/log
