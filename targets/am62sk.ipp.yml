@@ -1,4 +1,19 @@
 # Target for the TI SK-AM62 Evaluation Board (https://www.ti.com/tool/SK-AM62)
+#
+# PURPOSE: Quick Setup & Testing
+# This target is designed for rapid evaluation. It produces a monolithic
+# "ready-to-go" image that includes both the hardware-specific bootloader
+# and the OS on the same SD card.
+#
+# NOT FOR PRODUCTION:
+# This image is tightly coupled to this specific hardware revision. For
+# production deployments, standardized fleet management, or hardware-agnostic
+# builds, use 'targets/ebbr.ipp.yml'.
+#
+# USAGE:
+# 1. Set board DIP switches to "SD Boot" mode.
+# 2. Flash this image directly to an SD card.
+
 version: '2'
 mpp-vars:
   k3_board: 'am62x_evm_gp'
