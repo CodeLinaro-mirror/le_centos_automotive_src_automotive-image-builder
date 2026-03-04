@@ -390,4 +390,6 @@ mpp-vars:
     - rootfiles
     - systemd-udev
     - dracut-config-generic
+    # TODO-BOOTC: Without this, bootupd fails with "Failed to find /usr/bin/grub2-editenv" in bc-i-b
+    - grub2-tools-minimal
     - lz4
