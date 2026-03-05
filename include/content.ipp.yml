@@ -306,6 +306,7 @@ mpp-vars:
       type = \"ext4\"
       [install]
       kargs = {_json.dumps(kernel_opts)}
+      { 'bootloader = "none"' if use_aboot else "" }
 
   disk_yaml:
     mount_configuration: none

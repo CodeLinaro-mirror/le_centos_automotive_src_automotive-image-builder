@@ -6,6 +6,9 @@ mpp-vars:
   distro_baseurl: http://mirror.stream.centos.org/$distro_version-stream
   distro_baseurl_repo: $distro_baseurl/BaseOS/$arch/os/
   distro_chroot: centos-stream-$distro_version-$arch
+  # We add the nightly autosd compose as well, because sometimes it has packages not synced to cs mirrors yet
+  compose_baseurl: https://autosd.sig.centos.org/AutoSD-$distro_version/nightly/repos/AutoSD/compose
+  compose_baseurl_repo: $compose_baseurl/AutoSD/$arch/os/
   # linux-firmware-automotive is not yet available
   linux_firmware_rpm: linux-firmware
   # No centos-release-autosd/automotive yet
@@ -13,12 +16,18 @@ mpp-vars:
   distro_repos:
     - id: baseos
       baseurl: $distro_baseurl/BaseOS/$arch/os/
+      priority: 10
     - id: appstream
       baseurl: $distro_baseurl/AppStream/$arch/os/
+      priority: 10
     - id: automotive
       baseurl: https://mirror.stream.centos.org/SIGs/$distro_version-stream/automotive/$arch/packages-main/
     - id: autosd
       baseurl: https://mirror.stream.centos.org/SIGs/$distro_version-stream/autosd/$arch/packages-main/
+      priority: 10
+    - id: compose
+      baseurl: $compose_baseurl_repo
+      priority: 10
   distro_devel_repos:
     - id: crb
       baseurl: $distro_baseurl/CRB/$arch/os/

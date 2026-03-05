@@ -118,11 +118,9 @@ mpp-vars:
   use_efipart:
     mpp-if: not "use_efipart" in locals()
     then:
-      # TODO-BOOTC: aboot doesn't need a /boot/efi, but bc-t-i currently fails in bootupd stage if this is missing
-      mpp-eval: use_ukiboot or (use_aboot and use_bootc)
+      mpp-eval: use_ukiboot
   use_efipart_mount:
-    # TODO-BOOTC: We don't need to mount it even though we added it above for aboot (in particular with --separate-partitions)
-    mpp-eval: use_efipart and not (use_aboot and use_bootc)
+    mpp-eval: use_efipart
   use_bootpart:
     mpp-eval: locals().get('use_bootpart', False)
   use_sblpart:
@@ -915,7 +913,8 @@ mpp-vars:
     - rpm-ostree
     - nss-altfiles
     - skopeo  # Needed for upgrading from an OCI remove image
-    - bootupd
+    - mpp-if: use_bootc and use_ukiboot
+      then: bootupd
 
   package_mode_rpms:
     mpp-join:
