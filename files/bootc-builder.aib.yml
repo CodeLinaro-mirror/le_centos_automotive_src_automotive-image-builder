@@ -15,4 +15,8 @@ content:
     - aboot-update
     - systemd-ukify
     - systemd-boot
-    - kernel-tools # Provides bootconfig tool used by aboot-update
+
+
+experimental:
+  internal_defines:
+    simple_enable_weak_deps: true
