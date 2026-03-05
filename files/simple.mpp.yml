@@ -26,6 +26,7 @@ mpp-vars:
   simple_add_debug_repos: false
   simple_sbom: {}
   qm_simple_sbom: {}
+  simple_enable_weak_deps: false
 
 pipelines:
   - mpp-import-pipelines:
@@ -145,7 +146,8 @@ pipelines:
             origin: org.osbuild.source
             mpp-depsolve:
               architecture: $arch
-              ignore-weak-deps: true
+              ignore-weak-deps:
+                mpp-eval: not simple_enable_weak_deps
               module-platform-id: $distro_module_id
               baseurl: $distro_baseurl_repo
               root-dir: $distro_root_dir
