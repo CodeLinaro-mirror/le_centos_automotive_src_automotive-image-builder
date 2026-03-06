@@ -135,7 +135,7 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
 
 
 def random_container_name():
-    return "aib-" + binascii.b2a_hex(os.urandom(12)).decode("utf8")
+    return "localhost/aib-" + binascii.b2a_hex(os.urandom(12)).decode("utf8")
 
 
 @command(
