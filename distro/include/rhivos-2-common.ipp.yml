@@ -31,8 +31,17 @@ mpp-vars:
       else:
         id: $rhivos_rpms_id
         system-repo: true
-        rhsm: true
-  distro_devel_repos: []
+        rhsm: $use_rhsm
+  distro_devel_repos:
+    - mpp-if: distro_baseurl
+      then:
+        id: rhivos-source
+        baseurl: $distro_baseurl/RHIVOS/source/tree/
+        priority: 10
+      else:
+        id: $rhivos_source_rpms_id
+        system-repo: true
+        rhsm: $use_rhsm
   distro_debug_repos:
     - mpp-if: distro_baseurl
       then:
@@ -42,7 +51,7 @@ mpp-vars:
       else:
         id: $rhivos_debug_rpms_id
         system-repo: true
-        rhsm: true
+        rhsm: $use_rhsm
   distro_module_id: platform:el10
   distro_gpg_keys:
     mpp-format-string: |

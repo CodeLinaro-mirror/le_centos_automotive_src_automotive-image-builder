@@ -3,6 +3,7 @@ version: '2'
 mpp-vars:
   rhivos_rpms_id: rhivos-2-core-for-$arch-rpms
   rhivos_debug_rpms_id: rhivos-2-core-for-$arch-debug-rpms
+  rhivos_source_rpms_id: rhivos-2-core-for-$arch-source-rpms
 
 pipelines:
   - mpp-import-pipelines:
