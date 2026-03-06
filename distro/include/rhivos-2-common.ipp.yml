@@ -31,7 +31,7 @@ mpp-vars:
       else:
         id: $rhivos_rpms_id
         system-repo: true
-        rhsm: true
+        rhsm: $use_rhsm
   distro_devel_repos: []
   distro_debug_repos:
     - mpp-if: distro_baseurl
@@ -42,7 +42,7 @@ mpp-vars:
       else:
         id: $rhivos_debug_rpms_id
         system-repo: true
-        rhsm: true
+        rhsm: $use_rhsm
   distro_module_id: platform:el10
   distro_gpg_keys:
     mpp-format-string: |

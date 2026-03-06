@@ -51,6 +51,8 @@ mpp-vars:
 
   denylist_rpms: []
 
+  use_rhsm: true
+
   timezone: UTC
   locale: en_US.UTF-8
   hostname: localhost
