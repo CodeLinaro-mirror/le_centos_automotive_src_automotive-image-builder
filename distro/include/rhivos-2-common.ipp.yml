@@ -32,7 +32,16 @@ mpp-vars:
         id: $rhivos_rpms_id
         system-repo: true
         rhsm: $use_rhsm
-  distro_devel_repos: []
+  distro_devel_repos:
+    - mpp-if: distro_baseurl
+      then:
+        id: rhivos-source
+        baseurl: $distro_baseurl/RHIVOS/source/tree/
+        priority: 10
+      else:
+        id: $rhivos_source_rpms_id
+        system-repo: true
+        rhsm: $use_rhsm
   distro_debug_repos:
     - mpp-if: distro_baseurl
       then:
