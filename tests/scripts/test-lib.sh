@@ -226,15 +226,15 @@ assert_partition_relative_size() {
     local epsilon=${4:-0.01}
 
     local loop
-    loop=$(sudo losetup --find --partscan --show "$img") || fatal "FAIL: Failed to setup loop device"
-    trap 'sudo losetup -d $loop' RETURN
+    loop=$($SUDO losetup --find --partscan --show "$img") || fatal "FAIL: Failed to setup loop device"
+    trap '$SUDO losetup -d $loop' RETURN
 
     local img_size
     img_size=$(stat -c %s "$img") || fatal "FAIL: Failed to stat image file"
 
     local part=""
     for p in /dev/$(basename "$loop")p*; do
-        if sudo blkid "$p" 2>/dev/null | grep -q "LABEL=\"$label\""; then
+        if $SUDO blkid "$p" 2>/dev/null | grep -q "LABEL=\"$label\""; then
             part=$p
             break
         fi
@@ -245,7 +245,7 @@ assert_partition_relative_size() {
     fi
 
     local part_size
-    part_size=$(sudo blockdev --getsize64 "$part") || fatal "FAIL: Failed to get size of partition $part"
+    part_size=$($SUDO blockdev --getsize64 "$part") || fatal "FAIL: Failed to get size of partition $part"
 
     local ratio
     ratio=$(awk -v ps=$part_size -v is=$img_size 'BEGIN { print ps / is }')
@@ -268,12 +268,12 @@ assert_partition_absolute_size() {
     local epsilon=${4:-0}  # optional tolerance in bytes
 
     local loop
-    loop=$(sudo losetup --find --partscan --show "$img") || fatal "FAIL: Failed to setup loop device"
-    trap 'sudo losetup -d $loop' RETURN
+    loop=$($SUDO losetup --find --partscan --show "$img") || fatal "FAIL: Failed to setup loop device"
+    trap '$SUDO losetup -d $loop' RETURN
 
     local part=""
     for p in /dev/$(basename "$loop")p*; do
-        if sudo blkid "$p" 2>/dev/null | grep -q "LABEL=\"$label\""; then
+        if $SUDO blkid "$p" 2>/dev/null | grep -q "LABEL=\"$label\""; then
             part=$p
             break
         fi
@@ -284,7 +284,7 @@ assert_partition_absolute_size() {
     fi
 
     local part_size
-    part_size=$(sudo blockdev --getsize64 "$part") || fatal "FAIL: Failed to get size of partition $part"
+    part_size=$($SUDO blockdev --getsize64 "$part") || fatal "FAIL: Failed to get size of partition $part"
 
     local lower upper
     lower=$(awk -v es=$expected_size -v e=$epsilon 'BEGIN { print es - e }')

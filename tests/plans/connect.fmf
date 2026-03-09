@@ -23,6 +23,9 @@ environment:
     # Build boot builder container only when it doesn't exist
     REBUILD_BOOTC_BUILDER: no
 
+    # sudo is not used as the tests are executed under root user
+    SUDO: ""
+
     AIB: aib
     AIBDEV: aib-dev
     AIB_BASEDIR: /usr/lib/automotive-image-builder

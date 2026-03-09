@@ -8,10 +8,10 @@ cleanup_policy_tests() {
     rm -f system-test.aibp.yml
     rm -f "${AIB_BASEDIR}/files/policies/installed-test.aibp.yml"
     rm -f "${AIB_BASEDIR}/files/policies/system-test.aibp.yml"
-    sudo rm -f /etc/automotive-image-builder/policies/system-test.aibp.yml
+    $SUDO rm -f /etc/automotive-image-builder/policies/system-test.aibp.yml
     # Only remove directories if they're empty (i.e., we didn't break existing setup)
-    sudo rmdir /etc/automotive-image-builder/policies 2>/dev/null || true
-    sudo rmdir /etc/automotive-image-builder 2>/dev/null || true
+    $SUDO rmdir /etc/automotive-image-builder/policies 2>/dev/null || true
+    $SUDO rmdir /etc/automotive-image-builder 2>/dev/null || true
 }
 
 # Update cleanup function parameters on each test artifact change
@@ -239,7 +239,7 @@ echo_log "Local file precedence works correctly"
 # Test 11: Test system-wide policy location (/etc/)
 echo_log "Test 11: Testing system-wide policy location..."
 # Create a system-wide policy
-sudo mkdir -p /etc/automotive-image-builder/policies
+$SUDO mkdir -p /etc/automotive-image-builder/policies
 cat > system-test.aibp.yml << 'EOF'
 name: system-policy
 description: System-wide policy in /etc/
@@ -248,7 +248,7 @@ restrictions:
     force:
       from_system_policy: true
 EOF
-sudo cp system-test.aibp.yml /etc/automotive-image-builder/policies/
+$SUDO cp system-test.aibp.yml /etc/automotive-image-builder/policies/
 
 # Test that policy name resolution finds the system policy
 build --dry-run --policy system-test --dump-variables simple-rpms.aib.yml "$NO_CTR_NAME" out
