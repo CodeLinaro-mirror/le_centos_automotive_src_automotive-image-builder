@@ -26,6 +26,7 @@ Requires:       zstd
 Requires:       qemu-kvm-core
 Requires:       virtiofsd
 Requires:       openssl
+Requires:       image-builder
 Recommends:     python3-rich
 
 %description
