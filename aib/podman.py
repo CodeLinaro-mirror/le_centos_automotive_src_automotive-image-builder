@@ -6,7 +6,6 @@ import shutil
 import tempfile
 import textwrap
 from pathlib import Path
-from .globals import default_bib_container
 
 from .utils import (
     detect_initrd_compression,
@@ -486,14 +485,6 @@ def podman_run_bootc_image_builder(
     user_container,
     verbose,
 ):
-    state = ContainerState.query()
-
-    # If we're in an a-i-b container and bc-i-b exists there, lets not launch nested containers.
-    if state.in_rootless_container and bib_container == default_bib_container:
-        bcib_path = shutil.which("bootc-image-builder-local")
-        if bcib_path:
-            bib_container = bcib_path
-
     if build_type == "raw":
         src_path = "image/disk.raw"
     elif build_type == "qcow2":
