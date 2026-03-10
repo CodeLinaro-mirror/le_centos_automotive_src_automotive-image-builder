@@ -142,8 +142,8 @@ class ContainerStorage:
             self.storage = storage
 
         self.tmpdir = tmpdir
-        self.tmp_storage = os.path.join(tmpdir, "aib-containers-store")
-        self.tmp_runroot = os.path.join(tmpdir, "aib-containers-store-run")
+        self.tmp_storage = os.path.join(tmpdir, "containers")
+        self.tmp_runroot = os.path.join(tmpdir, "containers-run")
         self.config_path = None
 
     @classmethod
@@ -498,9 +498,7 @@ def podman_run_bootc_image_builder(
     else:
         raise UnsupportedImageType(build_type)
 
-    with tempfile.TemporaryDirectory(
-        prefix="automotive-image-builder-", dir="/var/tmp"
-    ) as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
         try:
             # To easily test non-containerized bc-i-b builds, parse
             # absolute paths as binary name:

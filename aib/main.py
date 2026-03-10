@@ -754,9 +754,7 @@ def main():
     runner = Runner(args)
     runner.add_volume(os.getcwd())
 
-    with SudoTemporaryDirectory(
-        prefix="automotive-image-builder-", dir="/var/tmp"
-    ) as tmpdir:
+    with SudoTemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
         runner.add_volume(tmpdir)
         try:
             return args.func(tmpdir, runner)
