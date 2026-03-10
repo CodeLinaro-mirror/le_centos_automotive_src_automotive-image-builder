@@ -20,7 +20,7 @@ trap 'cleanup_path "$IMG_SIGNED" "$UPDATE_TAR"; cleanup_container "$EFI_SIGNER" 
 
 echo_log "Building helpers..."
 # Build EFI signer helper
-sudo podman build signer -t "$EFI_SIGNER"
+$SUDO podman build signer -t "$EFI_SIGNER"
 
 echo_log "Helpers built"
 
@@ -41,7 +41,7 @@ $AIB prepare-reseal --verbose --key=private.pem "$SB_UNSIGNED" "$SB_PREPARED"
 $AIB extract-for-signing --verbose "$SB_PREPARED" to-sign
 
 # Sign EFI files
-sudo podman run --rm -ti --privileged -v .:/work "$EFI_SIGNER" --certificates db.p12 --password-file password to-sign/efi/*
+$SUDO podman run --rm -ti --privileged -v .:/work "$EFI_SIGNER" --certificates db.p12 --password-file password to-sign/efi/*
 
 # Inject signed EFI files and reseal
 $AIB inject-signed --verbose --reseal-with-key=private.pem "$SB_PREPARED" to-sign "$SB_SIGNED"
@@ -69,13 +69,13 @@ $AIB prepare-reseal --verbose --key=private2.pem "$SB_UPD_UNSIGNED" "$SB_UPD_PRE
 $AIB extract-for-signing --verbose "$SB_UPD_PREPARED" to-sign
 
 # Sign EFI files
-sudo podman run --rm -ti --privileged -v .:/work "$EFI_SIGNER" --certificates db.p12 --password-file password to-sign/efi/*
+$SUDO podman run --rm -ti --privileged -v .:/work "$EFI_SIGNER" --certificates db.p12 --password-file password to-sign/efi/*
 
 # Inject signed EFI files and reseal
 $AIB inject-signed --verbose --reseal-with-key=private2.pem "$SB_UPD_PREPARED" to-sign "$SB_UPD_SIGNED"
 
 # Export file
-sudo podman save --format=oci-archive -o "$UPDATE_TAR" "$SB_UPD_SIGNED"
+$SUDO podman save --format=oci-archive -o "$UPDATE_TAR" "$SB_UPD_SIGNED"
 
 echo_pass "Built signed bootc update container"
 

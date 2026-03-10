@@ -71,7 +71,7 @@ $AIB extract-for-signing "$AVB_UPD_PREPARED" to-sign
 $AIB inject-signed --reseal-with-key=private2.pem "$AVB_UPD_PREPARED" to-sign "$AVB_UPD_SIGNED"
 
 # Export file
-sudo podman save --format=oci-archive -o "$UPDATE_TAR" "$AVB_UPD_SIGNED"
+$SUDO podman save --format=oci-archive -o "$UPDATE_TAR" "$AVB_UPD_SIGNED"
 
 echo_pass "Built signed bootc update container"
 

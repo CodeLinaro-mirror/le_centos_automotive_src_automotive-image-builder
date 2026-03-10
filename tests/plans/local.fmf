@@ -11,6 +11,9 @@ environment:
     # Build boot builder container only when it doesn't exist
     REBUILD_BOOTC_BUILDER: no
 
+    # Some tests require using sudo when executed locally
+    SUDO: "sudo"
+
     AIB: $PROJECT_DIR/bin/aib
     AIBDEV: $PROJECT_DIR/bin/aib-dev
     AIB_BASEDIR: $PROJECT_DIR
@@ -27,6 +30,8 @@ prepare:
       how: install
       package:
         - jq
+        - podman
+        - sudo
 
     - name: Setup local environment
       how: shell
