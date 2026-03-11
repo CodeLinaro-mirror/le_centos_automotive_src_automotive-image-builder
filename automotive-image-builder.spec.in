@@ -43,7 +43,7 @@ Tool to build (and run) automotive images
 
 %files
 %license LICENSE
-%doc README.md docs/manifest.html docs/manifest.md
+%doc README.md README.targets.md README.distros.md docs/manifest.html docs/manifest.md
 %{_bindir}/aib
 %{_bindir}/aib-dev
 %{_bindir}/air
