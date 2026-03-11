@@ -6,7 +6,6 @@ import shutil
 import tempfile
 import textwrap
 from pathlib import Path
-from .globals import default_bib_container
 
 from .utils import (
     detect_initrd_compression,
@@ -143,8 +142,8 @@ class ContainerStorage:
             self.storage = storage
 
         self.tmpdir = tmpdir
-        self.tmp_storage = os.path.join(tmpdir, "aib-containers-store")
-        self.tmp_runroot = os.path.join(tmpdir, "aib-containers-store-run")
+        self.tmp_storage = os.path.join(tmpdir, "containers")
+        self.tmp_runroot = os.path.join(tmpdir, "containers-run")
         self.config_path = None
 
     @classmethod
@@ -486,14 +485,6 @@ def podman_run_bootc_image_builder(
     user_container,
     verbose,
 ):
-    state = ContainerState.query()
-
-    # If we're in an a-i-b container and bc-i-b exists there, lets not launch nested containers.
-    if state.in_rootless_container and bib_container == default_bib_container:
-        bcib_path = shutil.which("bootc-image-builder-local")
-        if bcib_path:
-            bib_container = bcib_path
-
     if build_type == "raw":
         src_path = "image/disk.raw"
     elif build_type == "qcow2":
@@ -507,9 +498,7 @@ def podman_run_bootc_image_builder(
     else:
         raise UnsupportedImageType(build_type)
 
-    with tempfile.TemporaryDirectory(
-        prefix="automotive-image-builder-", dir="/var/tmp"
-    ) as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
         try:
             # To easily test non-containerized bc-i-b builds, parse
             # absolute paths as binary name:

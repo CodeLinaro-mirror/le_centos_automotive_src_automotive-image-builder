@@ -22,7 +22,7 @@ from .podman import ContainerState
 from .utils import DiskFormat
 from .version import get_version
 from . import log
-from .globals import default_distro, default_container_image_name, default_bib_container
+from .globals import default_distro, default_container_image_name
 
 
 def aib_build_container_name(distro):
@@ -391,8 +391,7 @@ BIB_ARGS = {
         "metavar": "IMAGE",
         "aliases": ["--bib-container"],
         "default-env": "AIB_BIB_CONTAINER_IMAGE",
-        "default": default_bib_container,
-        "help": f"bootc-image-builder image to use (default: {default_bib_container})",
+        "help": "bootc-image-builder image to use",
     },
     "--build-container": {
         "type": "str",

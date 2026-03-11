@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import binascii
+import shutil
 import sys
 import os
 import json
@@ -29,6 +30,7 @@ from .exceptions import (
 from . import AIBParameters
 from . import log
 from .podman import (
+    ContainerState,
     ContainerStorage,
     podman_image_exists,
     podman_image_info,
@@ -55,7 +57,7 @@ from .osbuild import (
     run_osbuild,
     export_disk_image_file,
 )
-from .globals import default_distro
+from .globals import default_distro, default_bib_container
 
 from . import list_ops  # noqa: F401
 
@@ -116,20 +118,85 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
         prefix="bib-out--", dir=os.path.dirname(out)
     ) as outputdir:
         output_file = os.path.join(outputdir.name, "image.raw")
-
-        res = podman_run_bootc_image_builder(
-            args.bib_container_image,
-            storage,
-            args.build_container or get_build_container_for(storage, src_container),
-            src_container,
-            "raw",
-            output_file,
-            args.vm,
-            args.user_container,
-            args.verbose,
+        build_container = args.build_container or get_build_container_for(
+            storage, src_container
         )
-        if res != 0:
-            raise BootcImageBuilderFailed()
+
+        bib_container = args.bib_container_image
+
+        # WIP: image-builder doesn't yet support --in-vm, so in some
+        # cases we have fall back to bootc-image-builder by default:
+        if args.vm and not bib_container:
+            state = ContainerState.query()
+
+            local_bcib_path = shutil.which("bootc-image-builder-local")
+            if state.in_rootless_container and local_bcib_path:
+                # We're in a rootless a-i-b container and can't use a recursive container for a-i-b
+                # so instead run bc-i-b directly in the same container
+                bib_container = local_bcib_path
+            else:
+                bib_container = default_bib_container
+
+        if bib_container:
+            res = podman_run_bootc_image_builder(
+                bib_container,
+                storage,
+                build_container,
+                src_container,
+                "raw",
+                output_file,
+                args.vm,
+                args.user_container,
+                args.verbose,
+            )
+            if res != 0:
+                raise BootcImageBuilderFailed()
+        else:
+            # Fall back to the use of image-builder instead of bc-i-b container
+            runner.add_volume("/dev")
+            runner.add_volume(tmpdir)
+            cachedir = os.path.join(tmpdir, "cache")
+            os.mkdir(cachedir)
+            rpmmddir = os.path.join(tmpdir, "rpmmd")
+            os.mkdir(rpmmddir)
+            cmdline = [
+                "image-builder",
+                "--cache",
+                cachedir,
+                "--rpmmd-cache",
+                rpmmddir,
+                "--output-dir",
+                outputdir.name,
+                "--output-name",
+                "image",
+                "--bootc-build-ref",
+                build_container,
+                "--bootc-ref",
+                src_container,
+            ]
+
+            if args.verbose:
+                cmdline += ["--progress", "verbose"]
+
+            if args.vm:
+                cmdline += ["--in-vm"]
+
+            cmdline += ["build", "raw"]
+
+            volumes = {}
+            if storage:
+                cmdline = [
+                    "env",
+                    f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
+                ] + cmdline
+                volumes[storage.storage] = storage.storage
+
+            runner.run_in_container(
+                cmdline,
+                need_osbuild_privs=True,
+                verbose=args.verbose,
+                extra_volumes=volumes,
+            )
 
         export_disk_image_file(runner, args, tmpdir, output_file, out, fmt)
 
@@ -687,9 +754,7 @@ def main():
     runner = Runner(args)
     runner.add_volume(os.getcwd())
 
-    with SudoTemporaryDirectory(
-        prefix="automotive-image-builder-", dir="/var/tmp"
-    ) as tmpdir:
+    with SudoTemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
         runner.add_volume(tmpdir)
         try:
             return args.func(tmpdir, runner)

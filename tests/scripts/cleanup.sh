@@ -12,4 +12,7 @@ if [ -n "$ctr_id" ]; then
     podman image rm -f "$ctr_id"
 fi
 
+# Echo dmesg output, which can be helpful in debugging CI issues
+sudo dmesg
+
 echo "Cleanup done."
