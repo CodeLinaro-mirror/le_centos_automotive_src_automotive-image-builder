@@ -432,6 +432,9 @@ def get_build_container_for(storage, container):
         DISK_FORMAT_ARGS,
         BIB_ARGS,
         {
+            "--oci-archive": {
+                "help": "Source container is oci container archive file instead of a container image",
+            },
             "src_container": "Bootc container name",
             "out": "Output image name",
         },
@@ -450,14 +453,22 @@ def to_disk_image(args, tmpdir, runner):
 
     storage = ContainerStorage.from_args(args, tmpdir)
 
-    if not podman_image_exists(storage, args.src_container):
-        raise ContainerNotFound(args.src_container)
-
     fmt = DiskFormat.from_string(args.format) or DiskFormat.from_filename(args.out)
 
-    container_to_disk_image(
-        args, tmpdir, runner, storage, args.src_container, fmt, args.out
-    )
+    if args.oci_archive:
+        containername = random_container_name()
+        bootc_archive_to_store(runner, args.src_container, storage, containername)
+        remove_container = True
+    else:
+        if not podman_image_exists(storage, args.src_container):
+            raise ContainerNotFound(args.src_container)
+        containername = args.src_container
+        remove_container = False
+
+    with TemporaryContainer(storage, containername, cleanup=remove_container):
+        container_to_disk_image(
+            args, tmpdir, runner, storage, containername, fmt, args.out
+        )
 
 
 @command(
