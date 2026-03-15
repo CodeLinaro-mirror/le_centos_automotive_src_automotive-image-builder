@@ -30,13 +30,22 @@ $defs:
     additionalProperties: false
     required:
       - id
-      - baseurl
+    anyOf:
+      - required: [baseurl]
+      - required: [metalink]
+      - required: [mirrorlist]
     properties:
       id:
         description: The id to use for this repo in the configuration
         type: string
       baseurl:
         description: The url to the repo, or a pathname to a local repository
+        type: string
+      metalink:
+        description: URL to a metalink file for the repo
+        type: string
+      mirrorlist:
+        description: URL to a file containing a list of baseurls for the repo
         type: string
       priority:
         description: "The priority of the repo, defaults to 99 if not specified. If there is more than one candidate package for a particular operation, the one from a repo with the lowest priority value is picked, possibly despite being less convenient otherwise (e.g. by being a lower version) (source: man dnf.conf)"

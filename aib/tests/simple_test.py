@@ -375,6 +375,34 @@ class TestContents(unittest.TestCase):
         expected_repos = [{"baseurl": "http://example.com/x86_64/repo"}]
         self.mock_loader.set.assert_any_call("simple_repos", expected_repos)
 
+    def test_set_defines_with_metalink_repo(self):
+        """Test set_defines with metalink repo"""
+        data = {
+            "repos": [{"id": "test", "metalink": "http://example.com/$arch/metalink"}]
+        }
+        contents = Contents(self.mock_loader, data, self.extra_include)
+        contents.set_defines()
+
+        expected_repos = [
+            {"id": "test", "metalink": "http://example.com/x86_64/metalink"}
+        ]
+        self.mock_loader.set.assert_any_call("simple_repos", expected_repos)
+
+    def test_set_defines_with_mirrorlist_repo(self):
+        """Test set_defines with mirrorlist repo"""
+        data = {
+            "repos": [
+                {"id": "test", "mirrorlist": "http://example.com/$arch/mirrorlist"}
+            ]
+        }
+        contents = Contents(self.mock_loader, data, self.extra_include)
+        contents.set_defines()
+
+        expected_repos = [
+            {"id": "test", "mirrorlist": "http://example.com/x86_64/mirrorlist"}
+        ]
+        self.mock_loader.set.assert_any_call("simple_repos", expected_repos)
+
     def test_set_defines_with_files(self):
         """Test set_defines with file operations"""
         data = {

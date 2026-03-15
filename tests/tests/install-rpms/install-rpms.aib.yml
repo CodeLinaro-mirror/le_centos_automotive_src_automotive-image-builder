@@ -8,7 +8,7 @@ content:
     - debug
   repos:
     - id: epel
-      baseurl: https://mirrors.hostiserver.com/fedora/epel/10/Everything/$arch/
+      metalink: https://mirrors.fedoraproject.org/metalink?repo=epel-10&arch=$arch
 
 qm:
   content:
@@ -20,4 +20,4 @@ qm:
       - debug
     repos:
       - id: epel
-        baseurl: https://mirrors.hostiserver.com/fedora/epel/10/Everything/$arch/
+        metalink: https://mirrors.fedoraproject.org/metalink?repo=epel-10&arch=$arch
