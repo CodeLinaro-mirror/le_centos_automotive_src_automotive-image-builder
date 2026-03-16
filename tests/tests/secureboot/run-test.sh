@@ -95,7 +95,7 @@ fi
 
 assert_file_has_content serial-console.log "secureboot: Secure boot enabled"
 
-run_vm_command "rpm-ostree status"
+run_vm_command "bootc status"
 
 # We should not have less installed yet
 if run_vm_command "stat /usr/bin/less" ; then
@@ -118,7 +118,7 @@ if ! wait_for_vm_up "$LOGIN_TIMEOUT" "$PASSWORD"; then
     exit 1
 fi
 
-run_vm_command "rpm-ostree status"
+run_vm_command "bootc status"
 
 # Check that we have the new update with less in
 if ! run_vm_command "stat /usr/bin/less" ; then

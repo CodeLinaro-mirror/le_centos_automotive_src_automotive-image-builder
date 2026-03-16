@@ -912,7 +912,8 @@ mpp-vars:
 
   ostree_mode_rpms:
     - bootc
-    - rpm-ostree
+    - rpm
+    - bubblewrap # Needed for ostree
     - nss-altfiles
     - skopeo  # Needed for upgrading from an OCI remove image
     - mpp-if: use_bootc and use_ukiboot
