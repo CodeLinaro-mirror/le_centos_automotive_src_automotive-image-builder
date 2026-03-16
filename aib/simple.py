@@ -420,8 +420,11 @@ class Contents:
         self.set_define("simple_remove", simple_remove)
 
         for r in self.repos:
-            url = r["baseurl"]
-            r["baseurl"] = url.replace("$arch", self.loader.defines["arch"])
+            for url_key in ("baseurl", "metalink", "mirrorlist"):
+                if url_key in r:
+                    r[url_key] = r[url_key].replace(
+                        "$arch", self.loader.defines["arch"]
+                    )
 
         if "debug" in self.enable_repos:
             self.set_define("simple_add_debug_repos", True)
