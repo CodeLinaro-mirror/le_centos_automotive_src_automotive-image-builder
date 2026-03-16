@@ -745,9 +745,11 @@ def main():
     net_dev = "virtio-net-pci"
     if args.aboot:
         net_dev = "virtio-net-device"
+    # We force the network to be in the second slot to make the ethernet iface name stable
+    net_pci_addr = "bus=pcie.0,addr=0x2"
     qemu_args += [
         "-device",
-        f"{net_dev},netdev=n0,mac={macstr}",
+        f"{net_dev},netdev=n0,mac={macstr},{net_pci_addr}",
         "-netdev",
         f"user,id=n0,net={args.network}," + guestfwds + ",".join(fwds),
     ]
