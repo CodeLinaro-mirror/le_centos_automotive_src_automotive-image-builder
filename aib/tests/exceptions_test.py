@@ -5,7 +5,6 @@ from aib.arguments import parse_args
 from aib.osbuild import create_osbuild_manifest, rewrite_manifest
 from aib import AIBParameters
 from aib import exceptions
-from aib.exports import get_export_data
 
 BASE_DIR = "/usr/lib/automotive-image-builder"
 INVALID_YAML = """
@@ -53,9 +52,3 @@ def test_missing_export():
             base_dir=BASE_DIR,
         )
     assert argparse_err.value.code == 2
-
-
-def test_export_data():
-    with pytest.raises(exceptions.UnsupportedExport) as export_err:
-        get_export_data("ostre-commit")
-    assert "ostre-commit" in str(export_err)

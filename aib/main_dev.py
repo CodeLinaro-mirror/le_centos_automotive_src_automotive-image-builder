@@ -6,7 +6,6 @@ import os
 from .utils import (
     DiskFormat,
 )
-from .exports import export, get_export_data
 from .runner import Runner
 from .utils import (
     SudoTemporaryDirectory,
@@ -65,87 +64,6 @@ def listrpms(args, tmpdir, runner):
     data = extract_rpmlist_json(osbuild_manifest)
 
     print(data)
-
-
-@command(
-    group=CommandGroup.BASIC,
-    help="Backwards compatible a-i-b 1.0 build command (deprecated)",
-    shared_args=["container", "include"],
-    args=[
-        {
-            "--mode": {
-                "type": "str",
-                "default": "image",
-                "help": "Build this image mode (package, image)",
-            },
-            "--ostree-repo": {
-                "type": "path",
-                "help": "Export ostree commit to ostree repo at this path",
-            },
-            "--export": {
-                "type": "append",
-                "help": "Export this image type",
-            },
-            "manifest": "Source manifest file",
-            "out": "Output path",
-        },
-        POLICY_ARGS,
-        TARGET_ARGS,
-        BUILD_ARGS,
-    ],
-)
-def build_deprecated(args, tmpdir, runner):
-    """
-    Backwards compatibility command to build various types of images.
-    This takes '--mode' and '--export' options that together define
-    what to build and how.
-
-    This command is deprecated, and we now recommend using 'build'
-    instead, as this are easier to use, and  avoid accidentally using
-    problematic combination of image options
-    """
-    has_repo = False
-    exports = []
-
-    is_bootc = False
-    # Rewrite exports according to export_data
-    for exp in args.export:
-        if "bootc" in exp:
-            is_bootc = True
-        data = get_export_data(exp)
-        exp = data.get("export_arg", exp)
-        exports.append(exp)
-        if exp == "ostree-commit":
-            has_repo = True
-
-    # Rewrite --mode image and --export bootc... to mode=bootc
-    if is_bootc:
-        if args.mode != "image":
-            raise exceptions.AIBException(f"mode {args.mode} not compabible with bootc")
-        args.mode = "bootc"
-
-    # If ostree repo was specified, also export it if needed
-    if not has_repo and args.ostree_repo:
-        exports += ["ostree-commit"]
-
-    with run_osbuild(args, tmpdir, runner, exports) as outputdir:
-        if args.ostree_repo:
-            repodir = os.path.join(outputdir.name, "ostree-commit/repo")
-            runner.run_as_user(
-                ["ostree", "pull-local", "--repo=" + args.ostree_repo, repodir]
-            )
-
-        if len(args.export) == 0:
-            pass
-        elif len(args.export) == 1:
-            # Export directly to args.out
-            export(outputdir.name, args.out, False, args.export[0], runner)
-        else:
-            if os.path.isdir(args.out) or os.path.isfile(args.out):
-                runner.run_as_root(["rm", "-rf", args.out])
-            os.mkdir(args.out)
-            for exp in args.export:
-                export(outputdir.name, args.out, True, exp, runner)
 
 
 @command(
