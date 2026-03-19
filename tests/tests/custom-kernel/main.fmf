@@ -12,8 +12,7 @@ description: |
   Results location:
     output.txt
 
-
-require:
+require+:
   - qemu-kvm
   - sshpass
 duration: 60m

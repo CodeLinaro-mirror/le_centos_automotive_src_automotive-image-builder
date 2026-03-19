@@ -13,7 +13,7 @@ description: |
   Results location:
     output.txt
 
-require:
+require+:
   - qemu-kvm
   - expect
   - socat

@@ -55,6 +55,7 @@ prepare:
 
 discover:
     how: fmf
+    prune: true
     filter: tag:-special
 
 execute:

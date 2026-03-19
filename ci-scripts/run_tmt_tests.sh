@@ -70,5 +70,9 @@ success=$?
 
 mkdir -p tmt-run
 cp -r /var/tmp/tmt/* tmt-run/
+# No need to store repository content in job artifacts
+for d in tmt-run/* ; do
+    rm -rf "$d"/tests/plans/"$PLAN_NAME"/tree
+done
 
 exit $success

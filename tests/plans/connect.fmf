@@ -74,6 +74,7 @@ prepare:
           ./scripts/init-bootc-builder.sh
 discover:
     how: fmf
+    prune: true
     filter: tag:-special
 
 execute:
