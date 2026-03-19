@@ -10,6 +10,7 @@ from .utils import (
 )
 from .ostree import OSTree
 from .simple import ManifestLoader
+from . import log
 from . import exceptions
 from .utils import (
     SudoTemporaryDirectory,
@@ -264,6 +265,11 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     if args.osbuild_manifest:
         osbuild_manifest = args.osbuild_manifest
+
+    if not args.simple_manifest:
+        log.warning(
+            "The old manifest format (*.mpp.yaml) is deprecated and support for it will soon be removed."
+        )
 
     create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage=storage)
 
