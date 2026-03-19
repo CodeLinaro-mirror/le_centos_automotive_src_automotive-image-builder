@@ -5,7 +5,7 @@ mpp-vars:
     - WALinuxAgent
     - cloud-init
     - cloud-utils-growpart
-    - gdisk
+    - fdisk
     - hyperv-daemons
   dracut_add_drivers:
     mpp-join:
