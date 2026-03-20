@@ -32,7 +32,7 @@ restrictions:
     disallow:
       - bluetooth
       - btusb
-    disallow@rcar_s4:
+    disallow@ebbr:
       - rcar_can
       - rcar_thermal
       - rcar_dmac

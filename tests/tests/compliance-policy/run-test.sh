@@ -282,28 +282,28 @@ echo_log "Policy resolution tests completed successfully"
 # Test 13: Test target-specific policy configuration using compliance policy
 echo_log "Test 13: Testing target-specific policy configuration..."
 
-# Test with rcar_s4 target - should get global + rcar_s4-specific kernel module restrictions
-echo_log "  Testing rcar_s4 target-specific kernel module restrictions..."
-build --dry-run --policy compliance.aibp.yml --target rcar_s4 --osbuild-manifest rcar_s4_out.json simple-rpms.aib.yml "$NO_CTR_NAME" out
+# Test with ebbr target - should get global + ebbr-specific kernel module restrictions
+echo_log "  Testing ebbr target-specific kernel module restrictions..."
+build --dry-run --policy compliance.aibp.yml --target ebbr --osbuild-manifest ebbr_out.json simple-rpms.aib.yml "$NO_CTR_NAME" out
 
-# Check that global modules are denied for rcar_s4
-assert_kernel_module_removed rcar_s4_out.json "bluetooth"
-assert_kernel_module_removed rcar_s4_out.json "btusb"
+# Check that global modules are denied for ebbr
+assert_kernel_module_removed ebbr_out.json "bluetooth"
+assert_kernel_module_removed ebbr_out.json "btusb"
 
-# Check that rcar_s4-specific modules are also denied
-assert_kernel_module_removed rcar_s4_out.json "rcar_can"
-assert_kernel_module_removed rcar_s4_out.json "rcar_thermal"
-assert_kernel_module_removed rcar_s4_out.json "rcar_dmac"
+# Check that ebbr-specific modules are also denied
+assert_kernel_module_removed ebbr_out.json "rcar_can"
+assert_kernel_module_removed ebbr_out.json "rcar_thermal"
+assert_kernel_module_removed ebbr_out.json "rcar_dmac"
 
 # Test with qemu target - should only get global kernel module restrictions
-echo_log "  Testing qemu target does not get rcar_s4-specific restrictions..."
+echo_log "  Testing qemu target does not get ebbr-specific restrictions..."
 build --dry-run --osbuild-manifest qemu_out.json --policy compliance.aibp.yml simple-rpms.aib.yml "$NO_CTR_NAME" out
 
 # Check that global modules are denied for qemu
 assert_kernel_module_removed qemu_out.json "bluetooth"
 assert_kernel_module_removed qemu_out.json "btusb"
 
-# Verify that qemu build does NOT have rcar_s4-specific module restrictions
+# Verify that qemu build does NOT have ebbr-specific module restrictions
 assert_kernel_module_not_removed qemu_out.json "rcar_can"
 assert_kernel_module_not_removed qemu_out.json "rcar_thermal"
 assert_kernel_module_not_removed qemu_out.json "rcar_dmac"

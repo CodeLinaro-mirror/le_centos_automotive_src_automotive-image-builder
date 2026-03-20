@@ -694,7 +694,7 @@ restrictions:
     disallow:
       - fat
       - nfs
-    disallow@rcar_s4:
+    disallow@ebbr:
       - ufs-renesas
       - at24
     disallow@rpi4:
@@ -703,8 +703,8 @@ restrictions:
   variables:
     force:
       global_var: true
-    force@rcar_s4:
-      rcar_specific_var: "rcar_value"
+    force@ebbr:
+      ebbr_specific_var: "ebbr_value"
     force@rpi4:
       rpi_specific_var: "rpi_value"
 """
@@ -715,7 +715,7 @@ restrictions:
 
     # Should have global + rpi4-specific modules
     assert set(policy_rpi4.disallowed_kernel_modules) == {"fat", "nfs", "bcm2835-dma"}
-    # Should NOT have rcar_s4-specific modules
+    # Should NOT have ebbr-specific modules
     assert "ufs-renesas" not in policy_rpi4.disallowed_kernel_modules
     assert "at24" not in policy_rpi4.disallowed_kernel_modules
 
@@ -723,25 +723,25 @@ restrictions:
     forced_vars = policy_rpi4.forced_variables
     assert forced_vars["global_var"] is True
     assert forced_vars["rpi_specific_var"] == "rpi_value"
-    assert "rcar_specific_var" not in forced_vars
+    assert "ebbr_specific_var" not in forced_vars
 
-    # Test with rcar_s4 target
-    policy_rcar = loader.load_policy(policy_file, "rcar_s4")
+    # Test with ebbr target
+    policy_ebbr = loader.load_policy(policy_file, "ebbr")
 
-    # Should have global + rcar_s4-specific modules
-    assert set(policy_rcar.disallowed_kernel_modules) == {
+    # Should have global + ebbr-specific modules
+    assert set(policy_ebbr.disallowed_kernel_modules) == {
         "fat",
         "nfs",
         "ufs-renesas",
         "at24",
     }
     # Should NOT have rpi4-specific modules
-    assert "bcm2835-dma" not in policy_rcar.disallowed_kernel_modules
+    assert "bcm2835-dma" not in policy_ebbr.disallowed_kernel_modules
 
-    # Should have global + rcar_s4-specific variables
-    forced_vars = policy_rcar.forced_variables
+    # Should have global + ebbr-specific variables
+    forced_vars = policy_ebbr.forced_variables
     assert forced_vars["global_var"] is True
-    assert forced_vars["rcar_specific_var"] == "rcar_value"
+    assert forced_vars["ebbr_specific_var"] == "ebbr_value"
     assert "rpi_specific_var" not in forced_vars
 
 

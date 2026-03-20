@@ -48,7 +48,7 @@ aib/
 └── progress.py          # OSBuild log pretty-printing
 
 distro/                  # Distribution definitions (autosd10-sig, cs9, rhivos, etc.)
-targets/                 # Hardware target configs (qemu, rpi4, rcar_s4, etc.)
+targets/                 # Hardware target configs (qemu, rpi4, ebbr, etc.)
 include/                 # Core osbuild-mpp template includes
 examples/                # Sample .aib.yml manifests
 files/
