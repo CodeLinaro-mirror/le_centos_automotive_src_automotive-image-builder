@@ -7,7 +7,7 @@ mpp-vars:
     - tuned
     - cloud-init
     - cloud-utils-growpart
-    - gdisk
+    - fdisk
     - NetworkManager-cloud-setup
     - rsync
     - qemu-guest-agent
