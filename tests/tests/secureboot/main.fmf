@@ -25,7 +25,7 @@ description: |
   Results location:
     output.txt
 
-require:
+require+:
   - openssl
   - podman
   - qemu-kvm

@@ -14,10 +14,13 @@ description: |
   Results location:
     output.txt
 
-require:
+require+:
   - qemu-kvm
   - expect
   - socat
+  - type: file
+    pattern:
+      - /tests/image-tests/*
 duration: 60m
 tag: [virt-required]
 # Tests, which require virtualization, usually take more time to run, so let's

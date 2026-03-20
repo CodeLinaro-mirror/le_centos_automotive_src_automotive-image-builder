@@ -5,4 +5,8 @@ component: aib
 framework: shell
 test: |
     ./run-test.sh
+require:
+  - type: file
+    pattern:
+      - /tests/scripts/*
 
