@@ -38,10 +38,7 @@ generic image, such as firmware installation or configuration.
 
  * ride4_sa8775p_sx - Qualcomm RIDESX4 board,  Rev 1, 2, & 2.5, with SCMI enabled firmware.
  * ride4_sa8775p_sx_r3 - Qualcomm RIDESX4 board,  Rev 3, with SCMI enabled firmware.
- * ride4_sa8775p_sx_legacy - Legacy version of ride4_sa8775p_sx
- * ride4_sa8775p_sx_legacy_r3 - Legacy version of ride4_sa8775p_sx_r3
  * ride4_sa8650p_sx_r3 - Qualcomm, SA8650P SX Rev3 SoC
- * qdrive3 - Qualcomm SA8540p Development Boards
 
 ### TI boards
 
