@@ -145,7 +145,8 @@ mpp-vars:
         then:
           - id: localrepo
             baseurl: $local_repo
-            priority: $local_repo_prio
+            priority:
+              mpp-eval: local_repo_prio
   build_repos:
     mpp-join:
       - mpp-eval: distro_repos
@@ -155,7 +156,8 @@ mpp-vars:
         then:
           - id: localrepo
             baseurl: $local_repo
-            priority: $local_repo_prio
+            priority:
+              mpp-eval: local_repo_prio
   image_devel_repos:
     mpp-join:
       - mpp-eval: distro_devel_repos
