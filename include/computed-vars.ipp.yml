@@ -459,7 +459,7 @@ mpp-vars:
   enable_reclaim_protection:
     mpp-eval: locals().get("enable_reclaim_protection", use_qm)
   cg_memory_min:
-    mpp-eval: locals().get("cg_memory_min", "64MiB")
+    mpp-eval: locals().get("cg_memory_min", 67108864)
   image_enabled_services:
     mpp-join:
       - mpp-eval: image_enabled_services
