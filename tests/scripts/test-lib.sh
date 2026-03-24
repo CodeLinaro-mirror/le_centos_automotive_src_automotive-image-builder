@@ -343,8 +343,10 @@ trybuild() {
         --distro=$AIB_DISTRO \
         --target qemu \
         --cache $OUTDIR/dnf-cache \
-        --build-dir "$BUILDDIR" $FAST_OPTIONS \
+        --build-dir "$BUILDDIR" \
+        $FAST_OPTIONS \
         --define reproducible_image=true \
+        $AIB_BUILD_OPTIONS \
         --verbose \
         "$@" > "${IMG_BUILD_LOG_BOOTC}"
     result=$?
@@ -394,8 +396,10 @@ trybuild_bootc_builder() {
         --verbose \
         --distro=$AIB_DISTRO \
         --cache $OUTDIR/dnf-cache \
-        --build-dir "$BUILDDIR" $FAST_OPTIONS \
+        --build-dir "$BUILDDIR" \
+        $FAST_OPTIONS \
         --define reproducible_image=true \
+        $AIB_BUILD_BUILDER_OPTIONS \
         "$@" > "${IMG_BUILD_LOG_BUILDER}"
     result=$?
 

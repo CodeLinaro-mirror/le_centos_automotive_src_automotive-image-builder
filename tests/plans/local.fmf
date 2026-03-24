@@ -14,6 +14,12 @@ environment:
     # Some tests require using sudo when executed locally
     SUDO: "sudo"
 
+    # Custom parameters to be passed to `aib build` command used in tests
+    AIB_BUILD_OPTIONS: ""
+
+    # Custom parameters to be passed to `aib build-builder` command used in tests
+    AIB_BUILD_BUILDER_OPTIONS: ""
+
     AIB: $PROJECT_DIR/bin/aib
     AIBDEV: $PROJECT_DIR/bin/aib-dev
     AIB_BASEDIR: $PROJECT_DIR

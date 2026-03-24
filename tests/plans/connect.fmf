@@ -26,6 +26,12 @@ environment:
     # sudo is not used as the tests are executed under root user
     SUDO: ""
 
+    # Custom parameters to be passed to `aib build` command used in tests
+    AIB_BUILD_OPTIONS: ""
+
+    # Custom parameters to be passed to `aib build-builder` command used in tests
+    AIB_BUILD_BUILDER_OPTIONS: ""
+
     AIB: aib
     AIBDEV: aib-dev
     AIB_BASEDIR: /usr/lib/automotive-image-builder
