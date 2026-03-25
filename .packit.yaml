@@ -29,8 +29,6 @@ jobs:
     trigger: pull_request
     osh_diff_scan_after_copr_build: false
     targets:
-      - centos-stream-9-aarch64
-      - centos-stream-9-x86_64
       - centos-stream-10-aarch64
       - centos-stream-10-x86_64
       - fedora-rawhide-aarch64
@@ -46,12 +44,6 @@ jobs:
       failure_comment:
         message: "automotive-image-builder build failed for merged commit {commit_sha}. Please check logs {logs_url}, packit dashboard {packit_dashboard_url} and external service dashboard {external_dashboard_url}"
     targets:
-      - centos-stream+epel-next-9-aarch64
-      - centos-stream+epel-next-9-x86_64
-      - centos-stream-9-aarch64
-      - centos-stream-9-x86_64
-      - epel-9-x86_64
-      - epel-9-aarch64
       - centos-stream+epel-next-10-aarch64
       - centos-stream+epel-next-10-x86_64
       - centos-stream-10-aarch64
@@ -60,7 +52,6 @@ jobs:
       - epel-10-aarch64
       - fedora-all-aarch64
       - fedora-all-x86_64
-      - rhel-9-x86_64
       - rhel-10-x86_64
 
   - <<: *copr
