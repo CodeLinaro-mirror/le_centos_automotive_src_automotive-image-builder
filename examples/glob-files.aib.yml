@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://centos.gitlab.io/automotive/src/automotive-image-builder/manifest_schema.yml
+
 name: example-glob-files
 version: "1.0"
 
