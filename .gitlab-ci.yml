@@ -178,6 +178,9 @@ pages:
     - generate-schema-doc files/manifest_schema.yml public/manifest.html
     # Backwards compat filename for old links
     - ln -s manifest.html public/simple_manifest.html
+    # Provide schema as plain yml
+    - cp files/manifest_schema.yml public/
+    - cp files/policy_schema.html public/
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 

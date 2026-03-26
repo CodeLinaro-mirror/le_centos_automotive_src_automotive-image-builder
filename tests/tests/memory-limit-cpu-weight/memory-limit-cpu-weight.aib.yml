@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://centos.gitlab.io/automotive/src/automotive-image-builder/manifest_schema.yml
 name: memory_limit_cpu_weight_test
 qm:
   memory_limit:

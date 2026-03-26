@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://centos.gitlab.io/automotive/src/automotive-image-builder/manifest_schema.yml
 # This is a more complex example that uses most available option
 # Its not a great initial example to look at
 
