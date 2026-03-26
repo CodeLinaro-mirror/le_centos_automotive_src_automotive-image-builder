@@ -180,7 +180,7 @@ pages:
     - ln -s manifest.html public/simple_manifest.html
     # Provide schema as plain yml
     - cp files/manifest_schema.yml public/
-    - cp files/policy_schema.html public/
+    - cp files/policy_schema.yml public/
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 
