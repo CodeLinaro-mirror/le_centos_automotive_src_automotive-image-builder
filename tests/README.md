@@ -186,6 +186,8 @@ The following environment variables exist to customize test execution:
 - **`AIB_DISTRO`**
    - Distribution used inside tests. Available distributions can be listed using `automotive-image-builder list-dist`
      on the relevant platform.
+   - If the value needs to be dynamically detected during prepare phase, then `AIB_DISTRO` should be set to empty value
+     in the plan and dynamically detected value should be stored in `${TMT_WORKDIR_ROOT}/aib_distro.txt`
    - Default value: `autosd10-sig`
 - **`AIB_SRPM_DIR`**
    - Directory where AIB source RPM should be uploaded before test execution
