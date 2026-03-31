@@ -690,196 +690,222 @@ mpp-vars:
                 mpp-if: "locals().get('aboot_ramdisk_offset') != None"
                 then:
                   mpp-format-string: "{aboot_ramdisk_offset}"
-
+  image_services_skipped_on_container:
+    mpp-join:
+      - mpp-eval: image_services_skipped_on_container
+      - - mpp-if: use_efipart_mount and not policy_disable_efi_features
+          then: dev-disk-by\x2dlabel-ESP.device
+        - mpp-if: use_efipart_mount and not policy_disable_efi_features
+          then:
+            mpp-format-string: "dev-disk-by{_dash_escape}uuid-{qm_varfs_uuid.replace('-', _dash_escape)}.device"
+        - mpp-if: selinux_booleans
+          then: selinux-bools.service
   # Extra directories that will be created in the image, list amended by moode-*.ipp
   extra_tree_dirs:
-    - path: /etc/containers
-      parents: true
-      exist_ok: true
-    - path: /usr/share/containers
-      parents: true
-      exist_ok: true
-    - path: /usr/lib/systemd/system.conf.d
-      parents: true
-      exist_ok: true
-    - mpp-if: enable_reclaim_protection
-      then:
-        path: /usr/lib/systemd/system/system.slice.d
-        parents: true
-        exist_ok: true
-    - mpp-if: enable_reclaim_protection
-      then:
-        path: /usr/lib/systemd/system/user.slice.d
-        parents: true
-        exist_ok: true
-    - path: /usr/lib/systemd/coredump.conf.d
-      parents: true
-      exist_ok: true
-    - mpp-if: use_qm
-      then:
-        path: /usr/share/containers/systemd/qm.container.d
-        parents: true
-        exist_ok: true
-    - mpp-if: use_qm and qm_wayland_enable
-      then:
-        path: /etc/qm/containers/systemd/wayland-compositor.container.d
-        parents: true
-        exist_ok: true
-    - mpp-if: use_boot_check
-      then:
-        path: /usr/lib/systemd/system/auto-boot-check.service.d
-        parents: true
-        exist_ok: true
-    - path: /usr/lib/bootc/install
-      parents: true
-      exist_ok: true
-    - path: /usr/lib/bootc-image-builder
-      parents: true
-      exist_ok: true
-    - path: /usr/lib/automotive-image-builder
-      parents: true
-      exist_ok: true
-    - mpp-if: root_ssh_keys
-      then:
-        path: /etc/ssh/authorized_keys
-        parents: true
-        exist_ok: true
-    - mpp-if: use_repart
-      then:
-        path: /usr/lib/repart.d
-        parents: true
-        exist_ok: true
-    - mpp-if: use_repart
-      then:
-        path: /usr/lib/systemd/system/systemd-repart.service.d
-        parents: true
-        exist_ok: true
+    mpp-join:
+      - - path: /etc/containers
+          parents: true
+          exist_ok: true
+        - path: /usr/share/containers
+          parents: true
+          exist_ok: true
+        - path: /usr/lib/systemd/system.conf.d
+          parents: true
+          exist_ok: true
+        - mpp-if: enable_reclaim_protection
+          then:
+            path: /usr/lib/systemd/system/system.slice.d
+            parents: true
+            exist_ok: true
+        - mpp-if: enable_reclaim_protection
+          then:
+            path: /usr/lib/systemd/system/user.slice.d
+            parents: true
+            exist_ok: true
+        - path: /usr/lib/systemd/coredump.conf.d
+          parents: true
+          exist_ok: true
+        - mpp-if: use_qm
+          then:
+            path: /usr/share/containers/systemd/qm.container.d
+            parents: true
+            exist_ok: true
+        - mpp-if: use_qm and qm_wayland_enable
+          then:
+            path: /etc/qm/containers/systemd/wayland-compositor.container.d
+            parents: true
+            exist_ok: true
+        - mpp-if: use_boot_check
+          then:
+            path: /usr/lib/systemd/system/auto-boot-check.service.d
+            parents: true
+            exist_ok: true
+        - path: /usr/lib/bootc/install
+          parents: true
+          exist_ok: true
+        - path: /usr/lib/bootc-image-builder
+          parents: true
+          exist_ok: true
+        - path: /usr/lib/automotive-image-builder
+          parents: true
+          exist_ok: true
+        - mpp-if: root_ssh_keys
+          then:
+            path: /etc/ssh/authorized_keys
+            parents: true
+            exist_ok: true
+        - mpp-if: use_repart
+          then:
+            path: /usr/lib/repart.d
+            parents: true
+            exist_ok: true
+        - mpp-if: use_repart
+          then:
+            path: /usr/lib/systemd/system/systemd-repart.service.d
+            parents: true
+            exist_ok: true
+      - mpp-eval: |
+          [
+            {
+              'path': f'/usr/lib/systemd/system/{service}.d',
+              'parents': True,
+              'exist_ok': True
+            } for service in image_services_skipped_on_container
+          ]
   # Extra content that will be copied from from extra-tree to the image, list amended by moode-*.ipp
   extra_tree_content:
-    - mpp-if: use_repart
-      then:
-        from: input://extra-tree/repart.dropin
-        to: tree:///usr/lib/systemd/system/systemd-repart.service.d/10-automotive.conf
-    - mpp-if: grow_rootfs
-      then:
-        from: input://extra-tree/repart.conf
-        to: tree:///usr/lib/repart.d/10-root.conf
-    - from: input://extra-tree/systemd-system.conf
-      to: tree:///usr/lib/systemd/system.conf.d/10-automotive.conf
-    - mpp-if: enable_reclaim_protection
-      then:
-        from: input://extra-tree/systemd-system.slice.conf
-        to: tree:///usr/lib/systemd/system/system.slice.d/10-automotive.conf
-    - mpp-if: enable_reclaim_protection
-      then:
-        from: input://extra-tree/systemd-user.slice.conf
-        to: tree:///usr/lib/systemd/system/user.slice.d/10-automotive.conf
-    - from: input://extra-tree/coredump.conf
-      to: tree:///usr/lib/systemd/coredump.conf.d/10-automotive.conf
-    - from: input://extra-tree/rcu-normal.service
-      to: tree:///usr/lib/systemd/system/rcu-normal.service
-    - mpp-if: disable_emergency_shell
-      then:
-        from: input://extra-tree/emergency.service
-        to: tree:///etc/systemd/system/emergency.service
-    - mpp-if: disable_emergency_shell
-      then:
-        from: input://extra-tree/rescue.service
-        to: tree:///etc/systemd/system/rescue.service
-    - mpp-if: use_luks and luks_auto_unlock
-      then:
-        from: input://extra-tree/luks-key
-        to: tree:///usr/.auto-unlock-key
-    - from: input://extra-tree/containers.conf
-      to: tree://$containers_configdir/containers.conf
-    - mpp-if: use_qm and qm_wayland_enable
-      then:
-        from: input://extra-tree/wayland-compositor.conf
-        to: tree:///etc/qm/containers/systemd/wayland-compositor.container.d/10-wayland-image.conf
-    - mpp-if: use_ostree
-      then:
-        from: input://extra-tree/ostree_prepare_root.conf
-        to: tree:///usr/lib/ostree/prepare-root.conf
-    - from: input://extra-tree/build-info
-      to: tree:///etc/build-info
-    - mpp-if: load_modules
-      then:
-        from: input://extra-tree/auto-modules.conf
-        to: tree:///usr/lib/modules-load.d/auto-modules.conf
-    - from: input://extra-tree/subuid
-      to: tree:///etc/subuid
-    - from: input://extra-tree/subgid
-      to: tree:///etc/subgid
-    - mpp-if: use_static_ip
-      then:
-        from: input://extra-tree/main.nmstate
-        to: tree:///etc/main.nmstate
-    - mpp-if: use_static_ip
-      then:
-        from: input://extra-tree/main-nmstate.service
-        to: tree:///usr/lib/systemd/system/main-nmstate.service
-    - mpp-if: use_static_ip and use_boot_check
-      then:
-        from: input://extra-tree/nmstate.bootcheck
-        to: tree:///usr/lib/boot-check.d/nmstate.conf
-    - mpp-if: _boot_check_qm_digest and use_boot_check
-      then:
-        from: input://extra-tree/qm.bootcheck
-        to: tree:///usr/lib/boot-check.d/qm.conf
-    - mpp-if: use_boot_check
-      then:
-        from: input://extra-tree/bootcheck.conf
-        to: tree:///usr/lib/systemd/system/auto-boot-check.service.d/10-automotive.conf
-    - mpp-if: use_tuned_realtime
-      then:
-        from: input://extra-tree/realtime-variables.conf
-        to: tree:///etc/tuned/realtime-variables.conf
-    - mpp-if: use_bootpart
-      then:
-        from: input://extra-tree/boot.mount
-        to: tree:////usr/lib/systemd/system/boot.mount
-    - mpp-if: use_efipart_mount and not policy_disable_efi_features
-      then:
-        from: input://extra-tree/boot-efi.mount
-        to: tree:////usr/lib/systemd/system/boot-efi.mount
-    - mpp-if: _use_separate_var
-      then:
-        from: input://extra-tree/var.mount
-        to: tree:////usr/lib/systemd/system/var.mount
-    - mpp-if: _qm_use_separate_var
-      then:
-        from: input://extra-tree/var-qm.mount
-        to: tree:////usr/lib/systemd/system/var-qm.mount
-    - mpp-if: ld_so_cache_protected
-      then:
-        from: input://extra-tree/etc-ld.so.cache.mount
-        to: tree:///usr/lib/systemd/system/etc-ld.so.cache.mount
-    - mpp-if: use_qm
-      then:
-        from: input://extra-tree/qm-automotive.conf
-        to: tree:////usr/share/containers/systemd/qm.container.d/10-automotive.conf
-    - mpp-if: use_qm and qm_wayland_enable
-      then:
-        from: input://extra-tree/wayland-extra-devices.conf
-        to: tree:///usr/share/containers/systemd/qm.container.d/20-wayland-extra-devices.conf
-    - from: input://extra-tree/signing_info.json
-      to: tree://///etc/signing_info.json
-    - from: input://extra-tree/bootc.install
-      to: tree://///usr/lib/bootc/install/05-aib.toml
-    - from: input://extra-tree/disk.yaml
-      to: tree://///usr/lib/bootc-image-builder/disk.yaml
-    - mpp-if: use_ukibootpart
-      then:
-        from: input://extra-tree/ukibootctl_init.bin
-        to: tree://///usr/lib/automotive-image-builder/ukibootctl_init.bin
-    - mpp-if: root_ssh_keys
-      then:
-        from: input://extra-tree/root_sshd_authorized_keys.conf
-        to: tree:///etc/ssh/sshd_config.d/99-custom-authorized-keys.conf
-    - mpp-if: root_ssh_keys
-      then:
-        from: input://extra-tree/root_sshd_authorized_keys
-        to: tree:///etc/ssh/authorized_keys/root
+    mpp-join:
+      - - mpp-if: use_repart
+          then:
+            from: input://extra-tree/repart.dropin
+            to: tree:///usr/lib/systemd/system/systemd-repart.service.d/10-automotive.conf
+        - mpp-if: grow_rootfs
+          then:
+            from: input://extra-tree/repart.conf
+            to: tree:///usr/lib/repart.d/10-root.conf
+        - from: input://extra-tree/systemd-system.conf
+          to: tree:///usr/lib/systemd/system.conf.d/10-automotive.conf
+        - mpp-if: enable_reclaim_protection
+          then:
+            from: input://extra-tree/systemd-system.slice.conf
+            to: tree:///usr/lib/systemd/system/system.slice.d/10-automotive.conf
+        - mpp-if: enable_reclaim_protection
+          then:
+            from: input://extra-tree/systemd-user.slice.conf
+            to: tree:///usr/lib/systemd/system/user.slice.d/10-automotive.conf
+        - from: input://extra-tree/coredump.conf
+          to: tree:///usr/lib/systemd/coredump.conf.d/10-automotive.conf
+        - from: input://extra-tree/rcu-normal.service
+          to: tree:///usr/lib/systemd/system/rcu-normal.service
+        - mpp-if: disable_emergency_shell
+          then:
+            from: input://extra-tree/emergency.service
+            to: tree:///etc/systemd/system/emergency.service
+        - mpp-if: disable_emergency_shell
+          then:
+            from: input://extra-tree/rescue.service
+            to: tree:///etc/systemd/system/rescue.service
+        - mpp-if: use_luks and luks_auto_unlock
+          then:
+            from: input://extra-tree/luks-key
+            to: tree:///usr/.auto-unlock-key
+        - from: input://extra-tree/containers.conf
+          to: tree://$containers_configdir/containers.conf
+        - mpp-if: use_qm and qm_wayland_enable
+          then:
+            from: input://extra-tree/wayland-compositor.conf
+            to: tree:///etc/qm/containers/systemd/wayland-compositor.container.d/10-wayland-image.conf
+        - mpp-if: use_ostree
+          then:
+            from: input://extra-tree/ostree_prepare_root.conf
+            to: tree:///usr/lib/ostree/prepare-root.conf
+        - from: input://extra-tree/build-info
+          to: tree:///etc/build-info
+        - mpp-if: load_modules
+          then:
+            from: input://extra-tree/auto-modules.conf
+            to: tree:///usr/lib/modules-load.d/auto-modules.conf
+        - from: input://extra-tree/subuid
+          to: tree:///etc/subuid
+        - from: input://extra-tree/subgid
+          to: tree:///etc/subgid
+        - mpp-if: use_static_ip
+          then:
+            from: input://extra-tree/main.nmstate
+            to: tree:///etc/main.nmstate
+        - mpp-if: use_static_ip
+          then:
+            from: input://extra-tree/main-nmstate.service
+            to: tree:///usr/lib/systemd/system/main-nmstate.service
+        - mpp-if: use_static_ip and use_boot_check
+          then:
+            from: input://extra-tree/nmstate.bootcheck
+            to: tree:///usr/lib/boot-check.d/nmstate.conf
+        - mpp-if: _boot_check_qm_digest and use_boot_check
+          then:
+            from: input://extra-tree/qm.bootcheck
+            to: tree:///usr/lib/boot-check.d/qm.conf
+        - mpp-if: use_boot_check
+          then:
+            from: input://extra-tree/bootcheck.conf
+            to: tree:///usr/lib/systemd/system/auto-boot-check.service.d/10-automotive.conf
+        - mpp-if: use_tuned_realtime
+          then:
+            from: input://extra-tree/realtime-variables.conf
+            to: tree:///etc/tuned/realtime-variables.conf
+        - mpp-if: use_bootpart
+          then:
+            from: input://extra-tree/boot.mount
+            to: tree:////usr/lib/systemd/system/boot.mount
+        - mpp-if: use_efipart_mount and not policy_disable_efi_features
+          then:
+            from: input://extra-tree/boot-efi.mount
+            to: tree:////usr/lib/systemd/system/boot-efi.mount
+        - mpp-if: _use_separate_var
+          then:
+            from: input://extra-tree/var.mount
+            to: tree:////usr/lib/systemd/system/var.mount
+        - mpp-if: _qm_use_separate_var
+          then:
+            from: input://extra-tree/var-qm.mount
+            to: tree:////usr/lib/systemd/system/var-qm.mount
+        - mpp-if: ld_so_cache_protected
+          then:
+            from: input://extra-tree/etc-ld.so.cache.mount
+            to: tree:///usr/lib/systemd/system/etc-ld.so.cache.mount
+        - mpp-if: use_qm
+          then:
+            from: input://extra-tree/qm-automotive.conf
+            to: tree:////usr/share/containers/systemd/qm.container.d/10-automotive.conf
+        - mpp-if: use_qm and qm_wayland_enable
+          then:
+            from: input://extra-tree/wayland-extra-devices.conf
+            to: tree:///usr/share/containers/systemd/qm.container.d/20-wayland-extra-devices.conf
+        - from: input://extra-tree/signing_info.json
+          to: tree://///etc/signing_info.json
+        - from: input://extra-tree/bootc.install
+          to: tree://///usr/lib/bootc/install/05-aib.toml
+        - from: input://extra-tree/disk.yaml
+          to: tree://///usr/lib/bootc-image-builder/disk.yaml
+        - mpp-if: use_ukibootpart
+          then:
+            from: input://extra-tree/ukibootctl_init.bin
+            to: tree://///usr/lib/automotive-image-builder/ukibootctl_init.bin
+        - mpp-if: root_ssh_keys
+          then:
+            from: input://extra-tree/root_sshd_authorized_keys.conf
+            to: tree:///etc/ssh/sshd_config.d/99-custom-authorized-keys.conf
+        - mpp-if: root_ssh_keys
+          then:
+            from: input://extra-tree/root_sshd_authorized_keys
+            to: tree:///etc/ssh/authorized_keys/root
+      - mpp-eval: |
+          [
+            {
+              'from': 'input://extra-tree/skip-on-container.dropin',
+              'to': f'tree:////usr/lib/systemd/system/{service}.d/10-container.conf'
+            } for service in image_services_skipped_on_container
+          ]
 
   build_rpms:
     mpp-join:
@@ -973,6 +999,8 @@ mpp-vars:
           then: NetworkManager
         - mpp-if: use_qm
           then: qm
+        - mpp-if: use_qm
+          then: fuse-overlayfs # this is needed for nested containers when running bootc images as containers
         - mpp-if: use_qm and qm_wayland_enable
           then: qm-oci-hooks
         - mpp-if: system_boot_check
