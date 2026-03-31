@@ -391,6 +391,7 @@ trybuild_bootc_builder() {
     local result=0
 
     $AIB build-builder \
+        --verbose \
         --distro=$AIB_DISTRO \
         --cache $OUTDIR/dnf-cache \
         --build-dir "$BUILDDIR" $FAST_OPTIONS \
