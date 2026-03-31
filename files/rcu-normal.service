@@ -2,6 +2,7 @@
 Description=Disable expedited rcu updates
 Requires=boot-complete.target
 After=boot-complete.target
+ConditionVirtualization=!container
 
 [Service]
 Type=oneshot

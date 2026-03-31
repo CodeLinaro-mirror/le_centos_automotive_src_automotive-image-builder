@@ -6,6 +6,7 @@ mpp-vars:
       [Unit]
       Before=local-fs.target
       After=blockdev@dev-disk-by\\x2duuid-{bootfs_uuid.replace("-", _dash_escape)}.target
+      ConditionVirtualization=!container
 
       [Mount]
       What=/dev/disk/by-uuid/$bootfs_uuid
@@ -19,6 +20,7 @@ mpp-vars:
       [Unit]
       Before=local-fs.target
       After=blockdev@dev-disk-by\\x2dlabel-ESP.target
+      ConditionVirtualization=!container
 
       [Mount]
       What=/dev/disk/by-label/ESP
@@ -32,6 +34,7 @@ mpp-vars:
       [Unit]
       Before=local-fs.target
       After=blockdev@dev-disk-by\\x2duuid-{varfs_uuid.replace("-", _dash_escape)}.target
+      ConditionVirtualization=!container
 
       [Mount]
       What=/dev/disk/by-uuid/$varfs_uuid
@@ -45,6 +48,7 @@ mpp-vars:
       [Unit]
       Before=local-fs.target
       After=blockdev@dev-disk-by\\x2duuid-{qm_varfs_uuid.replace("-", _dash_escape)}.target
+      ConditionVirtualization=!container
 
       [Mount]
       What=/dev/disk/by-uuid/$qm_varfs_uuid
@@ -57,6 +61,7 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       Before=local-fs.target
+      ConditionVirtualization=!container
 
       [Mount]
       What=/etc/ld.so.cache
@@ -299,6 +304,10 @@ mpp-vars:
               filename: vbmeta.img
               paths:
                 - mpp-eval: _kernel_dir + "/vbmeta.img"
+
+  skip_on_container_dropin: |
+    [Unit]
+    ConditionVirtualization=!container
 
   bootc_install_options:
     mpp-format-string: |
@@ -959,6 +968,20 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['disk.yaml']}
               to: tree:///disk.yaml
+
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: skip-on-container.dropin
+              text: $skip_on_container_dropin
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['skip-on-container.dropin']}
+              to: tree:///skip-on-container.dropin
 
       - type: org.osbuild.copy
         inputs:

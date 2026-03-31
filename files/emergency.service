@@ -6,6 +6,7 @@ Conflicts=shutdown.target
 Conflicts=rescue.service
 Before=shutdown.target
 Before=rescue.service
+ConditionVirtualization=!container
 
 [Service]
 Type=oneshot

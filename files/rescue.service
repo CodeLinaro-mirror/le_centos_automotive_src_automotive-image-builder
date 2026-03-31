@@ -5,6 +5,7 @@ DefaultDependencies=no
 Conflicts=shutdown.target
 After=sysinit.target plymouth-start.service
 Before=shutdown.target
+ConditionVirtualization=!container
 
 [Service]
 Type=oneshot

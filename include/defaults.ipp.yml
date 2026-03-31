@@ -317,6 +317,11 @@ mpp-vars:
     - remote-fs.target
     # Not using systemd-boot
     - systemd-boot-update.service
+  image_services_skipped_on_container:
+    - proc-sys-fs-binfmt_misc.automount
+    - sys-kernel-config.mount
+    - sys-kernel-debug.mount
+    - sys-kernel-tracing.mount
   extra_subuid: ""
   extra_subgid: ""
   efipart_dos_type: 'ef'
