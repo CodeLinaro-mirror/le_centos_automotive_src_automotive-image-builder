@@ -32,7 +32,7 @@ shared build. These targets should be preferred over board specific
 targets. Sometimes boards need some hw specific setup be used with the
 generic image, such as firmware installation or configuration.
 
- * ebbr - Generic target for systems compliant with the EBBR Specification
+ * ebbr - Generic target for systems compliant with the EBBR Specification (for example Renesas RCar S4 or NXP S32G)
 
 ### Qualcomm boards
 
@@ -51,8 +51,6 @@ generic image, such as firmware installation or configuration.
 ### Other boards
 
  * rpi4 - Raspberry PI 4 (needs recent EFI supporting firmware)
- * rcar_s4 - Aboot based Renesas R-Car S4 with stock functionality (NOTE: prefer ebbr target)
- * rcar_s4_can - Aboot based Renesas R-Car S4 with CAN bus enablement (NOTE: prefer ebbr target)
  * ccimx93dvk - Digi Connectcore 93 board
  * imx8qxp_mek - Multisensory Enablement Kit i.MX 8QuadXPlus MEK CPU Board
 

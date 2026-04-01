@@ -27,6 +27,7 @@ version: '2'
 mpp-vars:
   target_supported_arches:
     - aarch64
+    - x86_64 # TODO: This is used in a test atm, so allow it even if its weird
   use_autoinit: true
   # We're listing here all possible consoles for the supported boards. That
   # may be overkill for some boards, but it doesn't hurt either. We need to

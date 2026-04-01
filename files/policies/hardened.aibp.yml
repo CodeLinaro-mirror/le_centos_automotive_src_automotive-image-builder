@@ -39,7 +39,7 @@ restrictions:
       - fat
       - nfs
       - nfs_acl
-    disallow@rcar_s4:
+    disallow@ebbr:
       - ufs-renesas
       - at24
       - pcie-rcar-gen4
