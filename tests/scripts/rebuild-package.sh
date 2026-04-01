@@ -42,7 +42,7 @@ createrepo_c ${AIB_LOCAL_REPO}
 
 
 # TODO: Once switching to CS10 we can create repo file using dnf config-manager
-add_repo "aib-local-repo" "file:///${AIB_LOCAL_REPO}"
+add_repo "aib-local-repo" "file://${AIB_LOCAL_REPO}"
 
 # TODO: Remove following issue is fixed: https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/issues/35
 echo "excludepkgs=automotive-image-builder" >> /etc/yum.repos.d/aib-base-repo.repo
