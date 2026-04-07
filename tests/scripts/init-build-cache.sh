@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+source "$(dirname ${BASH_SOURCE[0]})"/test-lib.sh
+
 if [ -d "$BUILDDIR" ]; then
     echo "Build cache directory '$BUILDDIR' already exists, skipping"
     exit 0
@@ -19,7 +21,7 @@ EOF
 
 echo "Populating build directory '$BUILDDIR' started"
 $AIB download \
-    --distro=$AIB_DISTRO \
+    --distro="$(get_aib_distro)" \
     --cache $OUTDIR/dnf-cache \
     --build-dir $BUILDDIR \
     "$MIN_IMAGE_MFT"

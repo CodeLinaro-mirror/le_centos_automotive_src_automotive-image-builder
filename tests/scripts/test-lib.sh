@@ -333,6 +333,21 @@ save_to_tmt_data () {
     cp "$src" "${dest}${n}"
 }
 
+get_aib_distro() {
+    local aib_distro="$AIB_DISTRO"
+
+    if [ -z "$aib_distro" ]; then
+        local aib_distro_cfg="${TMT_WORKDIR_ROOT:-/var/tmp/tmt}/aib_distro.txt"
+        if [ ! -f "$aib_distro_cfg" ]; then
+            echo_fail "Cannot detect distro parameter for aib"
+            exit 1
+        fi
+        aib_distro="$(cat $aib_distro_cfg)"
+    fi
+
+    echo "$aib_distro"
+}
+
 # Some default options that make builds faster, override if problematic
 FAST_OPTIONS="--define sign_kernel_modules=false"
 
@@ -340,11 +355,13 @@ trybuild() {
     local result=0
 
     $AIB build \
-        --distro=$AIB_DISTRO \
+        --distro="$(get_aib_distro)" \
         --target qemu \
         --cache $OUTDIR/dnf-cache \
-        --build-dir "$BUILDDIR" $FAST_OPTIONS \
+        --build-dir "$BUILDDIR" \
+        $FAST_OPTIONS \
         --define reproducible_image=true \
+        $AIB_BUILD_OPTIONS \
         --verbose \
         "$@" > "${IMG_BUILD_LOG_BOOTC}"
     result=$?
@@ -391,10 +408,13 @@ trybuild_bootc_builder() {
     local result=0
 
     $AIB build-builder \
-        --distro=$AIB_DISTRO \
+        --verbose \
+        --distro="$(get_aib_distro)" \
         --cache $OUTDIR/dnf-cache \
-        --build-dir "$BUILDDIR" $FAST_OPTIONS \
+        --build-dir "$BUILDDIR" \
+        $FAST_OPTIONS \
         --define reproducible_image=true \
+        $AIB_BUILD_BUILDER_OPTIONS \
         "$@" > "${IMG_BUILD_LOG_BUILDER}"
     result=$?
 
@@ -417,7 +437,7 @@ trybuild_dev() {
     local result=0
 
     $AIBDEV build \
-        --distro=$AIB_DISTRO \
+        --distro="$(get_aib_distro)" \
         --cache $OUTDIR/dnf-cache \
         --build-dir "$BUILDDIR" $FAST_OPTIONS \
         --define reproducible_image=true \
