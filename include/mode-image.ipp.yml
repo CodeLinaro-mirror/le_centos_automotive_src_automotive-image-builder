@@ -48,6 +48,21 @@ pipelines:
             options:
               paths:
                 mpp-eval: extra_tree_content
+          - mpp-if: use_qm
+            then:
+              type: org.osbuild.copy
+              inputs:
+                extra-tree:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - name:extra-tree-content
+              options:
+                paths:
+                  - from: input://extra-tree/qm-host-env-container.service
+                    to: tree:///usr/lib/systemd/system/qm-host-env-container.service
+                  - from: input://extra-tree/qm-host-env-container-rootless.service
+                    to: tree:///usr/lib/systemd/system/qm-host-env-container-rootless.service
           - type: org.osbuild.users
             options:
               users:
@@ -100,6 +115,10 @@ pipelines:
                   then: aboot-gptctl-set-success.service
                 - mpp-if: "containers_transient_store and 'podman' in rpms['rootfs']"
                   then: podman-clean-transient.service
+                - mpp-if: use_qm
+                  then: qm-host-env-container.service
+                - mpp-if: use_qm
+                  then: qm-host-env-container-rootless.service
         - mpp-eval: image_extra_stages
         - - type: org.osbuild.selinux
             options:

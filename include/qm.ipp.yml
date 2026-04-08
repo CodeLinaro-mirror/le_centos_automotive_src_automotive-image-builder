@@ -10,10 +10,22 @@ pipelines:
       - type: org.osbuild.mkdir
         options:
           paths:
-            - path: /etc
-            - path: /usr
-            - path: /usr/lib
-            - path: /usr/lib/sysusers.d
+            mpp-join:
+              - - path: /etc
+                - path: /usr
+                - path: /usr/lib
+                - path: /usr/lib/sysusers.d
+                - path: /etc/systemd/system.conf.d
+                  parents: true
+                  exist_ok: true
+              - mpp-eval: |
+                  [
+                    {
+                      'path': f'/usr/lib/systemd/system/{service}.d',
+                      'parents': True,
+                      'exist_ok': True
+                    } for service in qm_image_services_skipped_on_rootless_container
+                  ]
       - type: org.osbuild.copy
         inputs:
           data-tree:
@@ -21,14 +33,37 @@ pipelines:
             origin: org.osbuild.pipeline
             references:
               - "name:data"
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: qm_skip_on_rootless_dropin_file
+              text: $qm_skip_on_rootless_dropin
+          inlinefile2:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: qm-systemd-manager.conf
+              text: $qm_systemd_manager_conf
         options:
           paths:
-            - from: input://data-tree/etc/passwd
-              to: tree:///etc/passwd
-            - from: input://data-tree/etc/group
-              to: tree:///etc/group
-            - from: input://data-tree/usr/lib/sysusers.d/00-base-users.conf
-              to: tree:///usr/lib/sysusers.d/00-base-users.conf
+            mpp-join:
+              - - from: input://data-tree/etc/passwd
+                  to: tree:///etc/passwd
+                - from: input://data-tree/etc/group
+                  to: tree:///etc/group
+                - from: input://data-tree/usr/lib/sysusers.d/00-base-users.conf
+                  to: tree:///usr/lib/sysusers.d/00-base-users.conf
+                - from:
+                    mpp-format-string: input://inlinefile2/{embedded['qm-systemd-manager.conf']}
+                  to: tree:///etc/systemd/system.conf.d/00-host.conf
+              - mpp-eval: |
+                  [
+                    {
+                      'from': f'input://inlinefile/{embedded["qm_skip_on_rootless_dropin_file"]}',
+                      'to': f'tree:///usr/lib/systemd/system/{service}.d/10-container.conf'
+                    } for service in qm_image_services_skipped_on_rootless_container
+                  ]
 
       - type: org.osbuild.systemd-sysusers
 

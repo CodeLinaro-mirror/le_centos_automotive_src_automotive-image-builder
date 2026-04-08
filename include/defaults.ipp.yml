@@ -320,6 +320,10 @@ mpp-vars:
     - sys-kernel-config.mount
     - sys-kernel-debug.mount
     - sys-kernel-tracing.mount
+  qm_image_services_skipped_on_rootless_container:
+    - sys-kernel-config.mount
+    - sys-kernel-debug.mount
+    - sys-kernel-tracing.mount
   extra_subuid: ""
   extra_subgid: ""
   efipart_dos_type: 'ef'
