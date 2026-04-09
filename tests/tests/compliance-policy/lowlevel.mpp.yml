@@ -31,6 +31,12 @@ pipelines:
               ignore-weak-deps: true
               module-platform-id: $distro_module_id
               baseurl: $distro_baseurl_repo
+              root-dir: $distro_root_dir
+              releasever: $distro_version
+              enabled-repo-ids:
+                mpp-if: distro_enabled_repo_ids
+                then:
+                  mpp-eval: distro_enabled_repo_ids
               repos:
                 mpp-join:
                   - mpp-eval: image_repos
