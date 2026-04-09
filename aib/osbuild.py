@@ -14,8 +14,11 @@ from . import log
 from . import exceptions
 from .utils import (
     SudoTemporaryDirectory,
+    get_fs_type,
     truncate_partition_size,
     extract_part_of_file,
+    NFS_SUPER_MAGIC,
+    AFS_SUPER_MAGIC,
 )
 from .globals import default_target
 
@@ -261,6 +264,23 @@ def extract_rpmlist_json(osbuild_manifest):
     return base64.b64decode(data_b64).decode("utf8")
 
 
+def validate_builddir(builddir):
+    """Check that builddir is on a valid path."""
+    try:
+        fs_type = get_fs_type(str(builddir))
+    except OSError:
+        return
+
+    if fs_type == NFS_SUPER_MAGIC:
+        raise exceptions.AIBException(
+            f"Build directory '{builddir}' is on an NFS filesystem, which is not supported."
+        )
+    if fs_type == AFS_SUPER_MAGIC:
+        raise exceptions.AIBException(
+            f"Build directory '{builddir}' is on an AFS filesystem, which is not supported."
+        )
+
+
 def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     if args.osbuild_manifest:
@@ -277,6 +297,7 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
     if args.build_dir:
         builddir = args.build_dir
         os.makedirs(builddir, exist_ok=True)
+    validate_builddir(builddir)
     runner.add_volume(builddir)
     runner.add_volume("/dev")
 

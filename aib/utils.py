@@ -1,5 +1,7 @@
 import argparse
 import base64
+import ctypes
+import ctypes.util
 import errno
 import os
 import shutil
@@ -10,6 +12,25 @@ import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional
+
+
+class _Statfs(ctypes.Structure):
+    _fields_ = [("f_type", ctypes.c_long), ("_pad", ctypes.c_byte * 512)]
+
+
+_libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
+
+NFS_SUPER_MAGIC = 0x6969
+AFS_SUPER_MAGIC = 0x5346414F
+
+
+def get_fs_type(path):
+    """Return the f_type field from statfs(2) for the given path."""
+    buf = _Statfs()
+    if _libc.statfs(os.fsencode(path), ctypes.byref(buf)) != 0:
+        err = ctypes.get_errno()
+        raise OSError(err, os.strerror(err), path)
+    return buf.f_type
 
 
 def extract_comment_header(file):
