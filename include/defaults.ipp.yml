@@ -97,7 +97,6 @@ mpp-vars:
   root_password: null
   root_ssh_keys: []
   ssh_permit_root_login: false                  # Only used by aws target
-  ssh_permit_password_auth: false               # Not used by a-i-b
 
   # Default data for an example guest user. This is not used by a-i-b but can be used by the end user manifest
   guest_password: $6$xoLqEUz0cGGJRx01$H3H/bFm0myJPULNMtbSsOFd/2BnHqHkMD92Sfxd.EKM9hXTWSmELG8cf205l6dktomuTcgKGGtGDgtvHVXSWU.
@@ -208,7 +207,6 @@ mpp-vars:
     biospart: fac7f1fb-3e8d-4137-a512-961de09a5549
     rootpart: 6264d520-3fb9-423f-8ab8-7a0a8e3d3562
     luks: aedd1eef-f24e-425e-a9f3-bb5a1c996a95
-  use_compliance_mode: false
   use_module_sig_enforce: true
   use_efi_runtime: true
   # Policy variables - default to empty/false when no policy is applied
@@ -364,8 +362,6 @@ mpp-vars:
   # These are overridden by the arch file
   arch_rpms: []
   arch_build_rpms: []
-
-  osbuild_toml_rpm:
 
   build_rpms:
     - dnf
