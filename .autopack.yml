@@ -1,0 +1,16 @@
+package: automotive-image-builder
+
+propose:
+  distgit_url: https://gitlab.com/CentOS/automotive/rpms/automotive-image-builder
+  distgit_branch: main
+  upstream_url: https://gitlab.com/CentOS/automotive/src/automotive-image-builder
+  archive_cmd: build/build-rpm.sh --build-source --print-source-path --release
+  spec_cmd: build/build-rpm.sh --generate-spec --release
+  version_cmd: python3 aib/version.py
+
+build:
+  target: autosd10s-packages-main-el10s
+
+tags:
+  testing: autosd10s-packages-main-testing
+  release: autosd10s-packages-main-release
