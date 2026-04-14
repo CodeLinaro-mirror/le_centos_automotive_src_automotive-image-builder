@@ -335,3 +335,11 @@ bump-version:
         -o merge_request.remove_source_branch
   rules:
     - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/
+
+propose-downstream:
+  stage: deploy
+  image: quay.io/mkemel/autopack:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/
+  script:
+    - autopack propose
