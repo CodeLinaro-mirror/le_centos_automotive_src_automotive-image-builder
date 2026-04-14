@@ -66,4 +66,3 @@ These allow creating images that easily run in the cloud. Useful for development
  * pc - Intended to run on a normal PC or laptop, so uses the regular
    centos kernel instead of the automotive kernel to ensure
    compatibility and support of typical PC hardware.
- * acrn - Targets Intel ACRN hypervisor (experimental)
