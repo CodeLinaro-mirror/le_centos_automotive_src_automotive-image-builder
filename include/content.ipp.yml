@@ -309,6 +309,38 @@ mpp-vars:
     [Unit]
     ConditionVirtualization=!container
 
+  qm_skip_on_rootless_dropin: |
+    [Unit]
+    ConditionEnvironment=!HOST_ENV_CONTAINER_ROOTLESS=True
+
+  qm_systemd_manager_conf: |
+    [Manager]
+
+  qm_host_env_container: |
+    [Unit]
+    ConditionPathExists=/run/systemd/container
+    Before=qm.service
+
+    [Service]
+    Type=oneshot
+    ExecStart=/bin/awk '{print "DefaultEnvironment=HOST_ENV_CONTAINER_ENGINE=" $0}' /run/systemd/container
+    StandardOutput=append:/etc/qm/systemd/system.conf.d/00-host.conf
+
+    [Install]
+    WantedBy=default.target
+  qm_host_env_container_rootless: |
+    [Unit]
+    ConditionPathExists=/run/systemd/container
+    Before=qm.service
+
+    [Service]
+    Type=oneshot
+    ExecStart=/bin/awk '{ if ( $1 == 0 && $2 != 0 ) print "DefaultEnvironment=HOST_ENV_CONTAINER_ROOTLESS=True"}' /proc/1/uid_map
+    StandardOutput=append:/etc/qm/systemd/system.conf.d/00-host.conf
+
+    [Install]
+    WantedBy=default.target
+
   bootc_install_options:
     mpp-format-string: |
       [install.filesystem.root]
@@ -1009,3 +1041,28 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['root_sshd_authorized_keys']}
               to: tree:///root_sshd_authorized_keys
+
+      - mpp-if: use_qm
+        then:
+          type: org.osbuild.copy
+          inputs:
+            inlinefile:
+              type: org.osbuild.files
+              origin: org.osbuild.source
+              mpp-embed:
+                id: qm-host-env-container.service
+                text: $qm_host_env_container
+            inlinefile2:
+              type: org.osbuild.files
+              origin: org.osbuild.source
+              mpp-embed:
+                id: qm-host-env-container-rootless.service
+                text: $qm_host_env_container_rootless
+          options:
+            paths:
+              - from:
+                  mpp-format-string: input://inlinefile/{embedded['qm-host-env-container.service']}
+                to: tree:///qm-host-env-container.service
+              - from:
+                  mpp-format-string: input://inlinefile2/{embedded['qm-host-env-container-rootless.service']}
+                to: tree:///qm-host-env-container-rootless.service

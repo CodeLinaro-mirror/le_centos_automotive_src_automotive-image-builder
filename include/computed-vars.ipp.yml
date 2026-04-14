@@ -730,6 +730,11 @@ mpp-vars:
             path: /usr/share/containers/systemd/qm.container.d
             parents: true
             exist_ok: true
+        - mpp-if: use_qm
+          then:
+            path: /etc/qm/systemd/system.conf.d
+            parents: true
+            exist_ok: true
         - mpp-if: use_qm and qm_wayland_enable
           then:
             path: /etc/qm/containers/systemd/wayland-compositor.container.d
