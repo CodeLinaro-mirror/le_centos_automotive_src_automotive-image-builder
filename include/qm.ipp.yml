@@ -105,6 +105,7 @@ pipelines:
                   - mpp-eval: qm_extra_rpms
                   - - systemd
                     - podman
+                    - fuse-overlayfs # this is needed for nested containers when running bootc images as containers
                     - selinux-policy-$selinux_policy
                     - procps-ng
                   - mpp-if: qm_wayland_enable
