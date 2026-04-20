@@ -88,10 +88,6 @@ pipelines:
                 paths:
                   - from: input://tree/build-key.pub
                     to: tree:///etc/ostree/initramfs-root-binding.key
-          - type: org.osbuild-auto.ostree.pre-gen
-            options:
-              osname:
-                mpp-eval: osname
 
           - mpp-if: use_ukiboot and partition_label == 'dos'
             then:
