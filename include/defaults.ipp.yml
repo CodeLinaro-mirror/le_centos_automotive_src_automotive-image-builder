@@ -308,8 +308,6 @@ mpp-vars:
     - systemd-system-update-generator
     # We use .mount services only
     - systemd-fstab-generator
-    # We're re-doing ostree generators statically
-    - ostree-system-generator
   image_disabled_services:
     # Not using remote filesystems
     - remote-fs.target
