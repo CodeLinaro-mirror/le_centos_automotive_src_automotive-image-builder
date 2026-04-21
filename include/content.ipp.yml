@@ -204,11 +204,18 @@ mpp-vars:
     AddDevice=/dev/tty7
     Annotation=org.containers.qm.wayland.seat=seat0
     Volume=/run/udev:/run/udev:ro,Z
-  main_nmstate:
+  nmstate_dracut_module:
+    mpp-format-string: |
+      #!/usr/bin/bash
+      install() {{
+        inst_multiple "$systemdsystemunitdir"/main-nmstate-initrd.service nmstatectl /etc/main-initrd.nmstate
+        $SYSTEMCTL -q --root "$initdir" add-wants sysinit.target main-nmstate-initrd.service
+      }}
+  main_nmstate_initrd:
     mpp-format-string: |
       ---
       interfaces:
-        - name: {static_ip_iface}
+        - name: {static_ip_iface_early}
           type: ethernet
           state: up
           ipv4:
@@ -222,18 +229,31 @@ mpp-vars:
       routes:
         config:
           - destination: 0.0.0.0/0
-            next-hop-interface: {static_ip_iface}
+            next-hop-interface: {static_ip_iface_early}
             next-hop-address: {static_gw}
+  main_nmstate:
+    mpp-format-string: |
+      ---
       dns-resolver:
         config:
           server:
             - {static_dns}
+  main_nmstate_initrd_service:
+    mpp-format-string: |
+      [Unit]
+      After=systemd-modules-load.service
+      DefaultDependencies=no
+      Before=shutdown.target initrd-switch-root.target
+      Conflicts=shutdown.target initrd-switch-root.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/nmstatectl apply --kernel --no-verify /etc/main-initrd.nmstate
+      RemainAfterExit=yes
   main_nmstate_service:
     mpp-format-string: |
       [Unit]
       After=systemd-modules-load.service
-      Requires=sys-subsystem-net-devices-{static_ip_iface}.device
-      After=sys-subsystem-net-devices-{static_ip_iface}.device
       DefaultDependencies=no
 
       [Service]
@@ -789,6 +809,19 @@ pipelines:
             type: org.osbuild.files
             origin: org.osbuild.source
             mpp-embed:
+              id: nmstate_dracut_module
+              text: $nmstate_dracut_module
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['nmstate_dracut_module']}
+              to: tree:///nmstate_dracut_module
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
               id: main.nmstate
               text: $main_nmstate
         options:
@@ -809,6 +842,32 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['main-nmstate.service']}
               to: tree:///main-nmstate.service
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: main-initrd.nmstate
+              text: $main_nmstate_initrd
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['main-initrd.nmstate']}
+              to: tree:///main-initrd.nmstate
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: main-nmstate-initrd.service
+              text: $main_nmstate_initrd_service
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['main-nmstate-initrd.service']}
+              to: tree:///main-nmstate-initrd.service
       - type: org.osbuild.copy
         inputs:
           inlinefile:

@@ -236,11 +236,15 @@ mpp-vars:
             then: systemd-journald
           - mpp-if: use_repart
             then: systemd-repart
+          - mpp-if: use_static_ip
+            then: nmstate
   dracut_add_modules:
     mpp-join:
       - mpp-eval: dracut_add_modules
       - - mpp-if: use_repart
           then: systemd-repart
+        - mpp-if: use_static_ip
+          then: nmstate
   dracut_add_drivers:
     mpp-join:
       - mpp-eval: dracut_add_drivers
@@ -769,6 +773,11 @@ mpp-vars:
             path: /usr/lib/systemd/system/systemd-repart.service.d
             parents: true
             exist_ok: true
+        - mpp-if: use_static_ip
+          then:
+            path: /usr/lib/dracut/modules.d/99nmstate
+            parents: true
+            exist_ok: true
       - mpp-eval: |
           [
             {
@@ -834,18 +843,6 @@ mpp-vars:
           to: tree:///etc/subuid
         - from: input://extra-tree/subgid
           to: tree:///etc/subgid
-        - mpp-if: use_static_ip
-          then:
-            from: input://extra-tree/main.nmstate
-            to: tree:///etc/main.nmstate
-        - mpp-if: use_static_ip
-          then:
-            from: input://extra-tree/main-nmstate.service
-            to: tree:///usr/lib/systemd/system/main-nmstate.service
-        - mpp-if: use_static_ip and use_boot_check
-          then:
-            from: input://extra-tree/nmstate.bootcheck
-            to: tree:///usr/lib/boot-check.d/nmstate.conf
         - mpp-if: _boot_check_qm_digest and use_boot_check
           then:
             from: input://extra-tree/qm.bootcheck
@@ -904,6 +901,23 @@ mpp-vars:
           then:
             from: input://extra-tree/root_sshd_authorized_keys
             to: tree:///etc/ssh/authorized_keys/root
+      - mpp-if: use_static_ip
+        then:
+          - from: input://extra-tree/nmstate_dracut_module
+            to: tree:///usr/lib/dracut/modules.d/99nmstate/module-setup.sh
+          - from: input://extra-tree/main-initrd.nmstate
+            to: tree:///etc/main-initrd.nmstate
+          - from: input://extra-tree/main-nmstate-initrd.service
+            to: tree:///usr/lib/systemd/system/main-nmstate-initrd.service
+          - from: input://extra-tree/main.nmstate
+            to: tree:///etc/main.nmstate
+          - from: input://extra-tree/main-nmstate.service
+            to: tree:///usr/lib/systemd/system/main-nmstate.service
+          - mpp-if: use_boot_check
+            then:
+              from: input://extra-tree/nmstate.bootcheck
+              to: tree:///usr/lib/boot-check.d/nmstate.conf
+
       - mpp-eval: |
           [
             {
