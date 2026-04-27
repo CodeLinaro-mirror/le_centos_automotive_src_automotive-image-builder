@@ -287,6 +287,12 @@ mpp-vars:
     - systemd-userdbd.socket
     # this waits by default for all interfaces, we do not want that
     - NetworkManager-wait-online.service
+    # We don't need to configure the hostname dynamically
+    - systemd-hostnamed.socket
+    - systemd-hostnamed.service
+    # We don't use tpm2 (atm)
+    - systemd-tpm2-setup.service
+    - systemd-tpm2-setup-early.service
   image_masked_generators:
     # legacy scripts not supported
     - systemd-rc-local-generator
@@ -309,6 +315,10 @@ mpp-vars:
     - systemd-system-update-generator
     # We use .mount services only
     - systemd-fstab-generator
+    # We don't want virtual sshd started
+    - systemd-ssh-generator
+    # We don't use tpm2 (atm)
+    - systemd-tpm2-generator
   image_disabled_services:
     # Not using remote filesystems
     - remote-fs.target
