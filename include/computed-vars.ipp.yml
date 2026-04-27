@@ -495,6 +495,11 @@ mpp-vars:
       - mpp-eval: image_masked_services
       - - mpp-if: use_repart
           then: systemd-repart.service # We only run this in the initrd
+  image_masked_generators:
+    mpp-join:
+      - mpp-eval: image_masked_generators
+      - - mpp-if: pregenerate_quadlets
+          then: podman-system-generator
   image_extra_stages:
     mpp-join:
       - mpp-eval: target_extra_image_stages
@@ -644,6 +649,13 @@ mpp-vars:
             options:
               profiles:
                 - realtime
+        - mpp-if: pregenerate_quadlets
+          then:
+            type: org.osbuild.lorax-script
+            options:
+              path: auto/runcmd
+              product:
+                name: "/usr/bin/quadlet_preprocess /run/osbuild/tree"
       - mpp-if: use_aboot_like
         then:
           - type: org.osbuild-auto.aboot.conf

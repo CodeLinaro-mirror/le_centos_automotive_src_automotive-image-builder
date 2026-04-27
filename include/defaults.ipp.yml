@@ -62,6 +62,8 @@ mpp-vars:
   container_subuid: 2500000000:1500000000
   container_subgid: 2500000000:1500000000
   containers_configdir: /usr/share/containers
+  pregenerate_quadlets:
+    mpp-eval: use_ostree
 
   use_qm: false   # Set to true to add QM container
   qm_writable:
