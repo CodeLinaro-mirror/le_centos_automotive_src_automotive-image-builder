@@ -276,15 +276,7 @@ pipelines:
             origin: org.osbuild.source
             mpp-embed:
               id: ostree_postprocess
-              text: |
-                #!/usr/bin/bash
-                ROOT="$1"
-                if [ -d $ROOT/usr/lib/sysimage/rpm ]; then
-                  mv $ROOT/usr/lib/sysimage/rpm $ROOT/usr/share/rpm
-                  ln -s ../../share/rpm $ROOT/usr/lib/sysimage/rpm
-                fi
-                mkdir -p $ROOT/usr/lib/rpm/macros.d
-                echo "%_dbpath /usr/share/rpm" > $ROOT/usr/lib/rpm/macros.d/macros.rpm-ostree
+              path: $_basedir/files/ostree_postprocess.sh
         options:
           paths:
             - from:
