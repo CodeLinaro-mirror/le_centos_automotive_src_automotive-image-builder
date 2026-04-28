@@ -11,7 +11,7 @@ BuildArch:	noarch
 BuildRequires:  make
 Requires:       android-tools
 Requires:       osbuild >= 172
-Requires:       osbuild-auto
+Requires:       osbuild-auto >= 0.1.18
 Requires:       osbuild-luks2
 Requires:       osbuild-lvm2
 Requires:       osbuild-ostree
