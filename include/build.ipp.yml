@@ -276,24 +276,46 @@ pipelines:
             origin: org.osbuild.source
             mpp-embed:
               id: ostree_postprocess
-              text: |
-                #!/usr/bin/bash
-                ROOT="$1"
-                if [ -d $ROOT/usr/lib/sysimage/rpm ]; then
-                  mv $ROOT/usr/lib/sysimage/rpm $ROOT/usr/share/rpm
-                  ln -s ../../share/rpm $ROOT/usr/lib/sysimage/rpm
-                fi
-                mkdir -p $ROOT/usr/lib/rpm/macros.d
-                echo "%_dbpath /usr/share/rpm" > $ROOT/usr/lib/rpm/macros.d/macros.rpm-ostree
+              path: $_basedir/files/ostree_postprocess.sh
         options:
           paths:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['ostree_postprocess']}
               to: tree:///usr/bin/ostree_postprocess
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: quadlet_preprocess
+              path: $_basedir/files/quadlet_preprocess.sh
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['quadlet_preprocess']}
+              to: tree:///usr/bin/quadlet_preprocess
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: bootc_preprocess
+              path: $_basedir/files/bootc_preprocess.sh
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['bootc_preprocess']}
+              to: tree:///usr/bin/gen_bootc_preprocess
       - type: org.osbuild.chmod
         options:
           items:
             "/usr/bin/ostree_postprocess":
+              mode: "755"
+            "/usr/bin/quadlet_preprocess":
+              mode: "755"
+            "/usr/bin/gen_bootc_preprocess":
               mode: "755"
   - name: data
     build: name:build
