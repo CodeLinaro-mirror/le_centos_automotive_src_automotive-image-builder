@@ -15,10 +15,10 @@ environment:
     SUDO: "sudo"
 
     # Custom parameters to be passed to `aib build` command used in tests
-    AIB_BUILD_OPTIONS: ""
+    AIB_BUILD_OPTIONS: "--define distro_baseurl=https://autosd.sig.centos.org/AutoSD-10/monthly/autosd10-202604010205/repos/AutoSD/compose"
 
     # Custom parameters to be passed to `aib build-builder` command used in tests
-    AIB_BUILD_BUILDER_OPTIONS: ""
+    AIB_BUILD_BUILDER_OPTIONS: "--define distro_baseurl=https://autosd.sig.centos.org/AutoSD-10/monthly/autosd10-202604010205/repos/AutoSD/compose"
 
     AIB: $PROJECT_DIR/bin/aib
     AIBDEV: $PROJECT_DIR/bin/aib-dev
