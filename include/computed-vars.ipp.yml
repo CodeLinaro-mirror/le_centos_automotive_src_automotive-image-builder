@@ -230,7 +230,7 @@ mpp-vars:
         then:
           - systemd-initrd-automotive
           - mpp-if: use_debug or use_kernel_debug_package
-            then: systemd-journald
+            then: systemd-journal-automotive
           - mpp-if: use_repart
             then: systemd-repart
           - mpp-if: use_static_ip
