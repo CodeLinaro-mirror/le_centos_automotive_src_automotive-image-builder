@@ -1,0 +1,16 @@
+summary: Verify sysboot integration adds expected stages to osbuild manifest
+description: |
+  Generates osbuild manifests with various boot_checks configurations and verifies
+  that the expected stages (mkdir, copy, symlink, systemd enable) are present.
+
+  Test inputs:
+    AIB manifests with boot_checks using commands, systemd units, or both.
+
+  Expected results:
+    - PASS: All sysboot integration tests passed successfully.
+
+  Results location:
+    output.txt
+
+duration: 60m
+id: a3c8e2f1-5b7d-4a1e-9c3f-8d2e6f1b4a7c
