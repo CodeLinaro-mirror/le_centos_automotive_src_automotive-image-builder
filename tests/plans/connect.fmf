@@ -2,7 +2,7 @@ summary: a-i-b tests running on pre-provisioned machine or VM
 
 environment:
     # Base repository where a-i-b and its dependencies should be installed from
-    AIB_BASE_REPO: https://autosd.sig.centos.org/AutoSD-10/nightly/repos/AutoSD/compose/AutoSD/$arch/os/
+    AIB_BASE_REPO: https://autosd.sig.centos.org/AutoSD-10/monthly/autosd10-202604010205/repos/AutoSD/compose/AutoSD/$arch/os/
 
     # Distribution used inside tests.
     # Available distributions can be listed using `aib list-dist` on the relevant platform.
@@ -27,10 +27,10 @@ environment:
     SUDO: ""
 
     # Custom parameters to be passed to `aib build` command used in tests
-    AIB_BUILD_OPTIONS: ""
+    AIB_BUILD_OPTIONS: "--define distro_baseurl=https://autosd.sig.centos.org/AutoSD-10/monthly/autosd10-202604010205/repos/AutoSD/compose"
 
     # Custom parameters to be passed to `aib build-builder` command used in tests
-    AIB_BUILD_BUILDER_OPTIONS: ""
+    AIB_BUILD_BUILDER_OPTIONS: "--define distro_baseurl=https://autosd.sig.centos.org/AutoSD-10/monthly/autosd10-202604010205/repos/AutoSD/compose"
 
     AIB: aib
     AIBDEV: aib-dev
