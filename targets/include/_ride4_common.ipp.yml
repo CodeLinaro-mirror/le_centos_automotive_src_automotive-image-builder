@@ -23,12 +23,6 @@ mpp-vars:
   qm_varpart_uuid: "283dd53c-d749-68ac-261d-104d9cd22f76"
   #use_tuned_realtime: true
 
-  target_repos:
-    - id: qcom-board-support
-      baseurl: https://download.copr.fedorainfracloud.org/results/@centos-automotive-sig/qcom-board-support/$distro_chroot/
-      priority: 6
-  target_rpms:
-    - stmmac-mac-generator
   image_enabled_services:
     mpp-join:
       - mpp-eval: image_enabled_services
