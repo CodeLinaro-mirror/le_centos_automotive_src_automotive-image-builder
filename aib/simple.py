@@ -625,6 +625,9 @@ class ManifestLoader:
         commands = boot_checks.get("commands", [])
         systemd_units = boot_checks.get("systemd", [])
 
+        if "enabled_services" not in content.systemd:
+            content.systemd["enabled_services"] = []
+
         for boot_check in commands:
             boot_check_name = boot_check.get("name", "")
             boot_check_cmd = boot_check.get("cmd", "")
@@ -645,8 +648,6 @@ class ManifestLoader:
                 {"path": dropin_file, "text": f"[Service]\nExecStart={boot_check_cmd}"}
             )
 
-            if "enabled_services" not in content.systemd:
-                content.systemd["enabled_services"] = []
             content.systemd["enabled_services"].append(service_name)
 
         for unit in systemd_units:
