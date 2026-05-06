@@ -248,7 +248,7 @@ trigger-pipeline:
   variables:
     BUILD_BRANCH: AutoSD-10
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
       changes:
         - "**/*.py"
         - "**/*.yml"
