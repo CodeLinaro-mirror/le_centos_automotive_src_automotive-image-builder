@@ -248,7 +248,7 @@ trigger-pipeline:
   variables:
     BUILD_BRANCH: AutoSD-10
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
       changes:
         - "**/*.py"
         - "**/*.yml"
@@ -275,7 +275,9 @@ trigger-pipeline:
   - echo -e "\e[0Ksection_start:$(date +%s):tmt_setup[collapsed=true]\r\e[0KPreparing TMT"
   - dnf config-manager --set-enabled crb
   - dnf install -y python3-pip jq less rsync expect openssh-clients epel-release
-  - dnf install -y tmt tmt+report-junit
+  # - dnf install -y tmt tmt+report-junit
+  # Temporary: pin tmt to 1.71 to avoid regression in 1.72
+  - pip install 'tmt[report-junit]==1.71.0'
   - echo -e "\e[0Ksection_end:$(date +%s):tmt_setup\r\e[0K"
 
 build_doc_demos:
