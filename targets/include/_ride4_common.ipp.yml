@@ -23,11 +23,6 @@ mpp-vars:
   qm_varpart_uuid: "283dd53c-d749-68ac-261d-104d9cd22f76"
   #use_tuned_realtime: true
 
-  image_enabled_services:
-    mpp-join:
-      - mpp-eval: image_enabled_services
-      - - stmmac-mac-generator.service
-
   kernel_opts:
     mpp-join:
       - mpp-eval: kernel_opts
