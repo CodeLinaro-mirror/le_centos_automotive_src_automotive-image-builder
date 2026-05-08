@@ -543,7 +543,7 @@ $defs:
               - idle
           - type: integer
             minimum: 1
-            maximum: 100
+            maximum: 10000
       container_checksum:
         description: Optional container digest that is validated at boot
         type: string
