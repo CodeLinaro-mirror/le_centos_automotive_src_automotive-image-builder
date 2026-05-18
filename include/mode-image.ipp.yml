@@ -177,8 +177,8 @@ pipelines:
                 - wheel
                 - docker
           # TODO-BOOTC: bootupd 0.2.32 needs to have at least two EFI# modules or it asserts,
-          # so we create a fake (empty) one until a new version is available
-          - mpp-if: use_bootc
+          # so we create a fake (empty) one until a new version is available.
+          - mpp-if: use_bootc and optional_installed_rpm_evr("bootupd").startswith("0.2.32-")
             then:
               type: org.osbuild.mkdir
               options:

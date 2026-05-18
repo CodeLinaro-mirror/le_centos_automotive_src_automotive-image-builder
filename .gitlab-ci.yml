@@ -84,25 +84,9 @@ unit-test-job:
         path: coverage/report.xml
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
 
-prepare-image-x86-job:
-  image: quay.io/centos-sig-automotive/automotive-osbuild
-  stage: test
-  script:
-    - ./bin/aib download --verbose --distro autosd10-latest-sig --build-dir _build --cache _build/cache examples/complex.aib.yml
-    - ./bin/aib download --verbose --distro autosd10 --build-dir _build --cache _build/cache examples/complex.aib.yml
-  artifacts:
-    paths:
-      - _build/
-      - builder.tar
-    when: on_success
-    expire_in: 24 hours
-
 .build-bootc-template:
   image: quay.io/centos-sig-automotive/automotive-osbuild
   stage: test
-  needs:
-    - job: prepare-image-x86-job
-      artifacts: true
   variables:
     AIB_DISTRO: "autosd10"
     MANIFEST: "examples/complex.aib.yml"
@@ -120,9 +104,6 @@ prepare-image-x86-job:
 .build-dev-template:
   image: quay.io/centos-sig-automotive/automotive-osbuild
   stage: test
-  needs:
-    - job: prepare-image-x86-job
-      artifacts: true
   variables:
     AIB_DISTRO: "autosd10"
     MANIFEST: "examples/complex.aib.yml"
