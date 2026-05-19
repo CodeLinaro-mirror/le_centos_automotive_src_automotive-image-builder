@@ -270,6 +270,8 @@ mpp-vars:
       _Lazy(lambda: optional_installed_rpm_evr('ukiboot'))
   _ukiboot_efi_dir:
     mpp-eval: "'/usr/lib/efi/ukiboot/' + _ukiboot_evr"
+  # For now we're using the old bootupd location instead of _ukiboot_efi_dir
+  _bootupd_efi_dir: /usr/lib/bootupd/updates
   signing_info:
     signed_files:
       mpp-join:
@@ -283,17 +285,17 @@ mpp-vars:
               filename:
                 mpp-format-string: ukiboot{efiarch}.efi
               paths:
-                - mpp-eval: "_ukiboot_efi_dir + f'/EFI/{uefi_vendor}/ukiboot{efiarch}.efi'"
-                - mpp-eval: "_ukiboot_efi_dir + f'/EFI/{uefi_vendor}/shim{efiarch}.efi'"
-                - mpp-eval: "_ukiboot_efi_dir + f'/EFI/BOOT/{efibootfile}'"
+                - mpp-eval: "_bootupd_efi_dir + f'/EFI/{uefi_vendor}/ukiboot{efiarch}.efi'"
+                - mpp-eval: "_bootupd_efi_dir + f'/EFI/{uefi_vendor}/shim{efiarch}.efi'"
+                - mpp-eval: "_bootupd_efi_dir + f'/EFI/BOOT/{efibootfile}'"
             - type: efi
               filename: slot_a.addon.efi
               paths:
-                - mpp-eval: "_ukiboot_efi_dir + f'/EFI/{uefi_vendor}/ukiboot_a.efi.extra.d/slot_a.addon.efi'"
+                - mpp-eval: "_bootupd_efi_dir + f'/EFI/{uefi_vendor}/ukiboot_a.efi.extra.d/slot_a.addon.efi'"
             - type: efi
               filename: slot_b.addon.efi
               paths:
-                - mpp-eval: "_ukiboot_efi_dir + f'/EFI/{uefi_vendor}/ukiboot_b.efi.extra.d/slot_b.addon.efi'"
+                - mpp-eval: "_bootupd_efi_dir + f'/EFI/{uefi_vendor}/ukiboot_b.efi.extra.d/slot_b.addon.efi'"
         - mpp-if: use_aboot
           then:
             - type: aboot
