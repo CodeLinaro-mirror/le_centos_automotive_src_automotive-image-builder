@@ -2,6 +2,7 @@
 
 import binascii
 import shutil
+import shlex
 import sys
 import os
 import json
@@ -190,6 +191,17 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
                     f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
                 ] + cmdline
                 volumes[storage.storage] = storage.storage
+
+            # This is a temporary fix for bootupd 0.2.34 until https://github.com/coreos/bootupd/pull/1096
+            # is in the repo. It fixes bootupd failing if there is no /sys/firmware/efi on the build machine.
+            cmdline = [
+                "unshare",
+                "-m",
+                "bash",
+                "-c",
+                "mount -t tmpfs tmpfs /sys/firmware; mkdir /sys/firmware/efi;"
+                + shlex.join(cmdline),
+            ]
 
             runner.run_in_container(
                 cmdline,
