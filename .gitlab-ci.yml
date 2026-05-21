@@ -84,6 +84,36 @@ unit-test-job:
         path: coverage/report.xml
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
 
+macos-build:
+  stage: test
+  tags:
+    - macos
+  before_script:
+    # Ensure Podman’s Linux VM is up (macOS runners)
+    - |
+      if ! podman info &>/dev/null; then
+        echo "Podman machine not reachable; starting..."
+        podman machine start
+      fi
+  script:
+    - |
+      set -x
+      export AIB_PODMAN_OPTIONS="--dns=8.8.8.8 --dns=8.8.4.4"
+      for DISTRO in autosd autosd10-latest-sig; do
+        OUT="complex.${DISTRO}.ociarchive"
+        OUT_D="complex.${DISTRO}.d.qcow2"
+        sudo ./auto-image-builder.sh build --oci-archive --verbose --target=qemu --distro="$DISTRO" ./examples/complex.aib.yml "$OUT"
+        sudo ./auto-image-builder.sh -d build --verbose --target=qemu --distro="$DISTRO" ./examples/complex.aib.yml "$OUT_D"
+      done
+  after_script:
+    - rm -rf complex.*.ociarchive
+    - rm -rf complex.*.qcow2
+    - rm -rf _build builder.tar
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
 .build-bootc-template:
   image: quay.io/centos-sig-automotive/automotive-osbuild
   stage: test
