@@ -425,7 +425,7 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
 def partition_is_safe_to_truncate(p):
     name = p.get("name")
     if name:
-        prefixes = ["boot_", "vbmeta_", "ukiboot"]
+        prefixes = ["boot_", "vbmeta_", "ukiboot", "abl_"]
         for p in prefixes:
             if name.startswith(p):
                 return True

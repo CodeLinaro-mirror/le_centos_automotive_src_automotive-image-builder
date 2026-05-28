@@ -128,6 +128,7 @@ mpp-vars:
   ukibootpart_size: 262144 # 128M
   ukibootctlpart_size: 2048
   vbmetapart_size: 128 # 64K
+  ablpart_size: 2048 # 1MB
   varpart_relative_size: 0 # /var size as relative of image size (unless varpart_size is set)
   qm_varpart_relative_size: 0 # /var/qm size as relative of image size (unless qm_varpart_size is set)
   extra_parts: []            # Extra partitions to add to image
@@ -216,6 +217,8 @@ mpp-vars:
     ukibootpart_ctl: 5A6F3ADE-EEB0-11EF-A838-E89C256C3906
     vbmetapart_a: da91d469-09b3-ce43-795e-3b86f3735143
     vbmetapart_b: 305087ff-bf9a-910d-f3c4-606a8de7788a
+    abl_a: 0a474288-0437-2ce5-a358-d597d64e0ce0
+    abl_b: 0583b9b1-c0a5-b9e6-d2d7-1485d68a5e8e
     biospart: fac7f1fb-3e8d-4137-a512-961de09a5549
     rootpart: 6264d520-3fb9-423f-8ab8-7a0a8e3d3562
     luks: aedd1eef-f24e-425e-a9f3-bb5a1c996a95
