@@ -328,6 +328,7 @@ pipelines:
             - path: /usr
             - path: /usr/lib
             - path: /usr/lib/sysusers.d
+            - path: /usr/lib/kernel
       - type: org.osbuild.copy
         inputs:
           inlinefile:
@@ -354,6 +355,12 @@ pipelines:
             mpp-embed:
               id: sysusers
               text: $base_systemd_sysusers
+          inlinefile5:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: kernel-install.conf
+              text: "layout=uki\n"
         options:
           paths:
             - from:
@@ -368,5 +375,9 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile4/{embedded['sysusers']}
               to: tree:///usr/lib/sysusers.d/00-base-users.conf
+            # Suppress grub2 kernel-install hooks during RPM install (see #105).
+            - from:
+                mpp-format-string: input://inlinefile5/{embedded['kernel-install.conf']}
+              to: tree:///usr/lib/kernel/install.conf
 
       - type: org.osbuild.systemd-sysusers

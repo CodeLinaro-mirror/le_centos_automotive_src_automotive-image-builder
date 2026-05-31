@@ -413,6 +413,7 @@ mpp-vars:
         - path: /usr
         - path: /usr/lib
         - path: /usr/lib/sysusers.d
+        - path: /usr/lib/kernel
   # Initialize systemd-sysusers, /etc/passwd and /etc/group (root users)
   # either with the static base content (to avoid dynamic uid allocations
   # changing between versions) or from the copy in QM (to merge dynamic
@@ -444,6 +445,11 @@ mpp-vars:
           to: tree:///usr/lib/sysusers.d/00-base-users.conf
         - from: input://data-tree/etc/selinux/config
           to: tree:///etc/selinux/config
+        # Suppress grub2 kernel-install hooks during RPM install (see #105).
+        - mpp-if: use_aboot_like
+          then:
+            from: input://data-tree/usr/lib/kernel/install.conf
+            to: tree:///usr/lib/kernel/install.conf
 
   rootpart_label:
     mpp-eval: aboot_partlabel if use_aboot else "root"
