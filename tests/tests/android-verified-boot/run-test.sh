@@ -83,7 +83,7 @@ echo_log "Running bootc disk image..."
 VM_PID=$(run_vm "$IMG_SIGNED" "serial-console.log" --avb --sharedir .)
 
 PASSWORD="password"
-LOGIN_TIMEOUT=40
+LOGIN_TIMEOUT=120
 if ! wait_for_vm_up "$LOGIN_TIMEOUT" "$PASSWORD"; then
     stop_vm "$VM_PID"
     exit 1

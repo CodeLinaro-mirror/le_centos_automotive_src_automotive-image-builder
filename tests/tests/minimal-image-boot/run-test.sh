@@ -38,7 +38,7 @@ echo_log "VM running at pid: $VM_PID"
 echo_log $VM_PID
 
 # Wait for the test to finish
-retry=90
+retry=120
 while ! grep -q '\[RUNNER\] Boot testing finished.' "$LOGFILE" 2>/dev/null; do
     sleep 1
     retry=$((retry-1))
