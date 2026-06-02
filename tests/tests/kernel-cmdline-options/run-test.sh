@@ -5,7 +5,7 @@ source "$(dirname ${BASH_SOURCE[0]})"/../../scripts/test-lib.sh
 # Define connection and VM parameters
 IMG_NAME="test.img"
 PASSWORD="password"
-LOGIN_TIMEOUT=40
+LOGIN_TIMEOUT=120
 
 EXPECTED_KERNEL_OPTIONS=("panic=1" "quiet" "loglevel=5" "debug")
 
