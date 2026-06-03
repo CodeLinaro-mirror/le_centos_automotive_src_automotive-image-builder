@@ -36,7 +36,7 @@ pipelines:
               enabled-repo-ids:
                 mpp-if: distro_enabled_repo_ids
                 then:
-                  mpp-eval: distro_enabled_repo_ids
+                  mpp-eval: "[r['id'] for r in image_repos + extra_repos if r.get('id')]"
               repos:
                 mpp-join:
                   - mpp-eval: image_repos

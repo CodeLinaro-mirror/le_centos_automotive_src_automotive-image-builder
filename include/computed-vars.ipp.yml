@@ -149,6 +149,7 @@ mpp-vars:
       - mpp-eval: distro_repos
       - mpp-eval: target_build_repos
       - mpp-eval: simple_repos
+      - mpp-eval: extra_build_repos
       - mpp-if: local_repo is not None
         then:
           - id: localrepo
@@ -162,8 +163,42 @@ mpp-vars:
     mpp-join:
       - mpp-eval: distro_debug_repos
 
+  simple_depsolve_repos:
+    mpp-join:
+      - mpp-eval: image_repos
+      - mpp-eval: extra_repos
+      - mpp-eval: simple_repos
+      - mpp-if: simple_add_devel_repos
+        then:
+          mpp-eval: image_devel_repos
+      - mpp-if: simple_add_debug_repos
+        then:
+          mpp-eval: image_debug_repos
+
+  simple_depsolve_repo_ids:
+    mpp-eval: "[r['id'] for r in simple_depsolve_repos if r.get('id')]"
+
+  qm_depsolve_repos:
+    mpp-join:
+      - mpp-eval: image_repos
+      - mpp-eval: extra_repos
+      - mpp-eval: qm_simple_repos
+      - mpp-if: qm_simple_add_devel_repos
+        then:
+          mpp-eval: image_devel_repos
+      - mpp-if: qm_simple_add_debug_repos
+        then:
+          mpp-eval: image_debug_repos
+      - mpp-eval: qm_extra_repos
+
+  qm_depsolve_repo_ids:
+    mpp-eval: "[r['id'] for r in qm_depsolve_repos if r.get('id')]"
+
   image_repo_ids:
     mpp-eval: "[repo['id'] for repo in image_repos]"
+
+  build_repo_ids:
+    mpp-eval: "[r['id'] for r in build_repos if r.get('id')]"
 
   _boot_check_qm_digest_default:
     mpp-eval: |

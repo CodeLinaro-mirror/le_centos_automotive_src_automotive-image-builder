@@ -155,18 +155,9 @@ pipelines:
               enabled-repo-ids:
                 mpp-if: distro_enabled_repo_ids
                 then:
-                  mpp-eval: distro_enabled_repo_ids
+                  mpp-eval: simple_depsolve_repo_ids
               repos:
-                mpp-join:
-                  - mpp-eval: image_repos
-                  - mpp-eval: extra_repos
-                  - mpp-eval: simple_repos
-                  - mpp-if: simple_add_devel_repos
-                    then:
-                      mpp-eval: image_devel_repos
-                  - mpp-if: simple_add_debug_repos
-                    then:
-                      mpp-eval: image_debug_repos
+                mpp-eval: simple_depsolve_repos
               packages:
                 mpp-join:
                   - mpp-eval: image_rpms
