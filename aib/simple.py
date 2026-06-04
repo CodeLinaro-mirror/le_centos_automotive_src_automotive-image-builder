@@ -683,7 +683,9 @@ class ManifestLoader:
             try:
                 manifest = yaml.safe_load(f)
             except yaml.YAMLError as exc:
-                raise exceptions.ManifestParseError(manifest_basedir) from exc
+                raise exceptions.ManifestParseError(
+                    manifest_basedir, cause=exc
+                ) from exc
 
         self._load(manifest, path, manifest_basedir)
 

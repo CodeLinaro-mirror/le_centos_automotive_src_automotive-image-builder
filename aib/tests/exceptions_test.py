@@ -36,7 +36,11 @@ def test_create_manifest(tmp_path):
         create_osbuild_manifest(
             args, tmpdir="/tmp", out="output", storage=None, runner=None
         )
-    assert manifest_file.as_posix() in str(manifest_err)
+    error_str = str(manifest_err.value)
+    # Verify the manifest path is in the error
+    assert manifest_file.as_posix() in error_str
+    # Verify that the underlying YAML error details are included
+    assert "parsing" in error_str.lower() or "line" in error_str.lower()
 
 
 def test_rewrite_manifest():
