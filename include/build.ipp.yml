@@ -170,11 +170,9 @@ pipelines:
               enabled-repo-ids:
                 mpp-if: distro_enabled_repo_ids
                 then:
-                  mpp-eval: distro_enabled_repo_ids
+                  mpp-eval: build_repo_ids
               repos:
-                mpp-join:
-                  - mpp-eval: build_repos
-                  - mpp-eval: extra_build_repos
+                mpp-eval: build_repos
               packages:
                 mpp-join:
                   - mpp-eval: build_rpms
