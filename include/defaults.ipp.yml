@@ -79,6 +79,7 @@ mpp-vars:
   qm_simple_rpms: []
   qm_simple_add_devel_repos: false
   qm_simple_add_debug_repos: false
+  boot_check_noreboot: false
   boot_check_qm_digest_default: # Per qm version, last is default if no match
     "0.9-.*":
       aarch64: "cd1a2bc09ceb9c6904a891417e02cfe839423150dd38a12f68a97f6d8a2df2bf"
