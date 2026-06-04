@@ -253,6 +253,7 @@ mpp-vars:
       [Unit]
       {"After=qm.service" if _boot_check_qm_digest else ""}
       {"After=main-nmstate.service" if use_static_ip else ""}
+      {"After=sys-subsystem-net-devices-" + static_ip_iface + ".device" if use_static_ip and static_ip_iface else ""}
       {"FailureAction=none" if boot_check_noreboot else ""}
   root_sshd_authorized_keys_conf:
     mpp-format-string: |
