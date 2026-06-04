@@ -125,19 +125,6 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
 
         bib_container = args.bib_container_image
 
-        # WIP: image-builder doesn't yet support --in-vm, so in some
-        # cases we have fall back to bootc-image-builder by default:
-        if args.vm and not bib_container:
-            state = ContainerState.query()
-
-            local_bcib_path = shutil.which("bootc-image-builder-local")
-            if state.in_rootless_container and local_bcib_path:
-                # We're in a rootless a-i-b container and can't use a recursive container for a-i-b
-                # so instead run bc-i-b directly in the same container
-                bib_container = local_bcib_path
-            else:
-                bib_container = default_bib_container
-
         if bib_container:
             res = podman_run_bootc_image_builder(
                 bib_container,
@@ -179,10 +166,10 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
             if args.verbose:
                 cmdline += ["--progress", "verbose"]
 
+            cmdline += ["build", "raw"]
+
             if args.vm:
                 cmdline += ["--in-vm"]
-
-            cmdline += ["build", "raw"]
 
             volumes = {}
             if storage:
