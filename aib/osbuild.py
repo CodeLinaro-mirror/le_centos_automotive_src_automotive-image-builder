@@ -103,7 +103,7 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
         try:
             manifest = yaml.safe_load(f)
         except yaml.YAMLError as exc:
-            raise exceptions.ManifestParseError(args.manifest) from exc
+            raise exceptions.ManifestParseError(args.manifest, cause=exc) from exc
 
     rewrite_manifest(manifest, os.path.dirname(args.manifest))
 

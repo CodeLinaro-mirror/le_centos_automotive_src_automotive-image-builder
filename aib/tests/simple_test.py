@@ -1555,3 +1555,32 @@ class TestExtraIncludeGlob(unittest.TestCase):
             extra_include._add_glob_files(contents, data)
 
         self.assertIn("missing/*.txt", str(cm.exception))
+
+
+class TestYAMLParsingErrors(unittest.TestCase):
+    """Test that YAML parsing errors include detailed error messages."""
+
+    def test_manifest_parse_error_includes_yaml_details(self):
+        """Test that ManifestParseError includes line/column info from YAML parsing errors."""
+        # Test the exception class directly
+        import yaml
+
+        invalid_yaml = "name: test\ncontent:\n   bad_indent:\n     - item1\n  good_indent:\n    - item2\n"
+
+        try:
+            yaml.safe_load(invalid_yaml)
+            self.fail("Expected YAML parsing to fail")
+        except yaml.YAMLError as yaml_error:
+            # Create the ManifestParseError with the cause
+            error = exceptions.ManifestParseError(
+                "/path/to/manifest.yml", cause=yaml_error
+            )
+            error_message = str(error)
+
+            # Verify the error includes the manifest path
+            self.assertIn("/path/to/manifest.yml", error_message)
+            # Verify the error includes YAML parsing details (line/column info)
+            self.assertTrue(
+                "line" in error_message.lower(),
+                f"Expected line info in error: {error_message}",
+            )

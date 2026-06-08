@@ -30,11 +30,15 @@ class DefineFileError(AIBException):
 
 
 class ManifestParseError(AIBException):
-    def __init__(self, manifest_path):
+    def __init__(self, manifest_path, cause=None):
         self.manifest = manifest_path
+        self.cause = cause
 
     def __str__(self):
-        return f"Error parsing {self.manifest}"
+        msg = f"Error parsing {self.manifest}"
+        if self.cause:
+            msg += f": {self.cause}"
+        return msg
 
 
 class SimpleManifestParseError(AIBException):
