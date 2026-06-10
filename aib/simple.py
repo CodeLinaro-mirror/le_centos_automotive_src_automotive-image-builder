@@ -534,6 +534,7 @@ class ManifestLoader:
             self.set_from("static_gw", static, "gateway")
             self.set_from("static_dns", static, "dns")
             self.set_from("static_ip_iface", static, "iface")
+            self.set_from("static_ip_iface_early", static, "iface_early")
             if "load_module" in static:
                 v = static["load_module"]
                 if isinstance(v, list):
