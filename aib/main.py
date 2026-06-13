@@ -777,7 +777,12 @@ def main():
     runner = Runner(args)
     runner.add_volume(os.getcwd())
 
-    with SudoTemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
+    # Working directory for intermediate build files. Defaults to /var/tmp, but
+    # can be redirected via AIB_TMPDIR_BASE -- needed in environments where
+    # /var/tmp is not shared into the build container (e.g. macOS/podman-machine,
+    # where only the user's home is mounted into the Linux VM).
+    tmpdir_base = os.environ.get("AIB_TMPDIR_BASE", "/var/tmp")
+    with SudoTemporaryDirectory(prefix="aib-", dir=tmpdir_base) as tmpdir:
         runner.add_volume(tmpdir)
         try:
             return args.func(tmpdir, runner)

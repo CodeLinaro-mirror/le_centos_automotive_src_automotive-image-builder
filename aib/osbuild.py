@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import base64
+import hashlib
 import os
 import json
 import yaml
@@ -124,6 +125,9 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
         ),
         # This is a leftover for backwards compatibilty:
         "image_type": "ostree" if args.mode == "image" else "regular",
+        # Last-resort timestamp when SOURCE_DATE_EPOCH is unset and no RPM
+        # buildtimes are available.
+        "manifest_mtime": int(os.stat(args.manifest).st_mtime),
     }
 
     if args.dump_variables:
@@ -175,9 +179,31 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
             revs[ref] = rev
         defines["ostree_parent_refs"] = revs
 
+    # Env vars aren't forwarded into the container, so pass SOURCE_DATE_EPOCH as a
+    # define. Set before the user defines below so an explicit override still wins.
+    sde = os.environ.get("SOURCE_DATE_EPOCH")
+    if sde is not None:
+        try:
+            sde_int = int(sde)
+            if sde_int < 0:
+                raise ValueError
+        except ValueError as e:
+            raise exceptions.AIBException(
+                f"SOURCE_DATE_EPOCH must be a non-negative integer, got '{sde}'"
+            ) from e
+        defines["source_date_epoch"] = sde_int
+
+    # --reproducible is shorthand for --define reproducible_image=true.
+    if getattr(args, "reproducible", False):
+        defines["reproducible_image"] = True
+
+    # Parsed user defines, gathered alongside `defines` for the image identity below.
+    user_defines = {}
+
     for d in args.define:
         k, v = parse_define(d, "--define")
         defines[k] = v
+        user_defines[k] = v
 
     for df in args.define_file:
         try:
@@ -187,6 +213,7 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
                 raise exceptions.DefineFileError("Define file must be yaml dict")
             for k, v in file_defines.items():
                 defines[k] = v
+                user_defines[k] = v
         except yaml.parser.ParserError as e:
             raise exceptions.DefineFileError(
                 f"Invalid yaml define file '{df}': {e}"
@@ -196,12 +223,39 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
         k, v = parse_define(d, "--extend-define")
         if not isinstance(v, list):
             v = [v]
+        # Build a fresh list so we don't mutate a list shared with `defines`.
+        prev = user_defines.get(k, [])
+        if not isinstance(prev, list):
+            prev = [prev]
+        user_defines[k] = prev + v
         if k not in defines:
             defines[k] = []
         defines[k].extend(v)
 
     if args.local_repo:
         defines["local_repo"] = os.path.abspath(args.local_repo)
+
+    # Hash of the build inputs, used to derive a stable image UUID in reproducible
+    # mode (see defaults.ipp.yml). Identifies the manifest and parameters, not the
+    # image content. For simple manifests args.manifest is the internal
+    # files/simple.mpp.yml, so hash args.simple_manifest when set.
+    content_hash = hashlib.sha256()
+    src = args.simple_manifest or args.manifest
+    if src and os.path.isfile(src):
+        with open(src, "rb") as mf:
+            content_hash.update(mf.read())
+    identity = {
+        "arch": args.arch,
+        "distro": args.distro,
+        "mode": args.mode,
+        "target": defines.get("target"),
+        "defines": user_defines,
+        "local_repo": defines.get("local_repo"),
+        "ostree_parent_refs": defines.get("ostree_parent_refs"),
+        "policy": args.policy.restrictions if args.policy else None,
+    }
+    content_hash.update(json.dumps(identity, sort_keys=True).encode())
+    defines["manifest_content_hash"] = content_hash.hexdigest()
 
     cmdline = [os.path.join(args.base_dir, "mpp/aib-osbuild-mpp")]
     for inc in args.include_dirs:

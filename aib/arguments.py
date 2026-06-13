@@ -355,6 +355,10 @@ BUILD_ARGS = {
         "default": None,
         "help": "Install rpms from a local repository at the given path",
     },
+    "--reproducible": {
+        "type": "bool",
+        "help": "Derive a deterministic image UUID from the manifest and build parameters",
+    },
     "--define": {
         "type": "append",
         "metavar": "KEY=VALUE",

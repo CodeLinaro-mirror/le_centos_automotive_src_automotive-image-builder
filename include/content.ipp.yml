@@ -126,16 +126,18 @@ mpp-vars:
       { "transient=true" if use_transient_etc else "" }
       [composefs]
       enabled={"maybe" if not use_composefs else "signed" if use_composefs_signed else "verity" }
+  # _Lazy: build_timestamp depends on rpms[], which is filled by depsolve.
   build_info:
-    mpp-format-string: |
-      DISTRO="{distro_name}"
+    mpp-eval: |
+      _Lazy(lambda: f'''DISTRO="{distro_name}"
       RELEASE="{release_name}"
       UUID="{image_uuid}"
-      TIMESTAMP="{build_timestamp}"
+      TIMESTAMP="{_materialize(build_timestamp)}"
       IMAGE_NAME="{name}"
       IMAGE_MODE="{image_mode}"
       IMAGE_TARGET="{target}"
       IMAGE_VERSION="{version}"
+      ''')
   qm_subuid_content:
     mpp-format-string: |
       containers:{ qm_container_subuid }
@@ -918,7 +920,8 @@ pipelines:
             origin: org.osbuild.source
             mpp-embed:
               id: build-info
-              text: $build_info
+              text:
+                mpp-format-string: '{_materialize(build_info)}'
         options:
           paths:
             - from:

@@ -182,6 +182,33 @@ Commonly used supported variables include:
 * `use_transient_etc`: If false, changes to `/etc` persist across boots in bootc images. Not recommended for production but useful for testing.
 * `use_debug`: If true, enables detailed debugging output during boot.
 
+## Reproducible builds
+
+By default each build gets a random UUID and the current time in `/etc/build-info`,
+so two builds from the same manifest differ. Enable reproducible mode to fix that:
+
+```shell
+$ aib build --reproducible my-image.aib.yml example:latest
+```
+
+In this mode the UUID is derived deterministically from a hash of the manifest
+and the build parameters (arch, distro, target, defines, local repo, ostree refs).
+Note that it identifies the *build configuration*, not the image content — if the
+package repos change you get the same UUID but a different image.
+
+The `TIMESTAMP` field in `/etc/build-info` (format: `%Y-%m-%d %H:%M:%S UTC`) is
+set from the first available source:
+
+1. An explicit `timestamp` variable (`--define timestamp=...`).
+2. [`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/)
+   — honored even without reproducible mode.
+3. The newest buildtime of the resolved RPM packages (build container excluded).
+4. The manifest file's mtime, falling back to the Unix epoch.
+
+Since osbuild is deterministic for a given manifest, two runs that produce the
+same manifest will produce identical images. Use `--dry-run --osbuild-manifest PATH`
+to export and compare the manifest without building.
+
 ## Using QM
 
 Automotive Image Builder supports the [QM](https://github.com/containers/qm/tree/main) package for
