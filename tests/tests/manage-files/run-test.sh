@@ -30,7 +30,8 @@ tar xvf "$TAR_FILE"
 echo_log "Checking file contents..."
 assert_file_has_content etc/custom-files/file1.txt "name: add_files"
 assert_file_has_content etc/custom-files/file2.txt "This is the file content"
-assert_file_has_content etc/custom-files/file3.txt "Automotive Image Builder"
+# TODO: Enable again when repo is available
+#assert_file_has_content etc/custom-files/file3.txt "Automotive Image Builder"
 assert_file_has_content usr/lib/qm/rootfs/etc/qm-custom/file4.txt "This is the qm file content"
 
 echo_log "Checking flattened glob files..."
