@@ -163,6 +163,9 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
     if args.target:
         defines["target"] = args.target
 
+    if args.root_password is not None:
+        defines["root_password"] = args.root_password
+
     validate_policy_args(args, defines["target"])
 
     if args.ostree_repo:

@@ -1,7 +1,8 @@
 import pytest
+import argparse
 
 import aib.main  # noqa: F401
-from aib.arguments import parse_args
+from aib.arguments import parse_args, parse_root_password, RootPasswordOptionPrefix
 
 
 @pytest.mark.parametrize("arg_before_subcommand", [True, False])
@@ -46,3 +47,42 @@ def test_args_work_before_and_after_subcommands(
     elif isinstance(expected_value, str):
         # For list arguments like --include
         assert expected_value in attr_value
+
+
+class TestParseRootPassword:
+
+    @pytest.mark.parametrize(
+        "input,error",
+        [
+            ("topsecretandactuallyhashed", argparse.ArgumentTypeError),
+            ("unknown:topsecret", argparse.ArgumentTypeError),
+        ],
+    )
+    def test_unsupported_prefix(self, input, error):
+        with pytest.raises(error):
+            parse_root_password(input)
+
+    @pytest.mark.parametrize(
+        "key,password", [("CUSTOM_PW", "topsecretandactuallyhashed"), ("CUSTOM_PW", "")]
+    )
+    def test_env_prefix(self, monkeypatch, key, password):
+        monkeypatch.setenv(key, password)
+
+        result = parse_root_password(f"{RootPasswordOptionPrefix.ENV.value}:{key}")
+        assert result == password
+
+    @pytest.mark.parametrize(
+        "file,password",
+        [
+            (".pw-file", "topsecretandactuallyhashed"),
+            ("file.txt", " withadditionalspaces     "),
+        ],
+    )
+    def test_file_prefix(self, tmp_path, file, password):
+        file_path = tmp_path / file
+        file_path.write_text(password)
+
+        result = parse_root_password(
+            f"{RootPasswordOptionPrefix.FILE.value}:{file_path}"
+        )
+        assert result == password.strip()

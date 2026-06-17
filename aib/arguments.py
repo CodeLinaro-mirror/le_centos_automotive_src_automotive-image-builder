@@ -17,6 +17,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Callable, List, Dict, Any
 from enum import Enum
+from pathlib import Path
 
 from .podman import ContainerState
 from .utils import DiskFormat
@@ -224,6 +225,12 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
             type=str,
             default=default,
         )
+    elif t == "root-password":
+        a = dst.add_argument(
+            *names,
+            type=parse_root_password,
+            default=None,
+        )
     else:
         log.error("Unknown arg type %s", t)
 
@@ -254,6 +261,40 @@ def add_args(parser, groups, args, suppress_default=False, suppress_help=False):
             suppress_default=suppress_default,
             suppress_help=suppress_help,
         )
+
+
+class RootPasswordOptionPrefix(str, Enum):
+
+    ENV = "env"
+    FILE = "file"
+
+    @staticmethod
+    def all() -> str:
+        return f"[{RootPasswordOptionPrefix.ENV.value}, {RootPasswordOptionPrefix.FILE.value}]"
+
+
+def parse_root_password(option: str) -> str:
+    parts = option.split(":", 1)
+    if len(parts) != 2:
+        raise argparse.ArgumentTypeError(
+            f"Invalid for root password value '{option}'. Must be in the form of {RootPasswordOptionPrefix.all()}:[hash]."
+        )
+
+    prefix, value = parts
+    if prefix == RootPasswordOptionPrefix.ENV.value:
+        env_var_value = os.getenv(value)
+        if value is None:
+            raise argparse.ArgumentTypeError(f"No such environment variable '{value}'")
+        return env_var_value
+    elif prefix == RootPasswordOptionPrefix.FILE.value:
+        path = Path(value).expanduser().resolve()
+        if not path.is_file():
+            raise argparse.ArgumentTypeError(f"No such file '{path}'")
+        with open(path, "r") as f:
+            return f.read().strip()
+    raise argparse.ArgumentTypeError(
+        f"Unknown root password option prefix '{option}'. Must be one of: {RootPasswordOptionPrefix.all()}."
+    )
 
 
 # Arguments for no subcommand
@@ -371,6 +412,10 @@ BUILD_ARGS = {
         "help": "Add internal defines from a yaml dictionary in a file",
     },
     "--dump-variables": "Dump internal variables that would be used when building and exit.",
+    "--root-password": {
+        "type": "root-password",
+        "help": "Set the hashed root password. This overwrites the hashed root password from the manifest.",
+    },
 }
 DISK_FORMAT_ARGS = {
     "--format": {
