@@ -58,13 +58,18 @@ ssh -o StrictHostKeyChecking=no -i $PWD/automotive_sig.ssh root@$ip dnf upgrade 
 
 section_end duffy_setup
 
-# Run tests with 5 parallel test executions
-export TMT_RUN_OPTIONS="-q \
-  -eNODE=$ip \
-  -eNODE_SSH_KEY=$PWD/automotive_sig.ssh \
-  -eBUILD_AIB_RPM=yes \
-  plan --name connect"
-( cd tests && ../ci-scripts/parallel-test-runner.sh 5 )
+# Run tests with 5 parallel test executions in a clean environment
+env -i \
+    HOME="$HOME" \
+    LC_CTYPE="${LC_ALL:-${LC_CTYPE:-$LANG}}" \
+    PATH="$PATH" \
+    USER="$USER" \
+    TMT_RUN_OPTIONS="-q \
+        -eNODE=$ip \
+        -eNODE_SSH_KEY=$PWD/automotive_sig.ssh \
+        -eBUILD_AIB_RPM=yes \
+        plan --name connect" \
+    bash -c "( cd tests && ../ci-scripts/parallel-test-runner.sh 5 )"
 
 success=$?
 
