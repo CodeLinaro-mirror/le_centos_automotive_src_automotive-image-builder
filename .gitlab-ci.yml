@@ -291,18 +291,23 @@ trigger-pipeline:
 
 build_doc_demos:
   stage: test
-  image: python:3.11
+  timeout: 120m
+  image: quay.io/centos/centos:stream10
+  needs:
+    - job: packit-srpm-build
+      artifacts: true
   before_script:
-    - apt-get update
-    - apt-get install -y jq less
+    - *prepare-cs-tmt-setup
     - *prepare-aws-setup
   script:
     - sh ci-scripts/run-sig-doc-demos.sh
   allow_failure: true
   artifacts:
-    paths:
-      - logs
     when: always
+    paths:
+      - tmt-run
+    reports:
+      junit: tmt-run/**/junit.xml
 
 integration_tests_10:
   stage: test

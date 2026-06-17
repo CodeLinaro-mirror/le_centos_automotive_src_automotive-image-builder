@@ -1,70 +1,90 @@
 #!/bin/bash
 
-if [ ! -f duffy.session ]; then
-echo "Retrieving an AWS instance"
-set +x
-duffy client \
- request-session \
- pool=metal-ec2-c5n-centos-10s-x86_64,quantity=1 > duffy.session
+source "$(dirname "${BASH_SOURCE[0]}")"/aws-lib.sh
+
+function section_start () {
+  local section_title="${1}"
+  local section_description="${2:-$section_title}"
+
+  echo -e "section_start:$(date +%s):${section_title}[collapsed=true]\r\e[0K${section_description}"
+}
+
+function section_end () {
+  local section_title="${1}"
+
+  echo -e "section_end:$(date +%s):${section_title}\r\e[0K"
+}
+
+section_start duffy_setup "Attaching to AWS"
+
+export SESSION_FILE="$PWD/duffy.session"
+
+if [ ! -f "$SESSION_FILE" ]; then
+    echo "Retrieving an AWS host ..."
+    if ! get_aws_session "metal-ec2-c5n-centos-10s-x86_64" "$SESSION_FILE"; then
+        exit 1
+    fi
 fi
 
+trap 'release_aws_session "$SESSION_FILE"' EXIT
 
-set -x
-
-ip=$(jq '.session.nodes[].data.provision.public_ipaddress' duffy.session)
-ip=$(echo $ip | sed -e 's|"||g')
+ip=$(get_ip_from_session "$SESSION_FILE")
 echo "IP address: $ip"
-session_id=$(jq '.session.id' duffy.session)
-session_id=$(echo $session_id | sed -e 's|"||g')
-echo "Session: $session_id"
 
-# Make sure libsepol is up to date
-ssh -o StrictHostKeyChecking=no -i $PWD/automotive_sig.ssh root@$ip dnf upgrade -y libsepol
+SRC_RPM=$(find . -name '*.src.rpm' | head -n 1)
 
-# shellcheck disable=SC2087 # CI_REPOSITORY_URL and CI_MERGE_REQUEST_REF_PATH need to be expanded before execution on AWS host
+if [ -z "$SRC_RPM" ]; then
+    echo "SRPM not found! Exiting."
+    exit 1
+fi
+
+echo "Found SRPM: $SRC_RPM"
+
+SRPM_DIR="/var/tmp/sig-docs-srpm"
+
 ssh \
-    -o " UserKnownHostsFile=/dev/null" \
-    -o "StrictHostKeyChecking no" \
-    -o "IdentitiesOnly=yes" \
-    -i automotive_sig.ssh \
-    root@$ip << EOF
-cat > run.sh << EO
-set -x
-mkdir -p /dev/shm/docs
-cd /dev/shm/docs
-dnf install -y git rpm-build make
-rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-SIG-Automotive
-git clone ${CI_REPOSITORY_URL}
-cd automotive-image-builder
-git fetch origin ${CI_MERGE_REQUEST_REF_PATH}
-git checkout FETCH_HEAD
-git show -s
-make rpm_dev
-dnf --repofrompath autosd,"https://mirror.stream.centos.org/SIGs/10-stream/autosd/$(uname -m)/packages-main/" localinstall -y automotive-image-builder-*.noarch.rpm
-curl -o test_all.sh \
-  "https://gitlab.com/CentOS/automotive/sig-docs/-/raw/main/demos/test_all.sh?ref_type=heads"
-# Better safe than sorry, ensure we don't install aib if we didn't manage before
-sed -i -e 's|dnf install -y git osbuild-auto automotive-image-builder |dnf install -y git osbuild-auto |' test_all.sh
-time bash test_all.sh
-EO
-bash run.sh
-EOF
+    -o StrictHostKeyChecking=no \
+    -i "$PWD/automotive_sig.ssh" \
+    root@"$ip" \
+    "mkdir -p '$SRPM_DIR'"
+
+scp \
+    -o StrictHostKeyChecking=no \
+    -i "$PWD/automotive_sig.ssh" \
+    "$SRC_RPM" \
+    root@"$ip":"$SRPM_DIR"/
+
+ssh \
+    -o StrictHostKeyChecking=no \
+    -i "$PWD/automotive_sig.ssh" \
+    root@"$ip" \
+    dnf upgrade -y libsepol
+
+section_end duffy_setup
+
+rm -rf sig-docs
+git clone https://gitlab.com/CentOS/automotive/sig-docs.git
+
+env -i \
+    HOME="$HOME" \
+    LC_CTYPE="${LC_ALL:-${LC_CTYPE:-$LANG}}" \
+    PATH="$PATH" \
+    USER="$USER" \
+    TMT_RUN_OPTIONS="-q \
+        -eNODE=$ip \
+        -eNODE_SSH_KEY=$PWD/automotive_sig.ssh \
+        -eBUILD_LOCAL_RPM=yes \
+        -eSRPM_DIR=$SRPM_DIR \
+        plan --name connect" \
+    bash -c "( cd sig-docs/tests && ../ci-scripts/parallel-test-runner.sh 5 connect )"
 
 success=$?
-echo $success
 
-scp -r \
-    -o " UserKnownHostsFile=/dev/null" \
-    -o "StrictHostKeyChecking no" \
-    -o "IdentitiesOnly=yes" \
-    -i automotive_sig.ssh \
-    root@$ip:/dev/shm/docs/automotive-image-builder/sig-docs/demos/logs/ .
-echo $?
+mkdir -p tmt-run
+cp -r /var/tmp/tmt/* tmt-run/ 2>/dev/null || true
 
-echo "Closing session: $session_id"
-set +x
-duffy client \
- retire-session $session_id
-rm duffy.session
+for d in tmt-run/* ; do
+    rm -rf "$d"/tests/plans/connect/tree
+done
 
 exit $success
