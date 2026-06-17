@@ -15,9 +15,8 @@ content:
       text: |
         This is the file content
 
-    # TODO: Enable again when repo is available
-    #- path: /etc/custom-files/file3.txt
-    #  url: "https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/raw/main/README.md?ref_type=heads&inline=false"
+    - path: /etc/custom-files/file3.txt
+      url: "https://gitlab.com/CentOS/automotive/src/automotive-image-builder/-/raw/main/README.md?ref_type=heads&inline=false"
 
     # Test basic glob pattern (flatten files)
     - path: /etc/test-glob
