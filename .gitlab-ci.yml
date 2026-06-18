@@ -278,21 +278,6 @@ trigger-pipeline:
   - dnf install -y tmt tmt+report-junit
   - echo -e "\e[0Ksection_end:$(date +%s):tmt_setup\r\e[0K"
 
-build_doc_demos:
-  stage: test
-  image: python:3.11
-  before_script:
-    - apt-get update
-    - apt-get install -y jq less
-    - *prepare-aws-setup
-  script:
-    - sh ci-scripts/run-sig-doc-demos.sh
-  allow_failure: true
-  artifacts:
-    paths:
-      - logs
-    when: always
-
 integration_tests_10:
   stage: test
   # We need to add a time for wait/retry process to acquire a host from AWS to the overall time of test execution
