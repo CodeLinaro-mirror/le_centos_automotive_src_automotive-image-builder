@@ -308,6 +308,8 @@ build_doc_demos:
       - tmt-run
     reports:
       junit: tmt-run/**/junit.xml
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
 
 integration_tests_10:
   stage: test

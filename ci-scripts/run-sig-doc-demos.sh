@@ -83,6 +83,7 @@ success=$?
 mkdir -p tmt-run
 cp -r /var/tmp/tmt/* tmt-run/ 2>/dev/null || true
 
+# The tree directory contains a copy of the test sources and is removed to reduce the size of the CI artifacts
 for d in tmt-run/* ; do
     rm -rf "$d"/tests/plans/connect/tree
 done
