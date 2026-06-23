@@ -347,7 +347,6 @@ class Contents:
         self.add_symlinks = data.get("add_symlinks", [])
         self.file_content_copy = []
         self.systemd = data.get("systemd", {})
-        self.sbom = data.get("sbom", {})
 
         self.validate_paths()
 
@@ -444,9 +443,6 @@ class Contents:
 
         if self.systemd:
             self.set_define("simple_systemd", self.systemd)
-
-        if self.sbom:
-            self.set_define("simple_sbom", self.sbom)
 
 
 class QMContents(Contents):

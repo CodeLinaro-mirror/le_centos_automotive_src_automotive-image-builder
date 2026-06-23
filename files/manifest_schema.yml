@@ -309,14 +309,6 @@ $defs:
             type: array
             items:
               type: string
-      sbom:
-        description: Generate a Software Bill of Materials (SBOM) document in SPDX v2 format for the installed RPM packages.
-        type: object
-        additionalProperties: false
-        properties:
-          doc_path:
-            description: Output path for the SBOM file
-            type: string
 
   static_network:
     type: object
