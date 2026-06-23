@@ -24,8 +24,6 @@ mpp-vars:
   simple_groups: {}
   simple_add_devel_repos: false
   simple_add_debug_repos: false
-  simple_sbom: {}
-  qm_simple_sbom: {}
   simple_enable_weak_deps: false
 
 pipelines:
@@ -118,12 +116,6 @@ pipelines:
           type: org.osbuild.systemd
           options:
             mpp-eval: qm_simple_systemd
-      - mpp-if: qm_simple_sbom
-        then:
-          type: org.osbuild.dnf4.sbom.spdx
-          options:
-            config:
-              mpp-eval: qm_simple_sbom
 
   - name: rootfs
     build: name:build
@@ -245,9 +237,3 @@ pipelines:
           options:
             users:
               mpp-eval: simple_users
-      - mpp-if: simple_sbom
-        then:
-          type: org.osbuild.dnf4.sbom.spdx
-          options:
-            config:
-              mpp-eval: simple_sbom
