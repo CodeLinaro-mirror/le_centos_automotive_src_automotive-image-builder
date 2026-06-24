@@ -28,7 +28,6 @@ mpp-vars:
       - mpp-eval: kernel_opts
       - - no_console_suspend=1
         - acpi=off
-        - net.naming-scheme=v252
 
   dracut_drivers: []
   dracut_omit_drivers:
