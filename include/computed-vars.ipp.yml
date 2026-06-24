@@ -5,6 +5,36 @@ version: '2'
 # things that depend on what was set in that.
 
 mpp-vars:
+  # Must stay fixed: changing it changes every reproducible image's UUID.
+  _aib_uuid_namespace:
+    mpp-eval: _uuid.UUID('6ba7b811-9dad-11d1-80b4-00c04fd430c8')
+  # Reproducible mode: stable UUID from the manifest hash. Otherwise: random.
+  image_uuid:
+    mpp-eval: >-
+      str(_uuid.uuid5(_aib_uuid_namespace, manifest_content_hash))
+      if reproducible_image else str(_uuid.uuid4())
+  # Reproducible: explicit timestamp > SOURCE_DATE_EPOCH > max RPM buildtime
+  # (image pipelines only, 'build' excluded) > manifest mtime > 1.
+  # _Lazy because rpms[] is filled by depsolve, which runs after mpp-vars.
+  timestamp:
+    mpp-eval: >-
+      locals().get('timestamp',
+        source_date_epoch if source_date_epoch is not None
+        else _Lazy(lambda: max(
+            (info.buildtime
+             for pipeline, pkgs in rpms.items() if pipeline != 'build'
+             for info in pkgs.values()
+             if getattr(info, 'buildtime', None)),
+            default=manifest_mtime if manifest_mtime is not None else 1))
+          if reproducible_image
+        else _datetime.datetime.now().timestamp())
+  # Always UTC. _Lazy because timestamp may be Lazy itself.
+  build_timestamp:
+    mpp-eval: >-
+      _Lazy(lambda: _datetime.datetime.fromtimestamp(
+        _materialize(timestamp), _datetime.timezone.utc
+      ).strftime('%Y-%m-%d %H:%M:%S UTC'))
+
   # Note: setting [qm_]varpart_size to -1 means "use externel image with the given uuid"
   _varpart_size:
     mpp-eval: locals().get('varpart_size', int(int(image_size) * varpart_relative_size / 512))

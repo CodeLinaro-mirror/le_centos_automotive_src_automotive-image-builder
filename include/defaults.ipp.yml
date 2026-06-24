@@ -353,12 +353,12 @@ mpp-vars:
 
   # Timestamps, etc
   reproducible_image: false
-  image_uuid:
-    mpp-eval: ('ffffffff-ffff-ffff-ffff-ffffffffffff' if reproducible_image else str(_uuid.uuid4()))
-  timestamp:
-    mpp-eval: (1 if reproducible_image else _datetime.datetime.now().timestamp())
-  build_timestamp:
-    mpp-eval: (str(_datetime.datetime.fromtimestamp(timestamp)))
+  # These three are set by the Python wrapper.
+  manifest_content_hash: ""
+  source_date_epoch: null
+  manifest_mtime: null
+  # image_uuid/timestamp/build_timestamp are in computed-vars.ipp.yml, which is
+  # imported after the manifest vars, so a manifest can set reproducible_image.
 
   # These are overridden by the distro file
   distro_repos: []
