@@ -98,6 +98,7 @@ class CreateManifestReproducibleTest(unittest.TestCase):
             local_repo=None,
             include_dirs=[],
             cache=None,
+            root_password=None,
         )
 
     def _run(self, args=None, env=None):
