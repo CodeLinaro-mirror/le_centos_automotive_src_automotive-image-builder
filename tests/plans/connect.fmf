@@ -32,6 +32,10 @@ environment:
     # Custom parameters to be passed to `aib build-builder` command used in tests
     AIB_BUILD_BUILDER_OPTIONS: ""
 
+    # Boolean indicator, that prepare phase already finished during parallel test run. It's set automatically
+    # by parallel-test-runner.sh
+    PTR_PREPARE_FINISHED: ""
+
     AIB: aib
     AIBDEV: aib-dev
     AIB_BASEDIR: /usr/lib/automotive-image-builder
@@ -78,6 +82,7 @@ prepare:
       how: shell
       script: |
           ./scripts/init-bootc-builder.sh
+
 discover:
     how: fmf
     prune: true
