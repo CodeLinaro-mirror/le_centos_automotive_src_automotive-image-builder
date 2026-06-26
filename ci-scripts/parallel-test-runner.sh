@@ -11,6 +11,9 @@ fi
 
 TMT_WORKDIR_ROOT=${TMT_WORKDIR_ROOT:-"/var/tmp/tmt"}
 
+# Boolean indicator, that prepare phase already finished during parallel test run
+PTR_PREPARE_FINISHED=""
+
 # TMT_RUN_OPTIONS need to contain all important options for tmt execution
 if [ -n "$TMT_RUN_OPTIONS" ]; then
     # It's not possible to pass array type variable through environment, so conversion needed
@@ -64,6 +67,7 @@ execute_test() {
         $FEELING_SAFE \
         run \
         -i "$test_id" \
+        -ePTR_PREPARE_FINISHED="$PTR_PREPARE_FINISHED" \
         "${TMT_RUN_OPTIONS[@]}" \
         test --name "$test_name" \
         discover prepare provision execute -h tmt --no-progress-bar report &
@@ -88,6 +92,8 @@ tmt -c arch="$(arch)" \
 
 END_TIME=$(date +%s)
 echo "Finished test preparation, execution time: $(format_time $((END_TIME - START_TIME)))"
+
+PTR_PREPARE_FINISHED="yes"
 
 # Gather discovered tests
 mapfile -t DISCOVERED_TESTS< \

@@ -20,6 +20,10 @@ environment:
     # Custom parameters to be passed to `aib build-builder` command used in tests
     AIB_BUILD_BUILDER_OPTIONS: ""
 
+    # Boolean indicator, that prepare phase already finished during parallel test run. It's set automatically
+    # by parallel-test-runner.sh
+    PTR_PREPARE_FINISHED: ""
+
     AIB: $PROJECT_DIR/bin/aib
     AIBDEV: $PROJECT_DIR/bin/aib-dev
     AIB_BASEDIR: $PROJECT_DIR

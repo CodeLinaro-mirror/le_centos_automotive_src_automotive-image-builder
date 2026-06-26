@@ -2,6 +2,11 @@
 
 source "$(dirname ${BASH_SOURCE[0]})"/setup-lib.sh
 
+if [ "$PTR_PREPARE_FINISHED" == "yes" ]; then
+    echo "Prepare phase was already executed by parallel-test-runner.sh, skipping"
+    exit 0
+fi
+
 # Configure a-i-b base repository
 echo "AIB_BASE_REPO='${AIB_BASE_REPO}'"
 

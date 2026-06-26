@@ -5,6 +5,11 @@ source "$(dirname ${BASH_SOURCE[0]})"/setup-lib.sh
 # Path where local a-i-b repository will be create
 AIB_LOCAL_REPO=/var/tmp/aib-local-repo
 
+if [ "$PTR_PREPARE_FINISHED" == "yes" ]; then
+    echo "Prepare phase was already executed by parallel-test-runner.sh, skipping"
+    exit 0
+fi
+
 if [ "${BUILD_AIB_RPM}" != "yes" ]; then
     echo "Building a-i-b package not requested, skipping ..."
     exit 0

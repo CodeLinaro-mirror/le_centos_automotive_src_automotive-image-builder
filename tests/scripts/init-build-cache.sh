@@ -2,6 +2,11 @@
 
 source "$(dirname ${BASH_SOURCE[0]})"/test-lib.sh
 
+if [ "$PTR_PREPARE_FINISHED" == "yes" ]; then
+    echo "Prepare phase was already executed by parallel-test-runner.sh, skipping"
+    exit 0
+fi
+
 if [ -d "$BUILDDIR" ]; then
     echo "Build cache directory '$BUILDDIR' already exists, skipping"
     exit 0
