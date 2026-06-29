@@ -701,6 +701,9 @@ def main():
     if not accel_enabled:
         print_verbose("Acceleration: off")
 
+    if args.aboot:
+        args.memory = "4G"  # this is hardcoded in our dtb files
+
     qemu_args += [
         "-m",
         str(args.memory),
@@ -779,7 +782,6 @@ def main():
     tmpdir = tempfile.TemporaryDirectory(prefix=f"runvm-{runvm_id}")
 
     if args.aboot:
-        args.memory = "4G"  # this is hardcoded in our dtb files
         qemu_args += ["-bios", aboot_bios]
     else:  # EFI
         efi_fw.add_qemu_args(args, qemu_args, tmpdir)
