@@ -367,6 +367,9 @@ $defs:
       sealed:
         description: "Sealed images can only boot the original, or re-sealed images, not e.g. layered bootc images. Defaults to true."
         type: boolean
+      disable_gettys:
+        description: "Disable login prompts on all ttys (including graphical and serial). Defaults to false."
+        type: boolean
       enable_oom_protection:
         description: Enable OOM Killer protection. This will set DefaultOOMScoreAdjust=-1000 in systemd configuration.
         type: boolean

@@ -219,6 +219,33 @@ assert_service_masked() {
 
 }
 
+resolve_systemd_generator_path() {
+    local generator_name="$1"
+    local section="$2"
+
+    if [ "$section" = "content" ]; then
+        echo "etc/systemd/system-generators/$generator_name"
+    elif [ "$section" = "qm" ]; then
+        echo "usr/lib/qm/rootfs/etc/systemd/system-generators/$generator_name"
+    else
+        fatal "Unknown section: $section"
+    fi
+}
+
+assert_generator_masked() {
+    local generator_name="$1"
+    local section="$2"
+    local symlink_path
+    symlink_path=$(resolve_systemd_generator_path "$generator_name" "$section")
+
+    if [ -L "$symlink_path" ] && [ "$(readlink $symlink_path)" = "/dev/null" ]; then
+        echo_pass "$generator_name is masked in $section."
+    else
+        echo_fail "$generator_name should be masked in $section but symlink doesn't exist!"
+        exit 1
+    fi
+}
+
 assert_partition_relative_size() {
     local img=$1
     local label=$2

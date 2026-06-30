@@ -26,3 +26,6 @@ qm:
         - cups.service
       masked_services:
         - chronyd.service
+
+image:
+  disable_gettys: true
