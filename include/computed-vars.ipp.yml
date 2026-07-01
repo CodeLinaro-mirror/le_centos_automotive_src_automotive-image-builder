@@ -120,6 +120,7 @@ mpp-vars:
   partition_type_aboot: 20117f86-e985-4357-b9ee-374bc1d8487d # Android boot v2
   partition_type_ukiboot: df331e4d-be00-463f-b4a7-8b43e18fb53a
   partition_type_ukibootctl: fefd9070-346f-4c9a-85e6-17f07f922773
+  partition_type_vbmeta: 4b7a15d6-322c-42ac-8110-88b7da0c5d77 # Android vbmeta
 
   # Derive these from use_boot
   use_aboot:

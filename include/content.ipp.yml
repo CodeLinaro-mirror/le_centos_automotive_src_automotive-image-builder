@@ -452,7 +452,7 @@ mpp-vars:
         - mpp-if: use_vbmetapart
           then:
             label: vbmeta_a
-            type: $partition_type_aboot
+            type: $partition_type_vbmeta
             uuid: $vbmetapart_a_uuid
             size:
               mpp-format-string: '{abootpart_size * 512}'
@@ -463,7 +463,7 @@ mpp-vars:
         - mpp-if: use_vbmetapart
           then:
             label: vbmeta_b
-            type: $partition_type_aboot
+            type: $partition_type_vbmeta
             uuid: $vbmetapart_b_uuid
             size:
               mpp-format-string: '{abootpart_size * 512}'
