@@ -145,13 +145,6 @@ class BuildContainerNotFound(AIBException):
         )
 
 
-class BootcImageBuilderFailed(AIBException):
-    """Raised when bootc-image-builder fails to create an image."""
-
-    def __str__(self):
-        return "bootc-image-builder failed to create the image"
-
-
 class IncompatibleOptions(AIBException):
     """Raised when incompatible command-line options are used together."""
 

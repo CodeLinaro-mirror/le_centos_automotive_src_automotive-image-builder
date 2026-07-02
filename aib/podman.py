@@ -14,7 +14,6 @@ from .utils import (
 from . import log
 from .exceptions import (
     PodmanCommandFailed,
-    UnsupportedImageType,
     InitramfsNotFound,
 )
 
@@ -472,84 +471,6 @@ def podman_image_info(storage, image):
     except (PodmanCommandFailed, RuntimeError, ValueError) as e:
         log.info("No build info in %s: %s", image, e)
     return ContainerInfo(image, build_info)
-
-
-def podman_run_bootc_image_builder(
-    bib_container,
-    storage,
-    build_container,
-    bootc_container,
-    build_type,
-    dest_path,
-    in_vm,
-    user_container,
-    verbose,
-):
-    if build_type == "raw":
-        src_path = "image/disk.raw"
-    elif build_type == "qcow2":
-        src_path = "qcow2/disk.qcow2"
-    elif build_type == "vmdk":
-        src_path = "vmdk/disk.vmdk"
-    elif build_type == "vpc":
-        src_path = "vpc/disk.vpc"
-    elif build_type == "ovf":
-        src_path = "ovf/disk.ovf"
-    else:
-        raise UnsupportedImageType(build_type)
-
-    with tempfile.TemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
-        try:
-            # To easily test non-containerized bc-i-b builds, parse
-            # absolute paths as binary name:
-            use_container = not bib_container.startswith("/")
-            output_need_sudo = True
-
-            args = [
-                "--build-container",
-                build_container,
-                "--progress",
-                "verbose",
-                "--type",
-                build_type,
-                bootc_container,
-            ]
-            if in_vm:
-                args.append("--in-vm")
-            if use_container:
-                output_need_sudo = not user_container
-                volumes = {
-                    "/output": tmpdir,
-                    "/var/lib/containers/storage": storage.storage,
-                }
-                res = run_podman_cmd(
-                    bib_container,
-                    volumes,
-                    args,
-                    podman_args=["--privileged", "--network=none"],
-                    with_sudo=not user_container,
-                    stdout_pipe=None if verbose else subprocess.DEVNULL,
-                )
-            else:
-                storedir = os.path.join(tmpdir, "store")
-                os.mkdir(storedir)
-                rpmmddir = os.path.join(tmpdir, "rpmmd")
-                os.mkdir(rpmmddir)
-                args += ["--store", storedir, "--rpmmd", rpmmddir]
-                res = run_cmd(
-                    [bib_container, "--output", tmpdir] + args,
-                    stdout_pipe=None if verbose else subprocess.DEVNULL,
-                )
-
-            if res == 0:
-                src = os.path.join(tmpdir, src_path)
-                log.debug("Copying: %s to %s", src, dest_path)
-                run_cmd(["cp", src, dest_path], with_sudo=output_need_sudo)
-            return res
-
-        finally:
-            # Need sudo to have permissions to clean up the tmpdir
-            run_cmd(["rm", "-rf", tmpdir], with_sudo=output_need_sudo)
 
 
 def podman_bootc_inject_pubkey(
