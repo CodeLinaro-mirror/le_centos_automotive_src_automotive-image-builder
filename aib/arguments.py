@@ -435,13 +435,6 @@ DISK_FORMAT_ARGS = {
     },
 }
 BIB_ARGS = {
-    "--bib-container-image": {
-        "type": "str",
-        "metavar": "IMAGE",
-        "aliases": ["--bib-container"],
-        "default-env": "AIB_BIB_CONTAINER_IMAGE",
-        "help": "bootc-image-builder image to use",
-    },
     "--build-container": {
         "type": "str",
         "metavar": "IMAGE",

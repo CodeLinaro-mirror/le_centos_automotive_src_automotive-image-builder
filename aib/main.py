@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import binascii
-import shutil
 import shlex
 import sys
 import os
@@ -23,7 +22,6 @@ from . import exceptions
 from .exceptions import (
     ContainerNotFound,
     BuildContainerNotFound,
-    BootcImageBuilderFailed,
     IncompatibleOptions,
     InvalidBuildDir,
     UnknownSignatureType,
@@ -31,11 +29,9 @@ from .exceptions import (
 from . import AIBParameters
 from . import log
 from .podman import (
-    ContainerState,
     ContainerStorage,
     podman_image_exists,
     podman_image_info,
-    podman_run_bootc_image_builder,
     podman_bootc_inject_pubkey,
     PodmanImageMount,
     TemporaryContainer,
@@ -58,7 +54,7 @@ from .osbuild import (
     run_osbuild,
     export_disk_image_file,
 )
-from .globals import default_distro, default_bib_container
+from .globals import default_distro
 
 from . import list_ops  # noqa: F401
 
@@ -123,92 +119,62 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
             storage, src_container
         )
 
-        bib_container = args.bib_container_image
+        # Fall back to the use of image-builder instead of bc-i-b container
+        runner.add_volume("/dev")
+        runner.add_volume(tmpdir)
+        cachedir = os.path.join(tmpdir, "cache")
+        os.mkdir(cachedir)
+        rpmmddir = os.path.join(tmpdir, "rpmmd")
+        os.mkdir(rpmmddir)
+        cmdline = [
+            "image-builder",
+            "--cache",
+            cachedir,
+            "--rpmmd-cache",
+            rpmmddir,
+            "--output-dir",
+            outputdir.name,
+            "--output-name",
+            "image",
+            "--bootc-build-ref",
+            build_container,
+            "--bootc-ref",
+            src_container,
+        ]
 
-        # WIP: image-builder doesn't yet support --in-vm, so in some
-        # cases we have fall back to bootc-image-builder by default:
-        if args.vm and not bib_container:
-            state = ContainerState.query()
+        if args.verbose:
+            cmdline += ["--progress", "verbose"]
 
-            local_bcib_path = shutil.which("bootc-image-builder-local")
-            if state.in_rootless_container and local_bcib_path:
-                # We're in a rootless a-i-b container and can't use a recursive container for a-i-b
-                # so instead run bc-i-b directly in the same container
-                bib_container = local_bcib_path
-            else:
-                bib_container = default_bib_container
+        cmdline += ["build", "raw"]
 
-        if bib_container:
-            res = podman_run_bootc_image_builder(
-                bib_container,
-                storage,
-                build_container,
-                src_container,
-                "raw",
-                output_file,
-                args.vm,
-                args.user_container,
-                args.verbose,
-            )
-            if res != 0:
-                raise BootcImageBuilderFailed()
-        else:
-            # Fall back to the use of image-builder instead of bc-i-b container
-            runner.add_volume("/dev")
-            runner.add_volume(tmpdir)
-            cachedir = os.path.join(tmpdir, "cache")
-            os.mkdir(cachedir)
-            rpmmddir = os.path.join(tmpdir, "rpmmd")
-            os.mkdir(rpmmddir)
+        if args.vm:
+            cmdline += ["--in-vm"]
+
+        volumes = {}
+        if storage:
             cmdline = [
-                "image-builder",
-                "--cache",
-                cachedir,
-                "--rpmmd-cache",
-                rpmmddir,
-                "--output-dir",
-                outputdir.name,
-                "--output-name",
-                "image",
-                "--bootc-build-ref",
-                build_container,
-                "--bootc-ref",
-                src_container,
-            ]
+                "env",
+                f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
+            ] + cmdline
+            volumes[storage.storage] = storage.storage
 
-            if args.verbose:
-                cmdline += ["--progress", "verbose"]
+        # This is a temporary fix for bootupd 0.2.34 until https://github.com/coreos/bootupd/pull/1096
+        # is in the repo. It fixes bootupd failing if there is no /sys/firmware/efi on the build machine.
+        cmdline = [
+            "unshare",
+            "-m",
+            "bash",
+            "-c",
+            "mount -t tmpfs tmpfs /sys/firmware; mkdir /sys/firmware/efi;"
+            + shlex.join(cmdline),
+        ]
 
-            if args.vm:
-                cmdline += ["--in-vm"]
-
-            cmdline += ["build", "raw"]
-
-            volumes = {}
-            if storage:
-                cmdline = [
-                    "env",
-                    f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
-                ] + cmdline
-                volumes[storage.storage] = storage.storage
-
-            # This is a temporary fix for bootupd 0.2.34 until https://github.com/coreos/bootupd/pull/1096
-            # is in the repo. It fixes bootupd failing if there is no /sys/firmware/efi on the build machine.
-            cmdline = [
-                "unshare",
-                "-m",
-                "bash",
-                "-c",
-                "mount -t tmpfs tmpfs /sys/firmware; mkdir /sys/firmware/efi;"
-                + shlex.join(cmdline),
-            ]
-
-            runner.run_in_container(
-                cmdline,
-                need_osbuild_privs=True,
-                verbose=args.verbose,
-                extra_volumes=volumes,
-            )
+        runner.run_in_container(
+            cmdline,
+            need_osbuild_privs=True,
+            verbose=args.verbose,
+            extra_volumes=volumes,
+        )
 
         export_disk_image_file(runner, args, tmpdir, output_file, out, fmt)
 
@@ -456,8 +422,7 @@ def to_disk_image(args, tmpdir, runner):
     """
     Converts a bootc container image to a disk image that can be flashed on a board
 
-    Internally this uses the bootc-image-builder tool from a container image.
-    The --bib-container-image option can be used to specify a different version of this tool
+    Internally this uses the image-builder tool.
 
     Also, to build the image we need a container with tools. See the build-builder
     command for how to build one.

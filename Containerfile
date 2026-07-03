@@ -21,12 +21,7 @@ COPY --exclude=_build --exclude=*.qcow2 --exclude=*.img . /build
 RUN  dnf install -y git rpm-build make && \
      cd /build && make "$MAKE_WHAT"
 
-FROM quay.io/centos-bootc/bootc-image-builder:latest as bootc-i-b
-
 FROM base as runtime
-
-# We need bc-i-b in the main container for rootless builds to work
-COPY --from=bootc-i-b /usr/bin/bootc-image-builder /usr/bin/bootc-image-builder-local
 
 VOLUME /var/tmp
 VOLUME /var/log
@@ -36,6 +31,13 @@ LABEL name="Automotive Image Builder" \
 
 COPY --from=builder /build/automotive-image-builder-*.noarch.rpm .
 
-RUN dnf install -y qemu-kvm-core virtiofsd qemu-img && \
+# Fix /dev/shm for bootc install-to-filesystem, can be removed once
+# https://github.com/osbuild/osbuild/pull/2494 is in the osbuild package
+COPY contrib/osbuild-bootc-fix.patch /tmp/osbuild-bootc-fix.patch
+
+RUN dnf install -y qemu-kvm-core virtiofsd qemu-img patch && \
     dnf localinstall -y automotive-image-builder-*.noarch.rpm && \
-    dnf clean all
+    dnf clean all && \
+    cd /usr/lib/osbuild && \
+    patch -p1 --forward -r /dev/null < /tmp/osbuild-bootc-fix.patch || true && \
+    rm /tmp/osbuild-bootc-fix.patch
