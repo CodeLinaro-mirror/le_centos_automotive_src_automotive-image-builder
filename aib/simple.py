@@ -534,8 +534,13 @@ class ManifestLoader:
             self.set_from("static_gw", static, "gateway")
             self.set_from("static_dns", static, "dns")
             self.set_from("static_ip_iface", static, "iface")
+            self.set_from("static_ip_iface_early", static, "iface_early")
             if "load_module" in static:
-                self.set("static_ip_modules", [static["load_module"]])
+                v = static["load_module"]
+                if isinstance(v, list):
+                    self.set("static_ip_modules", v)
+                else:
+                    self.set("static_ip_modules", [v])
 
     def handle_auth(self, auth):
         self.set_from("root_password", auth, "root_password")

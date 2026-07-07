@@ -338,9 +338,16 @@ $defs:
       iface:
         description: The hardware network interface name to setup for the static ip at boot (for example eth0). Normally this doesn't need to be specified, as the default network interface for the target board will be used. However, in case you are using a non-standard network driver or card this can be used to override that.
         type: string
+      iface_early:
+        description: The hardware network interface name during early boot. The iface is the final name of the interface after the hardware setup is completed. However, sometimes it has a different name early in the boot sequencey. This defaults to eth0.
+        type: string
       load_module:
         description: Optional name of a kernel module to load at boot for the network support. Normally this feature may not be needed because the target board will load the default network drivers, but if a non-standard network driver is used, it can be specified using this option.
-        type: string
+        oneOf:
+          - type: string
+          - type: array
+            items:
+              type: string
 
   dynamic_network:
     type: object
