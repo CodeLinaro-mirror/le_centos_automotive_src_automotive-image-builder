@@ -31,13 +31,7 @@ LABEL name="Automotive Image Builder" \
 
 COPY --from=builder /build/automotive-image-builder-*.noarch.rpm .
 
-# Fix /dev/shm for bootc install-to-filesystem, can be removed once
-# https://github.com/osbuild/osbuild/pull/2494 is in the osbuild package
-COPY contrib/osbuild-bootc-fix.patch /tmp/osbuild-bootc-fix.patch
-
 RUN dnf install -y qemu-kvm-core virtiofsd qemu-img patch && \
     dnf localinstall -y automotive-image-builder-*.noarch.rpm && \
-    dnf clean all && \
-    cd /usr/lib/osbuild && \
-    patch -p1 --forward -r /dev/null < /tmp/osbuild-bootc-fix.patch || true && \
-    rm /tmp/osbuild-bootc-fix.patch
+    dnf clean all
+
