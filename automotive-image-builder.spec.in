@@ -15,7 +15,9 @@ Requires:       osbuild-auto >= 0.1.18
 Requires:       osbuild-luks2
 Requires:       osbuild-lvm2
 Requires:       osbuild-ostree
-Requires:       ostree
+# Until https://github.com/coreos/rpm-ostree/issues/5616 is resolved we need to pin to ostree/rpm-ostree 2026.1
+Requires:       ostree < 2026.2
+Requires:       rpm-ostree < 2026.2
 Requires:       python3-dnf
 Requires:       python3-jsonschema
 Requires:       python3-pyyaml
