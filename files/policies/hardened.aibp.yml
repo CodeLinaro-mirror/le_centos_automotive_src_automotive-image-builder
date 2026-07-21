@@ -31,7 +31,6 @@ restrictions:
       - dosfstools
       - e2fsprogs
       - erofs-utils
-      - libbpf
       - xfsprogs
 
   kernel_modules:
