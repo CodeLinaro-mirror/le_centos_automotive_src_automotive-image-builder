@@ -1,7 +1,7 @@
 remotes:
   osbuild:
     url: "https://github.com/osbuild/osbuild.git"
-    version: "8586e32f3e6247a64a7af7b2296ed835f6a79ddc"
+    version: "60bfbbcc73e8b2e85a3716697a6a566da1847252"
 
 files:
   osbuild:
