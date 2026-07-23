@@ -72,6 +72,7 @@ mpp-vars:
     mpp-eval: use_ostree
 
   use_qm: false   # Set to true to add QM container
+  qm_use_userns: false  # Enable/disable running QM in user namespace
   qm_writable:
     mpp-eval: image_mode == 'package'
   use_qm_containers_extra_store: false

@@ -16,25 +16,25 @@ mpp-vars:
   base_group:
 
   base_systemd_sysusers: |
-    # Type  Name              ID      GECOS                         Home directory        Shell
-    u       root              0:0     "root"                        /root                 /bin/bash
-    u       bin               1:1     "bin"                         /bin                  /sbin/nologin
-    u       daemon            2:2     "daemon"                      /sbin                 /sbin/nologin
-    u       adm               3:4     "adm"                         /var/adm              /sbin/nologin
-    u       lp                4:7     "lp"                          /var/spool/lpd        /sbin/nologin
-    u       sync              5:0     "sync"                        /sbin                 /bin/sync
-    u       shutdown          6:0     "shutdown"                    /sbin                 /sbin/shutdown
-    u       halt              7:0     "halt"                        /sbin                 /sbin/halt
-    u       mail              8:12    "mail"                        /var/spool/mail       /sbin/nologin
-    u       operator          11:0    "operator"                    /root                 /sbin/nologin
-    u       games             12:20   "games"                       /usr/games            /sbin/nologin
-    u       ftp               14:50   "FTP User"                    /var/ftp              /sbin/nologin
-    u       tss               59:59   "Account used for TPM access" /                     /sbin/nologin
-    u       sshd              74:74   "Privilege-separated SSH"     /usr/share/empty.sshd /usr/sbin/nologin
-    u       dbus              81:81   "System message bus"          /                     /sbin/nologin
-    u       chrony            998     "chrony system user"          /var/lib/chrony       /sbin/nologin
-    u       systemd-coredump  999     "systemd Core Dumper"         /                     /sbin/nologin
-    u       nobody            65534   "Kernel Overflow User"        /                     /sbin/nologin
+    # Type  Name              ID    GECOS                         Home directory        Shell
+    u       root              0:0   "root"                        /root                 /bin/bash
+    u       bin               1:1   "bin"                         /bin                  /sbin/nologin
+    u       daemon            2:2   "daemon"                      /sbin                 /sbin/nologin
+    u       adm               3:4   "adm"                         /var/adm              /sbin/nologin
+    u       lp                4:7   "lp"                          /var/spool/lpd        /sbin/nologin
+    u       sync              5:0   "sync"                        /sbin                 /bin/sync
+    u       shutdown          6:0   "shutdown"                    /sbin                 /sbin/shutdown
+    u       halt              7:0   "halt"                        /sbin                 /sbin/halt
+    u       mail              8:12  "mail"                        /var/spool/mail       /sbin/nologin
+    u       operator          11:0  "operator"                    /root                 /sbin/nologin
+    u       games             12:20 "games"                       /usr/games            /sbin/nologin
+    u       ftp               14:50 "FTP User"                    /var/ftp              /sbin/nologin
+    u       tss               59:59 "Account used for TPM access" /                     /sbin/nologin
+    u       sshd              74:74 "Privilege-separated SSH"     /usr/share/empty.sshd /usr/sbin/nologin
+    u       dbus              81:81 "System message bus"          /                     /sbin/nologin
+    u       chrony            998   "chrony system user"          /var/lib/chrony       /sbin/nologin
+    u       systemd-coredump  999   "systemd Core Dumper"         /                     /sbin/nologin
+    u       nobody            65534 "Kernel Overflow User"        /                     /sbin/nologin
     g       root              0
     g       bin               1
     g       daemon            2
