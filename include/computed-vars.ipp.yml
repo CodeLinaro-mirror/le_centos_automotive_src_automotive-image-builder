@@ -704,6 +704,23 @@ mpp-vars:
                   to: tree:///etc/qm/
                 - from: input://tree/var/
                   to: tree:///var/qm/
+        - mpp-if: use_qm
+          then:
+            type: org.osbuild-auto.qm.userns
+        - mpp-if: use_qm
+          then:
+            type: org.osbuild.idmap
+            options:
+              items:
+                /usr/lib/qm/rootfs:
+                  user: qm_root
+                  group: qm_root
+                /etc/qm:
+                  user: qm_root
+                  group: qm_root
+                /var/qm:
+                  user: qm_root
+                  group: qm_root
         - mpp-if: "denylist_modules or allowlist_modules != None"
           then:
             type: org.osbuild-auto.kernel.remove-modules
@@ -942,6 +959,10 @@ mpp-vars:
           then:
             from: input://extra-tree/luks-key
             to: tree:///usr/.auto-unlock-key
+        - from: input://extra-tree/subuid
+          to: tree:///etc/subuid
+        - from: input://extra-tree/subgid
+          to: tree:///etc/subgid
         - from: input://extra-tree/containers.conf
           to: tree://$containers_configdir/containers.conf
         - mpp-if: use_qm and qm_wayland_enable
@@ -958,10 +979,6 @@ mpp-vars:
           then:
             from: input://extra-tree/auto-modules.conf
             to: tree:///usr/lib/modules-load.d/auto-modules.conf
-        - from: input://extra-tree/subuid
-          to: tree:///etc/subuid
-        - from: input://extra-tree/subgid
-          to: tree:///etc/subgid
         - mpp-if: _boot_check_qm_digest and use_boot_check
           then:
             from: input://extra-tree/qm.bootcheck
