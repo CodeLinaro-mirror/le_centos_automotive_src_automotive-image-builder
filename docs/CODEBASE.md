@@ -320,7 +320,7 @@ The configuration system manages hundreds of variables across these categories:
 ### Prerequisites
 - Python 3
 - podman
-- osbuild (>= 187)
+- osbuild (>= 189)
 - Root access or sudo (for privileged builds)
 
 ### Key Commands
