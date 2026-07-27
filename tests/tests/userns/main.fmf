@@ -1,0 +1,16 @@
+summary: Verify user namespace integration adds expected stages to osbuild 
+    manifest
+description: |
+    Generates osbuild manifests with enabled and disabled configuration for user namespaces
+    and verifies that the expected stages (idmap and userns) are present.
+
+    Test inputs:
+      AIB manifests with user_namespaces using commands.
+
+    Expected results:
+      - PASS: All user namespace integration tests passed successfully.
+
+    Results location:
+      output.txt
+duration: 60m
+id: f2bae481-a3b5-4f99-8d2c-9fbfa9697980
