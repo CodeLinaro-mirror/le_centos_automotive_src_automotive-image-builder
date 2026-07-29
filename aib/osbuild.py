@@ -20,6 +20,7 @@ from .utils import (
     extract_part_of_file,
     NFS_SUPER_MAGIC,
     AFS_SUPER_MAGIC,
+    DiskFormat,
 )
 from .globals import default_target
 
@@ -431,6 +432,19 @@ def partition_is_safe_to_truncate(p):
     return False
 
 
+def partition_can_format(p):
+    simg_types = [
+        "20117f86-e985-4357-b9ee-374bc1d8487d",  # aboot
+        "4f68bce3-e8cd-4db1-96e7-fbcaf984b709",  # rootfs x86_64
+        "b921b045-1df0-41c3-af44-4c6f280d3fae",  # rootfs aarch64
+        "bc13c2ff-59e6-4262-a352-b275fd6f7172",  # boot
+        "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",  # efi
+        "4d21b016-b534-45c2-a9fb-5c16e091fd2d",  # var
+        "edfe9f90-3a4d-11f0-b8f8-e89c256c3906",  # var_qm
+    ]
+    return p.get("type", "").lower() in simg_types
+
+
 def export_disk_image_file(runner, args, tmpdir, image_file, out, fmt):
     runner.add_volume_for(out)
     if args.separate_partitions:
@@ -447,7 +461,8 @@ def export_disk_image_file(runner, args, tmpdir, image_file, out, fmt):
             name = p.get("name", f"part{idx}")
 
             part_tmp_file = os.path.join(tmpdir, "part.img")
-            part_file = os.path.join(out, name + fmt.ext)
+            part_fmt = fmt if partition_can_format(p) else DiskFormat.RAW
+            part_file = os.path.join(out, name + part_fmt.ext)
 
             if partition_is_safe_to_truncate(p):
                 size = truncate_partition_size(image_file, start, size)
@@ -460,6 +475,6 @@ def export_disk_image_file(runner, args, tmpdir, image_file, out, fmt):
                 start,
                 size,
             )
-            fmt.convert_image(runner, part_tmp_file, part_file)
+            part_fmt.convert_image(runner, part_tmp_file, part_file)
     else:
         fmt.convert_image(runner, image_file, out)
