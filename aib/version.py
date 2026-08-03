@@ -2,7 +2,7 @@ import os
 import re
 import sys
 
-__version__ = "1.2.3"
+__version__ = "1.2.4"
 
 
 def get_version():
