@@ -279,6 +279,9 @@ trigger-pipeline:
   - echo -e "\e[0Ksection_end:$(date +%s):tmt_setup\r\e[0K"
 
 integration_tests_10:
+  # Disable integration tests in CI, because we don't have any public upstream compose working with stable branch
+  rules:
+    - when: never
   stage: test
   # We need to add a time for wait/retry process to acquire a host from AWS to the overall time of test execution
   timeout: 120m
