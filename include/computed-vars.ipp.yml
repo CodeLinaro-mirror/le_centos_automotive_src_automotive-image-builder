@@ -91,6 +91,10 @@ mpp-vars:
     mpp-eval: _compute_uuid('vbmetapart_a')
   vbmetapart_b_uuid:
     mpp-eval: _compute_uuid('vbmetapart_b')
+  abl_a_uuid:
+    mpp-eval: _compute_uuid('abl_a')
+  abl_b_uuid:
+    mpp-eval: _compute_uuid('abl_b')
   ukibootpart_a_uuid:
     mpp-eval: _compute_uuid('ukibootpart_a')
   ukibootpart_b_uuid:
@@ -118,6 +122,8 @@ mpp-vars:
   partition_type_var_qm: edfe9f90-3a4d-11f0-b8f8-e89c256c3906
   partition_type_other: 0fc63daf-8483-4772-8e79-3d69d8477de4
   partition_type_aboot: 20117f86-e985-4357-b9ee-374bc1d8487d # Android boot v2
+  partition_type_abl_a: bd6928a1-4ce0-a038-4f3a-1495e3eddffb
+  partition_type_abl_b: 0ffb67a4-7a7f-4d08-bbf5-e20a8a68560b
   partition_type_ukiboot: df331e4d-be00-463f-b4a7-8b43e18fb53a
   partition_type_ukibootctl: fefd9070-346f-4c9a-85e6-17f07f922773
   partition_type_vbmeta: 4b7a15d6-322c-42ac-8110-88b7da0c5d77 # Android vbmeta
@@ -143,6 +149,8 @@ mpp-vars:
     mpp-if: not "use_vbmetapart" in locals()
     then:
       mpp-eval: use_aboot
+  use_ablpart:
+    mpp-eval: locals().get('use_ablpart', False)
   use_efipart:
     mpp-if: not "use_efipart" in locals()
     then:

@@ -467,6 +467,27 @@ mpp-vars:
             uuid: $vbmetapart_b_uuid
             size:
               mpp-format-string: '{abootpart_size * 512}'
+        - mpp-if: use_ablpart
+          then:
+            label: abl_a
+            type: $partition_type_abl_a
+            uuid: $abl_a_uuid
+            size:
+              mpp-format-string: '{ablpart_size * 512}'
+            attrs:
+              mpp-eval: active_gpt_attrs
+            payload_type: raw
+            payload:
+              source_path: /usr/share/qcom-abl/abl_noavb.elf
+        - mpp-if: use_ablpart
+          then:
+            label: abl_b
+            type: $partition_type_abl_b
+            uuid: $abl_b_uuid
+            size:
+              mpp-format-string: '{ablpart_size * 512}'
+            attrs:
+              mpp-eval: inactive_gpt_attrs
         # ukiboot partitions
         - mpp-if: use_ukibootpart
           then:

@@ -81,6 +81,22 @@ mpp-vars:
     uuid: $vbmetapart_b_uuid
     attrs:
       mpp-eval: inactive_gpt_attrs
+  abl_a_partition:
+    id: abl_a
+    name: abl_a
+    size: $ablpart_size
+    type: $partition_type_abl_a
+    uuid: $abl_a_uuid
+    attrs:
+      mpp-eval: active_gpt_attrs
+  abl_b_partition:
+    id: abl_b
+    name: abl_b
+    size: $ablpart_size
+    type: $partition_type_abl_b
+    uuid: $abl_b_uuid
+    attrs:
+      mpp-eval: inactive_gpt_attrs
   base_partitions:
     - mpp-if: use_sblpart
       then:
@@ -103,6 +119,12 @@ mpp-vars:
     - mpp-if: use_vbmetapart
       then:
         mpp-eval: vbmeta_b_partition
+    - mpp-if: use_ablpart
+      then:
+        mpp-eval: abl_a_partition
+    - mpp-if: use_ablpart
+      then:
+        mpp-eval: abl_b_partition
     - mpp-if: use_ukibootpart
       then:
         mpp-eval: ukiboot_a_partition

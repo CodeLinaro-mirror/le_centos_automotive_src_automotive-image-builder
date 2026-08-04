@@ -4,6 +4,9 @@ mpp-vars:
   target_supported_arches:
     - aarch64
   use_boot: aboot
+  use_ablpart:
+    # TODO: Temporary limitations until packages are accepted downstream.
+    mpp-eval: distro_name in ('autosd10-latest-sig', 'autosd10-sig')
   aboot_boot_type: aboot-gptctl
   qm_varpart_label: system_b
   skip_root_on_cmdline: true # This uses ABL bootloader which appends root= cmdline
@@ -29,6 +32,11 @@ mpp-vars:
       - - no_console_suspend=1
         - acpi=off
 
+  target_rpms:
+    mpp-join:
+      - mpp-eval: target_rpms
+      - - mpp-if: use_ablpart
+          then: qcom-abl
   dracut_drivers: []
   dracut_omit_drivers:
     mpp-join:
