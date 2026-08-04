@@ -93,6 +93,9 @@ pipelines:
           options:
             paths:
               mpp-eval: qm_simple_copy
+      # Re-run sysusers after copying files to account for possible user added sysuser configs
+      # Prevents the user to be re-created on each boot due to transient /etc
+      - type: org.osbuild.systemd-sysusers
       - mpp-if: qm_simple_symlinks
         then:
           type: org.osbuild.ln
@@ -121,6 +124,7 @@ pipelines:
     build: name:build
     stages:
 
+      # Run sysusers before rpm installs to prevent possible uid/gid drift
       - type: org.osbuild.systemd-sysusers
 
       - type: org.osbuild.rpm
@@ -196,6 +200,9 @@ pipelines:
           options:
             paths:
               mpp-eval: simple_copy
+      # Re-run sysusers after copying files to account for possible user added sysuser configs
+      # Prevents the user to be re-created on each boot due to transient /etc
+      - type: org.osbuild.systemd-sysusers
       - mpp-if: simple_symlinks
         then:
           type: org.osbuild.ln
