@@ -318,16 +318,16 @@ bump-version:
     - |
       git push "https://oauth2:${BUMP_VERSION_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "$BRANCH_NAME" \
         -o merge_request.create \
-        -o merge_request.target="$CI_DEFAULT_BRANCH" \
+        -o merge_request.target="aib-1.2.x" \
         -o merge_request.title="Bump version to ${NEXT_VERSION}" \
         -o merge_request.remove_source_branch
   rules:
     - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/
 
-propose-downstream:
+create-release:
   stage: deploy
-  image: quay.io/mkemel/autopack:latest
+  image: quay.io/centos-sig-automotive/autopack:latest
   rules:
     - if: $CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/
   script:
-    - autopack propose
+    - autopack release
