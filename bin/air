@@ -429,6 +429,9 @@ def available_tcp_port(port_range_from=1024):
             continue
         break
     s.close()
+
+    if port_range_from != port:
+        print(f"Port {port_range_from} already used. Using port {port} instead.")
     return port
 
 
