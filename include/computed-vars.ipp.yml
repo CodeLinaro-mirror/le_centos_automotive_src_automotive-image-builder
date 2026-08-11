@@ -572,11 +572,23 @@ mpp-vars:
       - mpp-eval: image_masked_services
       - - mpp-if: use_repart
           then: systemd-repart.service # We only run this in the initrd
+      - mpp-if: disable_gettys
+        then:
+          # autovt@ is a separate name (logind's on-demand VTs), not an alias for getty@
+          - getty.target
+          - getty@.service
+          - serial-getty@.service
+          - console-getty.service
+          - autovt@.service
   image_masked_generators:
     mpp-join:
       - mpp-eval: image_masked_generators
       - - mpp-if: pregenerate_quadlets
           then: podman-system-generator
+      - mpp-if: disable_gettys
+        then:
+          # prevents auto-creation of serial-getty units from kernel console= args
+          - systemd-getty-generator
   image_extra_stages:
     mpp-join:
       - mpp-eval: target_extra_image_stages

@@ -26,4 +26,12 @@ assert_service_enabled crond.service qm
 assert_service_disabled cups.service qm
 assert_service_masked chronyd.service qm
 
+echo_log "Checking gettys are masked (disable_gettys=true)"
+assert_service_masked getty.target content
+assert_service_masked getty@.service content
+assert_service_masked serial-getty@.service content
+assert_service_masked console-getty.service content
+assert_service_masked autovt@.service content
+assert_generator_masked systemd-getty-generator content
+
 echo_pass "systemd services symlink verification completed!"
