@@ -551,7 +551,7 @@ stop_vm() {
 # Should be used in trap part to remove specified paths
 cleanup_path() {
     for path in "$@"; do
-        rm -rf "$path" || echo "Error cleaning up path '$path'!"
+        $SUDO rm -rf "$path" || echo "Error cleaning up path '$path'!"
     done
 }
 
@@ -561,7 +561,7 @@ cleanup_container() {
     for name in "$@"; do
         img_id=$(podman image ls --format "{{.ID}}" "$name" || true)
         if [ -n "$img_id" ]; then
-            podman image rm -f "$img_id" || echo "Error cleaning up container '$name'!"
+            $SUDO podman image rm -f "$img_id" || echo "Error cleaning up container '$name'!"
         fi
     done
 }
