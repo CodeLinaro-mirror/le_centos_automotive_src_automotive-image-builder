@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import binascii
+import contextlib
 import sys
 import os
 import json
@@ -171,6 +172,12 @@ def random_container_name():
     return "localhost/aib-" + binascii.b2a_hex(os.urandom(12)).decode("utf8")
 
 
+def temporary_container_name(args, storage):
+    name = random_container_name()
+    args.cm.enter_context(TemporaryContainer(storage, name))
+    return name
+
+
 @command(
     group=CommandGroup.BASIC,
     help="Build a bootc container image (to container store or archive file) and optionally disk image",
@@ -231,7 +238,6 @@ def build(args, tmpdir, runner):
     # It may be a random temporary name if the user didn't want the result in the
     # root container store (i.e. user store or oci archive file)
     containername = None
-    remove_container = False
 
     storage = ContainerStorage.from_args(args, tmpdir)
 
@@ -251,8 +257,7 @@ def build(args, tmpdir, runner):
         elif args.tar or args.oci_archive:
             if args.disk and args.oci_archive:
                 # We need it in the store, to convert it
-                remove_container = True
-                containername = random_container_name()
+                containername = temporary_container_name(args, storage)
                 bootc_archive_to_store(runner, output_file, storage, containername)
 
             runner.add_volume_for(args.out)
@@ -263,8 +268,7 @@ def build(args, tmpdir, runner):
                 containername = args.out
             elif args.disk:
                 # We need it in the store anyway to convert it, but use a random name
-                remove_container = True
-                containername = random_container_name()
+                containername = temporary_container_name(args, storage)
 
             if containername:
                 bootc_archive_to_store(
@@ -277,10 +281,9 @@ def build(args, tmpdir, runner):
     if args.disk and not args.dry_run:
         assert containername is not None
         fmt = DiskFormat.from_string(args.format) or DiskFormat.from_filename(args.disk)
-        with TemporaryContainer(storage, containername, cleanup=remove_container):
-            container_to_disk_image(
-                args, tmpdir, runner, storage, containername, fmt, args.disk
-            )
+        container_to_disk_image(
+            args, tmpdir, runner, storage, containername, fmt, args.disk
+        )
 
 
 @command(
@@ -421,19 +424,16 @@ def to_disk_image(args, tmpdir, runner):
     fmt = DiskFormat.from_string(args.format) or DiskFormat.from_filename(args.out)
 
     if args.oci_archive:
-        containername = random_container_name()
+        containername = temporary_container_name(args, storage)
         bootc_archive_to_store(runner, args.src_container, storage, containername)
-        remove_container = True
     else:
         if not podman_image_exists(storage, args.src_container):
             raise ContainerNotFound(args.src_container)
         containername = args.src_container
-        remove_container = False
 
-    with TemporaryContainer(storage, containername, cleanup=remove_container):
-        container_to_disk_image(
-            args, tmpdir, runner, storage, containername, fmt, args.out
-        )
+    container_to_disk_image(
+        args, tmpdir, runner, storage, containername, fmt, args.out
+    )
 
 
 @command(
@@ -738,7 +738,9 @@ def main():
     with SudoTemporaryDirectory(prefix="aib-", dir=tmpdir_base) as tmpdir:
         runner.add_volume(tmpdir)
         try:
-            return args.func(tmpdir, runner)
+            with contextlib.ExitStack() as cm:
+                args.cm = cm
+                return args.func(tmpdir, runner)
         except KeyboardInterrupt:
             log.info("Build interrupted by user")
             sys.exit(130)
