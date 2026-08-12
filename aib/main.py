@@ -110,6 +110,24 @@ def bootc_archive_to_store(runner, archive_file, storage, container_name):
         subprocess.run(cmdline, check=True)
 
 
+def store_to_bootc_archive(runner, storage, container_name, archive_file):
+    """
+    Copy a container from container storage to a bootc OCI archive.
+    """
+    cmdline = [
+        "skopeo",
+        "copy",
+        "--quiet",
+        storage.skopeo(container_name),
+        "oci-archive:" + archive_file,
+    ]
+
+    if storage.with_sudo:
+        runner.run_as_root(cmdline)
+    else:
+        subprocess.run(cmdline, check=True)
+
+
 def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, out):
     with SudoTemporaryDirectory(
         prefix="bib-out--", dir=os.path.dirname(out)
@@ -431,9 +449,7 @@ def to_disk_image(args, tmpdir, runner):
             raise ContainerNotFound(args.src_container)
         containername = args.src_container
 
-    container_to_disk_image(
-        args, tmpdir, runner, storage, containername, fmt, args.out
-    )
+    container_to_disk_image(args, tmpdir, runner, storage, containername, fmt, args.out)
 
 
 @command(
@@ -532,13 +548,16 @@ def do_reseal_image(
     args=[
         SHARED_RESEAL_ARGS,
         {
+            "--oci-archive": {
+                "help": "Output an oci container archive file instead of a container image",
+            },
             "--reseal-with-key": {
                 "type": "path",
                 "help": "re-seal image with given key",
             },
             "src_container": "Bootc container name",
             "srcdir": "Directory with signed files",
-            "new_container": "Destination container name",
+            "new_container": "Destination container name or oci-archive file",
         },
     ],
 )
@@ -557,11 +576,16 @@ def inject_signed(args, tmpdir, runner):
     if not podman_image_exists(storage, args.src_container):
         raise ContainerNotFound(args.src_container)
 
+    if args.oci_archive:
+        new_container = temporary_container_name(args, storage)
+    else:
+        new_container = args.new_container
+
     with PodmanImageMount(
         storage,
         args.src_container,
         writable=True,
-        commit_image=None if args.reseal_with_key else args.new_container,
+        commit_image=None if args.reseal_with_key else new_container,
     ) as mount:
         if mount.has_file("/etc/signing_info.json"):
             content = mount.read_file("/etc/signing_info.json")
@@ -597,8 +621,11 @@ def inject_signed(args, tmpdir, runner):
                 privkey,
                 storage,
                 temp_container,
-                args.new_container,
+                new_container,
             )
+
+    if args.oci_archive:
+        store_to_bootc_archive(runner, storage, new_container, args.new_container)
 
 
 @command(
@@ -608,12 +635,15 @@ def inject_signed(args, tmpdir, runner):
     args=[
         SHARED_RESEAL_ARGS,
         {
+            "--oci-archive": {
+                "help": "Output an oci container archive file instead of a container image",
+            },
             "--key": {
                 "type": "path",
                 "help": "path to private key, as previously used in prepare-reseal",
             },
             "src_container": "Bootc container name",
-            "new_container": "Destination container name",
+            "new_container": "Destination container name or oci-archive file",
         },
     ],
 )
@@ -638,6 +668,11 @@ def reseal(args, tmpdir, runner):
     storage = ContainerStorage.from_args(args, tmpdir)
     if not podman_image_exists(storage, args.src_container):
         raise ContainerNotFound(args.src_container)
+
+    if args.oci_archive:
+        new_container = temporary_container_name(args, storage)
+    else:
+        new_container = args.new_container
 
     if args.key:
         pubkey, privkey = read_keys(args.key, args.passwd)
@@ -664,8 +699,11 @@ def reseal(args, tmpdir, runner):
         )
 
     do_reseal_image(
-        args, runner, tmpdir, privkey, storage, src_container, args.new_container
+        args, runner, tmpdir, privkey, storage, src_container, new_container
     )
+
+    if args.oci_archive:
+        store_to_bootc_archive(runner, storage, new_container, args.new_container)
 
 
 @command(
