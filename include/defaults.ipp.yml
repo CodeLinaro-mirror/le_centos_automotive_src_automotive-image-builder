@@ -219,6 +219,7 @@ mpp-vars:
   use_module_sig_enforce: true
   use_efi_runtime: true
   # Policy variables - default to empty/false when no policy is applied
+  policy_require_boot_check: false
   policy_require_qm_digest: false
   policy_require_qm_separate_partition: false
   policy_disable_efi_features: false

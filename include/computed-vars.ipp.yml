@@ -246,8 +246,15 @@ mpp-vars:
   _boot_check_qm_digest:
     mpp-eval: "[] if not (policy_require_qm_digest and use_qm) else locals().get('boot_check_qm_digest', _boot_check_qm_digest_default)"
 
-  use_boot_check:
+  need_boot_check:
     mpp-eval: "use_static_ip or len(_boot_check_qm_digest) > 0"
+
+  # policy_require_boot_check was added after policy_require_qm_digest, so for backwards compat add as needed
+  policy_require_boot_check:
+    mpp-eval: "policy_require_boot_check or policy_require_qm_digest"
+
+  use_boot_check:
+    mpp-eval: "policy_require_boot_check and need_boot_check"
 
   kernel_devel_rpm:
     mpp-eval: kernel_package + "-devel" if not kernel_version else kernel_package + "-devel-" + kernel_version
