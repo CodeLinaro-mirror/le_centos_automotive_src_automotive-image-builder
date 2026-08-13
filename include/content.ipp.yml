@@ -271,12 +271,13 @@ mpp-vars:
       default_gw {static_gw}
       nameserver {static_dns}
   bootcheck_dropin:
-    mpp-format-string: |
-      [Unit]
-      {"After=qm.service" if _boot_check_qm_digest else ""}
+    mpp-eval: |
+      _Lazy(lambda: f'''[Unit]
+      {"After=qm.service" if len(_boot_check_qm_digest) > 0 else ""}
       {"After=main-nmstate.service" if use_static_ip else ""}
       {"After=sys-subsystem-net-devices-" + static_ip_iface + ".device" if use_static_ip and static_ip_iface else ""}
       {"FailureAction=none" if boot_check_noreboot else ""}
+      ''')
   root_sshd_authorized_keys_conf:
     mpp-format-string: |
       AuthorizedKeysFile /etc/ssh/authorized_keys/%u .ssh/authorized_keys
@@ -917,7 +918,7 @@ pipelines:
               id: qm.bootcheck
               text:
                 mpp-format-string: |
-                  container_checksum qm {_materialize(_boot_check_qm_digest)}
+                  container_checksum qm {' '.join(_boot_check_qm_digest)}
         options:
           paths:
             - from:
@@ -930,7 +931,8 @@ pipelines:
             origin: org.osbuild.source
             mpp-embed:
               id: bootcheck.conf
-              text: $bootcheck_dropin
+              text:
+                mpp-eval: bootcheck_dropin()
         options:
           paths:
             - from:
