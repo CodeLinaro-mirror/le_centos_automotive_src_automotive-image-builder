@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextlib
 import sys
 import os
 
@@ -153,7 +154,9 @@ def main():
     with SudoTemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
         runner.add_volume(tmpdir)
         try:
-            return args.func(tmpdir, runner)
+            with contextlib.ExitStack() as cm:
+                args.cm = cm
+                return args.func(tmpdir, runner)
         except KeyboardInterrupt:
             log.info("Build interrupted by user")
             sys.exit(130)
