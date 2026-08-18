@@ -331,6 +331,20 @@ mpp-vars:
               paths:
                 - mpp-eval: _kernel_dir + "/vbmeta.img"
 
+  podman_clean_transient_at_shutdown_service: |
+    [Unit]
+    Description=Clean up podman transient data at shutdown
+    RequiresMountsFor=/var/lib/containers
+
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/bin/true
+    RemainAfterExit=yes
+    ExecStop=/usr/bin/podman system prune --external
+
+    [Install]
+    WantedBy=multi-user.target
+
   skip_on_container_dropin: |
     [Unit]
     ConditionVirtualization=!container
@@ -1087,6 +1101,20 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['disk.yaml']}
               to: tree:///disk.yaml
+
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: podman-clean-transient-at-shutdown.service
+              text: $podman_clean_transient_at_shutdown_service
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['podman-clean-transient-at-shutdown.service']}
+              to: tree:///podman-clean-transient-at-shutdown.service
 
       - type: org.osbuild.copy
         inputs:

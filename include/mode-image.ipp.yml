@@ -110,7 +110,7 @@ pipelines:
                 - mpp-if: use_aboot and aboot_boot_type == 'aboot-gptctl'
                   then: aboot-gptctl-set-success.service
                 - mpp-if: "containers_transient_store and 'podman' in rpms['rootfs']"
-                  then: podman-clean-transient.service
+                  then: podman-clean-transient-at-shutdown.service
                 - mpp-if: use_qm
                   then: qm-host-env-container.service
                 - mpp-if: use_qm

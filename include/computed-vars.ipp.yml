@@ -901,6 +901,10 @@ mpp-vars:
           then:
             from: input://extra-tree/repart.dropin
             to: tree:///usr/lib/systemd/system/systemd-repart.service.d/10-automotive.conf
+        - mpp-if: "containers_transient_store"
+          then:
+            from: input://extra-tree/podman-clean-transient-at-shutdown.service
+            to: tree:///usr/lib/systemd/system/podman-clean-transient-at-shutdown.service
         - mpp-if: grow_rootfs
           then:
             from: input://extra-tree/repart.conf

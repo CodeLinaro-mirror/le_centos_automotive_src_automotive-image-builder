@@ -70,7 +70,7 @@ pipelines:
                 - mpp-if: use_ukiboot
                   then: ukiboot-set-success.service
                 - mpp-if: "containers_transient_store and 'podman' in rpms['rootfs']"
-                  then: podman-clean-transient.service
+                  then: podman-clean-transient-at-shutdown.service
         - mpp-eval: image_extra_stages
         - - type: org.osbuild.dracut.conf
             options:
