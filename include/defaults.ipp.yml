@@ -82,19 +82,13 @@ mpp-vars:
   qm_simple_add_devel_repos: false
   qm_simple_add_debug_repos: false
   boot_check_noreboot: false
-  boot_check_qm_digest_default: # Per qm version, last is default if no match
-    "0.9-.*":
-      aarch64: "cd1a2bc09ceb9c6904a891417e02cfe839423150dd38a12f68a97f6d8a2df2bf"
-      x86_64: "3628949a510fa5487c7cc97f7022ffc44fe9d63183c63a3ad018a081ae7514f1"
-    "1.0-.*":
-      aarch64: "bc353927483de0b05ad38273cb0addd6671cb66cb422e61931ff30969f137eb3"
-      x86_64: "d3a6f44308daf613a4eed51a9f6b59bf5775da062f912fd3f6945b5270036be9"
-    "1.1-.*":
-      aarch64: "bc353927483de0b05ad38273cb0addd6671cb66cb422e61931ff30969f137eb3"
-      x86_64: "d3a6f44308daf613a4eed51a9f6b59bf5775da062f912fd3f6945b5270036be9"
-    "1.2-.*":
-      aarch64: "f3873680c15f9562175076633462a26a50e996b7cb75128a54ea8aaa547387c1"
-      x86_64: "ba6cc02699683241246e9e9ff8adae4ddc94900742085f89f9cff86f43da0d70"
+  boot_check_qm_digest_default_per_arch:
+    aarch64:
+      - "f3873680c15f9562175076633462a26a50e996b7cb75128a54ea8aaa547387c1" # qm 1.2
+      - "bc353927483de0b05ad38273cb0addd6671cb66cb422e61931ff30969f137eb3" # qm 1.0
+    x86_64:
+      - "ba6cc02699683241246e9e9ff8adae4ddc94900742085f89f9cff86f43da0d70" # qm 1.2
+      - "d3a6f44308daf613a4eed51a9f6b59bf5775da062f912fd3f6945b5270036be9" # qm 1.0
 
   use_luks: false
   luks_passphrase: password
@@ -225,6 +219,7 @@ mpp-vars:
   use_module_sig_enforce: true
   use_efi_runtime: true
   # Policy variables - default to empty/false when no policy is applied
+  policy_require_boot_check: false
   policy_require_qm_digest: false
   policy_require_qm_separate_partition: false
   policy_disable_efi_features: false

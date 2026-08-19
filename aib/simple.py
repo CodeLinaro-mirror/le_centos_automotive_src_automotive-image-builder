@@ -517,7 +517,11 @@ class ManifestLoader:
         self.set_from("qm_memory_high", memory_limit, "high")
 
         self.set_from("qm_cpu_weight", qm, "cpu_weight")
-        self.set_from("boot_check_qm_digest", qm, "container_checksum")
+        container_checksum = qm.get("container_checksum")
+        if container_checksum is not None:
+            if isinstance(container_checksum, str):
+                container_checksum = [container_checksum]
+            self.set("boot_check_qm_digest", container_checksum)
 
     def handle_network(self, network):
         static = network.get("static", None)

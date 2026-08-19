@@ -676,7 +676,22 @@ class TestManifestLoader(unittest.TestCase):
         self.assertEqual(loader.defines["qm_memory_max"], "1G")
         self.assertEqual(loader.defines["qm_memory_high"], "800M")
         self.assertEqual(loader.defines["qm_cpu_weight"], 100)
-        self.assertEqual(loader.defines["boot_check_qm_digest"], "sha256:abcd1234")
+        self.assertEqual(loader.defines["boot_check_qm_digest"], ["sha256:abcd1234"])
+
+    def test_with_qm_section_multi_digest(self):
+        manifest = {
+            "name": "test",
+            "version": "1.0",
+            "qm": {
+                "container_checksum": ["sha256:abcd1234", "sha256:efgh5678"],
+                "content": {"rpms": ["qm-package"]},
+            },
+        }
+        loader = self.load_manifest(manifest)
+        self.assertEqual(
+            loader.defines["boot_check_qm_digest"],
+            ["sha256:abcd1234", "sha256:efgh5678"],
+        )
 
     def test_with_network_section(self):
         manifest = {

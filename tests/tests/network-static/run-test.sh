@@ -8,8 +8,10 @@ TAR_FILE="out.tar"
 trap 'cleanup_path "$TAR_FILE" "etc" "usr"' 'EXIT'
 
 echo_log "Starting build for static network configuration..."
+# We use the policy so we can verify that this creates a boot-check.d/nmstate.conf
 build --tar \
     --extend-define "tar_paths=['etc/hostname','etc/main.nmstate','etc/main-initrd.nmstate','usr/lib/boot-check.d/nmstate.conf','usr/lib/modules-load.d/auto-modules.conf']" \
+    --policy hardened \
     network-static.aib.yml \
     "$TAR_FILE"
 echo_log "Build completed, output: $TAR_FILE"
