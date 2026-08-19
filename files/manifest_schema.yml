@@ -557,7 +557,7 @@ $defs:
       user_namespaces:
         description: Enable or disable running QM in its own user namespace
         type: boolean
-        default: true
+        default: false
   auth:
     type: object
     additionalProperties: false
