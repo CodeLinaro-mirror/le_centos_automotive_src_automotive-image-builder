@@ -218,6 +218,21 @@ class Policy:
         return self.restrictions.get("selinux_booleans", {}).get("force", {})
 
     @property
+    def masked_services(self) -> List[str]:
+        """Get list of services to mask."""
+        return self.restrictions.get("systemd", {}).get("masked_services", [])
+
+    @property
+    def enabled_services(self) -> List[str]:
+        """Get list of services to enable."""
+        return self.restrictions.get("systemd", {}).get("enabled_services", [])
+
+    @property
+    def disabled_services(self) -> List[str]:
+        """Get list of services to disable."""
+        return self.restrictions.get("systemd", {}).get("disabled_services", [])
+
+    @property
     def forced_sysctl(self) -> Dict[str, str]:
         """Get sysctl parameters to force to specific values."""
         return self.restrictions.get("sysctl", {}).get("force", {})

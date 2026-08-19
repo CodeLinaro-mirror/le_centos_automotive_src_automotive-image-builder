@@ -225,6 +225,9 @@ mpp-vars:
   policy_disable_efi_features: false
   policy_denylist_rpms: []
   policy_denylist_modules: []
+  policy_masked_services: []
+  policy_enabled_services: []
+  policy_disabled_services: []
   policy_systemctl_options: []
   policy_selinux_booleans: []
   consoles:

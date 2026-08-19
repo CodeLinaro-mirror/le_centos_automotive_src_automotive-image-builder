@@ -39,6 +39,38 @@ assert_systemd_service_enabled() {
     assert_jq "$json_file" "$stage_selector | .options.enabled_services[] | select(. == \"$service\")"
 }
 
+assert_systemd_service_masked() {
+    local json_file="$1"
+    local service="$2"
+    local stage_selector
+    stage_selector=$(_build_stage_selector "org.osbuild.systemd")
+    assert_jq "$json_file" "$stage_selector | .options.masked_services // [] | .[] | select(. == \"$service\")"
+}
+
+assert_systemd_service_not_masked() {
+    local json_file="$1"
+    local service="$2"
+    local stage_selector
+    stage_selector=$(_build_stage_selector "org.osbuild.systemd")
+    assert_jq_not "$json_file" "$stage_selector | .options.masked_services // [] | .[] | select(. == \"$service\")"
+}
+
+assert_systemd_service_disabled() {
+    local json_file="$1"
+    local service="$2"
+    local stage_selector
+    stage_selector=$(_build_stage_selector "org.osbuild.systemd")
+    assert_jq "$json_file" "$stage_selector | .options.disabled_services // [] | .[] | select(. == \"$service\")"
+}
+
+assert_systemd_service_not_disabled() {
+    local json_file="$1"
+    local service="$2"
+    local stage_selector
+    stage_selector=$(_build_stage_selector "org.osbuild.systemd")
+    assert_jq_not "$json_file" "$stage_selector | .options.disabled_services // [] | .[] | select(. == \"$service\")"
+}
+
 assert_sysctl_config() {
     local json_file="$1"
     local key="$2"
@@ -170,6 +202,13 @@ assert_kernel_cmdline_option compliance_out.json "module.sig_enforce=1"
 # Check compliance-specific systemd configurations
 echo_log "  Verifying compliance systemd configurations..."
 assert_systemd_service_enabled compliance_out.json "selinux-bools.service"
+
+assert_systemd_service_masked compliance_out.json "test-masked.service"
+assert_systemd_service_disabled compliance_out.json "test-disabled.service"
+
+# Check that non-compliance build does NOT have compliance-specific masked/disabled services
+assert_systemd_service_not_masked no_compliance_out.json "test-masked.service"
+assert_systemd_service_not_disabled no_compliance_out.json "test-disabled.service"
 
 # Check compliance-specific sysctl values
 echo_log "  Verifying compliance sysctl configurations..."

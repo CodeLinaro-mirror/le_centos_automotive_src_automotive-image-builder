@@ -146,6 +146,11 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
         defines["policy_denylist_rpms"] = policy.disallowed_rpms
         defines["policy_denylist_modules"] = policy.disallowed_kernel_modules
 
+        # Add service variables
+        defines["policy_masked_services"] = policy.masked_services
+        defines["policy_enabled_services"] = policy.enabled_services
+        defines["policy_disabled_services"] = policy.disabled_services
+
         # Add sysctl options
         sysctl_options = []
         for key, value in policy.get_forced_sysctl().items():

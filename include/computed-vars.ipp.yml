@@ -553,6 +553,7 @@ mpp-vars:
   image_enabled_services:
     mpp-join:
       - mpp-eval: image_enabled_services
+      - mpp-eval: policy_enabled_services
       - - mpp-if: tmp_is_tmpfs
           then: tmp.mount
         - rcu-normal.service
@@ -574,9 +575,14 @@ mpp-vars:
           then: selinux-bools.service
         - mpp-if: ld_so_cache_protected
           then: etc-ld.so.cache.mount
+  image_disabled_services:
+    mpp-join:
+      - mpp-eval: image_disabled_services
+      - mpp-eval: policy_disabled_services
   image_masked_services:
     mpp-join:
       - mpp-eval: image_masked_services
+      - mpp-eval: policy_masked_services
       - - mpp-if: use_repart
           then: systemd-repart.service # We only run this in the initrd
       - mpp-if: disable_gettys
