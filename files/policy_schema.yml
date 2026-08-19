@@ -225,6 +225,40 @@ properties:
           - $ref: "#/definitions/disallow_only"
           - description: "Kernel module restrictions"
 
+      systemd:
+        type: object
+        description: "Systemd service restrictions"
+        properties:
+          masked_services:
+            type: array
+            items:
+              type: string
+            description: "Services to mask"
+          enabled_services:
+            type: array
+            items:
+              type: string
+            description: "Services to enable"
+          disabled_services:
+            type: array
+            items:
+              type: string
+            description: "Services to disable"
+        patternProperties:
+          "^masked_services@[a-zA-Z0-9_-]+$":
+            type: array
+            items:
+              type: string
+          "^enabled_services@[a-zA-Z0-9_-]+$":
+            type: array
+            items:
+              type: string
+          "^disabled_services@[a-zA-Z0-9_-]+$":
+            type: array
+            items:
+              type: string
+        additionalProperties: false
+
       selinux_booleans:
         allOf:
           - $ref: "#/definitions/force_objects"

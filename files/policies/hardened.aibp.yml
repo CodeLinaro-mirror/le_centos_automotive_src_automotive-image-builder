@@ -43,6 +43,10 @@ restrictions:
       - at24
       - pcie-rcar-gen4
 
+  systemd:
+    masked_services:
+      - systemd-hostnamed.service
+
   selinux_booleans:
     force:
       deny_ptrace: true

@@ -660,6 +660,11 @@ def test_main_policy_variable_integration():
         defines["policy_denylist_rpms"] = policy.disallowed_rpms
         defines["policy_denylist_modules"] = policy.disallowed_kernel_modules
 
+        # Add service variables
+        defines["policy_masked_services"] = policy.masked_services
+        defines["policy_enabled_services"] = policy.enabled_services
+        defines["policy_disabled_services"] = policy.disabled_services
+
         # Add sysctl options
         sysctl_options = []
         for key, value in policy.get_forced_sysctl().items():
@@ -677,10 +682,41 @@ def test_main_policy_variable_integration():
     assert defines["disable_ipv6"] is True
     assert defines["policy_denylist_rpms"] == ["telnet"]
     assert defines["policy_denylist_modules"] == ["dccp"]
+    assert defines["policy_masked_services"] == []
+    assert defines["policy_enabled_services"] == []
+    assert defines["policy_disabled_services"] == []
     assert defines["policy_systemctl_options"] == [
         {"key": "net.ipv4.ip_forward", "value": "0"}
     ]
     assert defines["policy_selinux_booleans"] == ["deny_ptrace=true"]
+
+
+def test_policy_masked_services():
+    """Test masked_services property."""
+    policy = create_test_policy(
+        {"systemd": {"masked_services": ["foo.service", "bar.service"]}}
+    )
+    assert policy.masked_services == ["foo.service", "bar.service"]
+
+
+def test_policy_enabled_services():
+    """Test enabled_services property."""
+    policy = create_test_policy({"systemd": {"enabled_services": ["baz.service"]}})
+    assert policy.enabled_services == ["baz.service"]
+
+
+def test_policy_disabled_services():
+    """Test disabled_services property."""
+    policy = create_test_policy({"systemd": {"disabled_services": ["qux.service"]}})
+    assert policy.disabled_services == ["qux.service"]
+
+
+def test_policy_services_default_empty():
+    """Test that masked/enabled/disabled services default to empty lists."""
+    policy = create_test_policy({})
+    assert policy.masked_services == []
+    assert policy.enabled_services == []
+    assert policy.disabled_services == []
 
 
 def test_policy_target_specific_restrictions(tmp_path):
@@ -817,6 +853,11 @@ restrictions:
         defines["policy_denylist_rpms"] = policy.disallowed_rpms
         defines["policy_denylist_modules"] = policy.disallowed_kernel_modules
 
+        # Add service variables
+        defines["policy_masked_services"] = policy.masked_services
+        defines["policy_enabled_services"] = policy.enabled_services
+        defines["policy_disabled_services"] = policy.disabled_services
+
         # Add sysctl options
         sysctl_options = []
         for key, value in policy.get_forced_sysctl().items():
@@ -836,6 +877,9 @@ restrictions:
     assert defines["policy_disable_efi_features"] is True
     assert defines["policy_denylist_rpms"] == ["test-package"]
     assert defines["policy_denylist_modules"] == ["test-module"]
+    assert defines["policy_masked_services"] == []
+    assert defines["policy_enabled_services"] == []
+    assert defines["policy_disabled_services"] == []
     assert defines["policy_systemctl_options"] == [
         {"key": "test.setting", "value": "1"}
     ]

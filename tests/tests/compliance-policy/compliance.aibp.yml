@@ -37,6 +37,12 @@ restrictions:
       - rcar_thermal
       - rcar_dmac
 
+  systemd:
+    masked_services:
+      - test-masked.service
+    disabled_services:
+      - test-disabled.service
+
   selinux_booleans:
     force:
       httpd_can_network_connect: false
