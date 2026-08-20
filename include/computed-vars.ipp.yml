@@ -710,6 +710,23 @@ mpp-vars:
                   to: tree:///etc/qm/
                 - from: input://tree/var/
                   to: tree:///var/qm/
+        - mpp-if: use_qm and qm_use_userns
+          then:
+            type: org.osbuild-auto.qm.userns
+        - mpp-if: use_qm and qm_use_userns
+          then:
+            type: org.osbuild.idmap
+            options:
+              items:
+                /usr/lib/qm/rootfs:
+                  user: qm_root
+                  group: qm_root
+                /etc/qm:
+                  user: qm_root
+                  group: qm_root
+                /var/qm:
+                  user: qm_root
+                  group: qm_root
         - mpp-if: "denylist_modules or allowlist_modules != None"
           then:
             type: org.osbuild-auto.kernel.remove-modules

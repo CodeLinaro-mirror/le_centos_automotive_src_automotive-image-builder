@@ -554,6 +554,10 @@ $defs:
             items:
               type: string
             minItems: 1
+      user_namespaces:
+        description: Enable or disable running QM in its own user namespace
+        type: boolean
+        default: false
   auth:
     type: object
     additionalProperties: false

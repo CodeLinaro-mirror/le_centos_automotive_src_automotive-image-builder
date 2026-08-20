@@ -522,6 +522,7 @@ class ManifestLoader:
             if isinstance(container_checksum, str):
                 container_checksum = [container_checksum]
             self.set("boot_check_qm_digest", container_checksum)
+        self.set_from("qm_use_userns", qm, "user_namespaces")
 
     def handle_network(self, network):
         static = network.get("static", None)

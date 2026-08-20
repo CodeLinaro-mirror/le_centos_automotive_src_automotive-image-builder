@@ -138,12 +138,33 @@ mpp-vars:
       IMAGE_TARGET="{target}"
       IMAGE_VERSION="{version}"
       ''')
+
+  subuid_content:
+    mpp-format-string: |
+      containers:{ container_subuid }
+  subgid_content:
+    mpp-format-string: |
+      containers:{ container_subgid }
+  # If QM uses user namespaces, we can use the same subuid/subgid range and
+  # using --userns=auto inside QM will require root name instead of containers.
+  # If not, then an offset is required and containers name is required.
   qm_subuid_content:
-    mpp-format-string: |
-      containers:{ qm_container_subuid }
+    mpp-if: qm_use_userns
+    then:
+      mpp-format-string: |
+        root:{ container_subuid }
+    else:
+      mpp-format-string: |
+        containers:{ qm_container_subuid }
   qm_subgid_content:
-    mpp-format-string: |
-      containers:{ qm_container_subgid }
+    mpp-if: qm_use_userns
+    then:
+      mpp-format-string: |
+        root:{ container_subgid }
+    else:
+      mpp-format-string: |
+        containers:{ qm_container_subgid }
+
   qm_automotive_conf:
     mpp-format-string: |
       [Service]
@@ -153,26 +174,6 @@ mpp-vars:
 
       [Container]
       {"ReadOnly=false" if qm_writable else "" }
-  subuid_content_qm:
-    mpp-if: use_qm
-    then:
-      mpp-format-string: |-
-        qmcontainers:{qm_container_subuid}
-        containers:{container_subuid}
-    else: ""
-  subgid_content_qm:
-    mpp-if: use_qm
-    then:
-      mpp-format-string: |-
-        qmcontainers:{qm_container_subgid}
-        containers:{container_subgid}
-    else: ""
-  subuid_content: |-
-    $subuid_content_qm
-    $extra_subuid
-  subgid_content: |-
-    $subgid_content_qm
-    $extra_subgid
   systemd_system_conf:
     mpp-format-string: |
       [Manager]

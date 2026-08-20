@@ -11,7 +11,7 @@
 
 ### Versions (current as of 2026-03-10)
 - **Python** 3.x (no specific constraint in pyproject.toml)
-- **osbuild** >=187 - Core image build pipeline engine
+- **osbuild** >= 189 - Core image build pipeline engine
 - **osbuild-auto** - Automotive-specific osbuild extensions
 - **osbuild-ostree** - OSTree integration for osbuild
 - **ostree** - Immutable filesystem tree for bootc images

@@ -59,18 +59,23 @@ mpp-vars:
 
   tar_paths: []
   use_containers_extra_store: false
-  container_subuid: 2500000000:1500000000
-  container_subgid: 2500000000:1500000000
+
+  # Default container ids on the root partition used by podman with --userns=auto
+  container_subuid: 10000:100000
+  container_subgid: 10000:100000
+  # Default container ids in the QM partition used by podman with --userns=auto
+  qm_container_subuid: 110000:100000
+  qm_container_subgid: 110000:100000
+
   containers_configdir: /usr/share/containers
   pregenerate_quadlets:
     mpp-eval: use_ostree
 
   use_qm: false   # Set to true to add QM container
+  qm_use_userns: false  # Enable/disable running QM in user namespace
   qm_writable:
     mpp-eval: image_mode == 'package'
   use_qm_containers_extra_store: false
-  qm_container_subuid: 1000000000:1500000000
-  qm_container_subgid: 1000000000:1500000000
   # These are used to add rpms to the qm partition
   qm_extra_repos: []
   qm_extra_rpms: []
@@ -346,8 +351,6 @@ mpp-vars:
     - sys-kernel-config.mount
     - sys-kernel-debug.mount
     - sys-kernel-tracing.mount
-  extra_subuid: ""
-  extra_subgid: ""
   efipart_dos_type: 'ef'
   efipart_bootable: false
   distro_gpg_keys: ""
