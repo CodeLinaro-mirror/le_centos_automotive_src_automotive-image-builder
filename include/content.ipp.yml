@@ -207,6 +207,56 @@ mpp-vars:
     AddDevice=/dev/tty7
     Annotation=org.containers.qm.wayland.seat=seat0
     Volume=/run/udev:/run/udev:ro,Z
+  machineid_dracut_module: |
+    #!/usr/bin/bash
+    check() {
+        return 0
+    }
+    install() {
+        inst_multiple systemd-id128 mkdir dd
+        inst_simple "$systemdsystemunitdir/aib-machine-id-generate.service"
+        inst_simple "$systemdsystemunitdir/aib-machine-id-apply.service"
+        $SYSTEMCTL -q --root "$initdir" add-wants initrd.target aib-machine-id-generate.service
+        $SYSTEMCTL -q --root "$initdir" add-wants initrd.target aib-machine-id-apply.service
+    }
+  machineid_generate_service:
+    mpp-format-string: |
+      [Unit]
+      Description=Generate and persist a stable machine-id (first boot)
+      DefaultDependencies=no
+      ConditionKernelCommandLine=ostree
+      ConditionPathExists=!/sysroot/ostree/.machine-id
+      Requires={sysroot_unit}
+      After={sysroot_unit}
+      Before=ostree-prepare-root.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      StandardOutput=truncate:/sysroot/ostree/.machine-id
+      ExecStart=/usr/bin/systemd-id128 new
+
+      [Install]
+      WantedBy=initrd.target
+  machineid_apply_service:
+    mpp-format-string: |
+      [Unit]
+      Description=Publish the persisted machine-id to systemd
+      DefaultDependencies=no
+      ConditionKernelCommandLine=ostree
+      ConditionPathExists=/sysroot/ostree/.machine-id
+      Requires={sysroot_unit}
+      After={sysroot_unit} aib-machine-id-generate.service
+      Before=ostree-prepare-root.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStartPre=/usr/bin/mkdir -p /run/credentials/@initrd
+      ExecStart=/usr/bin/dd if=/sysroot/ostree/.machine-id of=/run/credentials/@initrd/system.machine_id bs=1 count=32
+
+      [Install]
+      WantedBy=initrd.target
   nmstate_dracut_module:
     mpp-format-string: |
       #!/usr/bin/bash
@@ -859,6 +909,45 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['nmstate_dracut_module']}
               to: tree:///nmstate_dracut_module
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: machineid_dracut_module
+              text: $machineid_dracut_module
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['machineid_dracut_module']}
+              to: tree:///machineid_dracut_module
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: machineid_generate_service
+              text: $machineid_generate_service
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['machineid_generate_service']}
+              to: tree:///aib-machine-id-generate.service
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: machineid_apply_service
+              text: $machineid_apply_service
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['machineid_apply_service']}
+              to: tree:///aib-machine-id-apply.service
       - type: org.osbuild.copy
         inputs:
           inlinefile:

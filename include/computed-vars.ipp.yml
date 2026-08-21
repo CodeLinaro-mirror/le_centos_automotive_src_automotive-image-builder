@@ -136,6 +136,9 @@ mpp-vars:
   use_aboot_like:
     mpp-eval: use_aboot or use_ukiboot
 
+  use_generate_machine_id:
+    mpp-eval: use_ostree and locals().get("use_generate_machine_id", use_transient_etc)
+
   # Enable as needed
   use_abootpart:
     mpp-if: not "use_abootpart" in locals()
@@ -316,6 +319,8 @@ mpp-vars:
             then: systemd-repart
           - mpp-if: use_static_ip
             then: nmstate
+          - mpp-if: use_generate_machine_id
+            then: aib-machine-id
   dracut_add_modules:
     mpp-join:
       - mpp-eval: dracut_add_modules
@@ -323,6 +328,8 @@ mpp-vars:
           then: systemd-repart
         - mpp-if: use_static_ip
           then: nmstate
+        - mpp-if: use_generate_machine_id
+          then: aib-machine-id
   dracut_add_drivers:
     mpp-join:
       - mpp-eval: dracut_add_drivers
@@ -916,6 +923,11 @@ mpp-vars:
             path: /usr/lib/dracut/modules.d/99nmstate
             parents: true
             exist_ok: true
+        - mpp-if: use_generate_machine_id
+          then:
+            path: /usr/lib/dracut/modules.d/50aib-machine-id
+            parents: true
+            exist_ok: true
       - mpp-eval: |
           [
             {
@@ -1059,6 +1071,14 @@ mpp-vars:
             then:
               from: input://extra-tree/nmstate.bootcheck
               to: tree:///usr/lib/boot-check.d/nmstate.conf
+      - mpp-if: use_generate_machine_id
+        then:
+          - from: input://extra-tree/machineid_dracut_module
+            to: tree:///usr/lib/dracut/modules.d/50aib-machine-id/module-setup.sh
+          - from: input://extra-tree/aib-machine-id-generate.service
+            to: tree:///usr/lib/systemd/system/aib-machine-id-generate.service
+          - from: input://extra-tree/aib-machine-id-apply.service
+            to: tree:///usr/lib/systemd/system/aib-machine-id-apply.service
 
       - mpp-eval: |
           [
