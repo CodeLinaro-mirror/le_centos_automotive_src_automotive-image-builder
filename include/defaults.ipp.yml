@@ -108,6 +108,10 @@ mpp-vars:
   root_ssh_keys: []
   ssh_permit_root_login: false                  # Only used by aws target
 
+  # Generate static ssh host keys embedded in the image, instead of
+  # letting them be regenerated on each boot.
+  use_static_ssh_host_keys: true
+
   # Default data for an example guest user. This is not used by a-i-b but can be used by the end user manifest
   guest_password: $6$xoLqEUz0cGGJRx01$H3H/bFm0myJPULNMtbSsOFd/2BnHqHkMD92Sfxd.EKM9hXTWSmELG8cf205l6dktomuTcgKGGtGDgtvHVXSWU.
   guest_uid: 2000

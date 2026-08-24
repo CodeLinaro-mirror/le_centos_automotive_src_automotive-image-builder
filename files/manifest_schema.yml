@@ -574,6 +574,9 @@ $defs:
           - "null"
         item:
           type: string
+      sshd_static_host_keys:
+        description: Generate static ssh host keys embedded in the image (true by default).
+        type: boolean
       sshd_config:
         description: Configuration of ssh daemon
         type: object
