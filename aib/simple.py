@@ -546,6 +546,7 @@ class ManifestLoader:
     def handle_auth(self, auth):
         self.set_from("root_password", auth, "root_password")
         self.set_from("root_ssh_keys", auth, "root_ssh_keys")
+        self.set_from("use_static_ssh_host_keys", auth, "sshd_static_host_keys")
         self.set_from("simple_sshd_config", auth, "sshd_config")
         self.set_from("simple_groups", auth, "groups")
         self.set_from("simple_users", auth, "users")

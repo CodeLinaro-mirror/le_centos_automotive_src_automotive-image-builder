@@ -724,6 +724,7 @@ class TestManifestLoader(unittest.TestCase):
             "auth": {
                 "root_password": "secret",
                 "root_ssh_keys": ["ssh-rsa AAAAB3..."],
+                "sshd_static_host_keys": False,
                 "sshd_config": {"PermitRootLogin": "yes"},
                 "groups": [{"name": "wheel"}],
                 "users": [{"name": "testuser", "groups": ["wheel"]}],
@@ -732,6 +733,7 @@ class TestManifestLoader(unittest.TestCase):
         loader = self.load_manifest(manifest)
         self.assertEqual(loader.defines["root_password"], "secret")
         self.assertEqual(loader.defines["root_ssh_keys"], ["ssh-rsa AAAAB3..."])
+        self.assertEqual(loader.defines["use_static_ssh_host_keys"], False)
         self.assertEqual(
             loader.defines["simple_sshd_config"], {"PermitRootLogin": "yes"}
         )
@@ -739,6 +741,26 @@ class TestManifestLoader(unittest.TestCase):
         self.assertEqual(
             loader.defines["simple_users"], [{"name": "testuser", "groups": ["wheel"]}]
         )
+
+    def test_with_auth_static_host_keys_enabled(self):
+        manifest = {
+            "name": "test",
+            "version": "1.0",
+            "auth": {"sshd_static_host_keys": True},
+        }
+        loader = self.load_manifest(manifest)
+        self.assertEqual(loader.defines["use_static_ssh_host_keys"], True)
+
+    def test_with_auth_static_host_keys_unset(self):
+        # When not set in the manifest, the variable is left to its default
+        # (which is true, defined in include/defaults.ipp.yml).
+        manifest = {
+            "name": "test",
+            "version": "1.0",
+            "auth": {"root_password": "secret"},
+        }
+        loader = self.load_manifest(manifest)
+        self.assertNotIn("use_static_ssh_host_keys", loader.defines)
 
     def test_with_kernel_section(self):
         manifest = {

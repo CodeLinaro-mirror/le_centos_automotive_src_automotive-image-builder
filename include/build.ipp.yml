@@ -308,6 +308,19 @@ pipelines:
             type: org.osbuild.files
             origin: org.osbuild.source
             mpp-embed:
+              id: pregen_ssh_host_keys
+              path: $_basedir/files/pregen_ssh_host_keys.sh
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['pregen_ssh_host_keys']}
+              to: tree:///usr/bin/pregen_ssh_host_keys
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
               id: quadlet_preprocess
               path: $_basedir/files/quadlet_preprocess.sh
         options:
@@ -332,6 +345,8 @@ pipelines:
         options:
           items:
             "/usr/bin/ostree_postprocess":
+              mode: "755"
+            "/usr/bin/pregen_ssh_host_keys":
               mode: "755"
             "/usr/bin/quadlet_preprocess":
               mode: "755"

@@ -1,0 +1,22 @@
+summary: Verify the auth.sshd_static_host_keys manifest option controls static ssh host key generation
+description: |
+  Compiles AIB manifests (via --dry-run --osbuild-manifest) and inspects the
+  resulting osbuild manifest to verify that the `pregen_ssh_host_keys`
+  lorax-script stage (which generates the static ssh host keys embedded in the
+  image) is included or excluded according to the `auth.sshd_static_host_keys`
+  manifest option.
+
+  Test inputs:
+    Three a-i-b manifests:
+      - enabled.aib.yml: sets `auth.sshd_static_host_keys: true`.
+      - disabled.aib.yml: sets `auth.sshd_static_host_keys: false`.
+      - default.aib.yml: does not set the option (defaults to true).
+
+  Expected results:
+    - PASS: 'Static ssh host key generation option validated successfully.'
+
+  Results location:
+    output.txt
+
+duration: 30m
+id: 1949ab81-72dc-46ea-af15-163848bef7e6

@@ -34,6 +34,13 @@ pipelines:
               paths:
                 - from: input://tree/
                   to: tree:///
+          - mpp-if: use_static_ssh_host_keys
+            then:
+              type: org.osbuild.lorax-script
+              options:
+                path: auto/runcmd
+                product:
+                  name: "/usr/bin/pregen_ssh_host_keys /run/osbuild/tree"
           - type: org.osbuild.mkdir
             options:
               paths:
