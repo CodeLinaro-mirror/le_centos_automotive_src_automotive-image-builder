@@ -10,6 +10,7 @@ from .utils import (
     get_osbuild_major_version,
 )
 from .ostree import OSTree
+from .podman import ContainerState
 from .simple import ManifestLoader
 from . import log
 from . import exceptions
@@ -344,6 +345,15 @@ def validate_builddir(builddir):
         )
 
 
+def get_osbuild_state_dir(builddir):
+    # If we're running as a rootless user the actual on-disk format of the store
+    # is different (different uids/gids) so use a different directory to avoid
+    # problems accidentally mixing these.
+    if ContainerState.query().in_rootless_container:
+        return os.path.join(builddir, "osbuild_store_rootless")
+    return os.path.join(builddir, "osbuild_store")
+
+
 def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     if args.osbuild_manifest:
@@ -369,7 +379,7 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
     with SudoTemporaryDirectory(prefix="image_output--", dir=builddir) as outputdir:
         cmdline += [
             "--store",
-            os.path.join(builddir, "osbuild_store"),
+            get_osbuild_state_dir(builddir),
             "--output-directory",
             outputdir.name,
         ]
