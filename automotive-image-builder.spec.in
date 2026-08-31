@@ -50,6 +50,10 @@ Tool to build (and run) automotive images
 %{_bindir}/automotive-image-builder
 %{_bindir}/automotive-image-builder-dev
 %{_bindir}/automotive-image-runner
+%{_libexecdir}/aib-entrypoint
+%{_libexecdir}/aib-dev-entrypoint
+%{_libexecdir}/aib.sh
+%{_libexecdir}/aib-print-wrapper
 %{_prefix}/lib/automotive-image-builder
 %{_sysconfdir}/automotive-image-builder
 

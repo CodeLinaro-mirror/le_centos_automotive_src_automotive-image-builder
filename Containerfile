@@ -35,3 +35,5 @@ RUN dnf install -y qemu-kvm-core virtiofsd qemu-img patch && \
     dnf localinstall -y automotive-image-builder-*.noarch.rpm && \
     dnf clean all
 
+CMD ["/usr/libexec/aib-print-wrapper"]
+

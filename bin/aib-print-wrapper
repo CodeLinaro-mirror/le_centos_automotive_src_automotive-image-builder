@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# Default container CMD: print the host-side aib.sh wrapper to stdout, so the
+# image can bootstrap its own launcher, e.g.:
+#
+#   podman run --rm quay.io/centos-sig-automotive/automotive-image-builder > aib
+#   chmod +x aib
+#   ./aib build ...
+#
+# The wrapper then runs this same image via `podman run`, so the version of the
+# launcher always matches the image it came from.
+exec cat /usr/libexec/aib.sh

@@ -2,6 +2,7 @@ VERSION=$(shell python3 aib/version.py)
 
 PREFIX=/usr
 BINDIR=$(PREFIX)/bin
+LIBEXECDIR=$(PREFIX)/libexec
 DATADIR=$(PREFIX)/lib/automotive-image-builder
 DESTDIR=
 
@@ -19,6 +20,11 @@ install:
 	ln -sf aib $(DESTDIR)$(BINDIR)/automotive-image-builder
 	ln -sf aib-dev $(DESTDIR)$(BINDIR)/automotive-image-builder-dev
 	ln -sf air $(DESTDIR)$(BINDIR)/automotive-image-runner
+	mkdir -p $(DESTDIR)$(LIBEXECDIR)
+	install bin/aib-entrypoint $(DESTDIR)$(LIBEXECDIR)/aib-entrypoint
+	ln -sf aib-entrypoint $(DESTDIR)$(LIBEXECDIR)/aib-dev-entrypoint
+	install aib.sh $(DESTDIR)$(LIBEXECDIR)/aib.sh
+	install bin/aib-print-wrapper $(DESTDIR)$(LIBEXECDIR)/aib-print-wrapper
 	for subdir in distro distro/include include targets targets/include ; do \
 		mkdir -p $(DESTDIR)$(DATADIR)/$$subdir ; \
 		install -m 0644 -t $(DESTDIR)$(DATADIR)/$$subdir $$subdir/*.yml ; \
