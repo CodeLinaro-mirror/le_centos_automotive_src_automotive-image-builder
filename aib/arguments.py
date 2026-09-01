@@ -305,6 +305,14 @@ GLOBAL_ARGS = {
 # Arguments for all subcommands
 COMMON_ARGS = {
     "--verbose": {"help": "Print verbose output"},
+    "--volume": {
+        "type": "append",
+        "metavar": "PATH",
+        "help": (
+            "Also bind-mount PATH into the build container. Only used by the "
+            "aib.sh container wrapper; accepted and ignored otherwise."
+        ),
+    },
 }
 
 # Shareable argument groups that can be used before or after subcommands (for historical reasons)
