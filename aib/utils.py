@@ -66,7 +66,7 @@ def extract_comment_header(file):
     return "\n".join(lines)
 
 
-def get_osbuild_major_version(runner, use_container):
+def get_osbuild_major_version(runner):
     osbuild_version = runner.run_as_user(
         ["/usr/bin/osbuild", "--version"],
         capture_output=True,
@@ -744,9 +744,8 @@ class DiskFormat(Enum):
 
     def convert_image(self, runner, src, dest):
         if self.convert:
-            runner.run_in_container(self.convert + [src, dest], need_selinux_privs=True)
-            if runner.container_needs_root:
-                runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", dest])
+            runner.run_as_root(self.convert + [src, dest])
+            runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", dest])
         else:
             if self == DiskFormat.SIMG:
                 convert_to_simg(src, dest)

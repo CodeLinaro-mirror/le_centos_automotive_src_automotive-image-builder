@@ -110,9 +110,6 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
 
     rewrite_manifest(manifest, os.path.dirname(args.manifest))
 
-    runner.add_volume_for(args.manifest)
-    runner.add_volume_for(out)
-
     defines = {
         "_basedir": args.base_dir,
         "_workdir": tmpdir.name,
@@ -122,7 +119,7 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
         "arch": args.arch,
         "distro_name": args.distro,
         "image_mode": args.mode,
-        "osbuild_major_version": get_osbuild_major_version(runner, use_container=False),
+        "osbuild_major_version": get_osbuild_major_version(runner),
         # This is a leftover for backwards compatibilty:
         "image_type": "ostree" if args.mode == "image" else "regular",
         # Last-resort timestamp when SOURCE_DATE_EPOCH is unset and no RPM
@@ -178,8 +175,6 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
     validate_policy_args(args, defines["target"])
 
     if args.ostree_repo:
-        runner.add_volume_for(args.ostree_repo)
-
         ostree = OSTree(args.ostree_repo, runner)
         revs = {}
         for ref in ostree.refs():
@@ -306,15 +301,13 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
 
     # mpp-osbuild only looks in the default (host or user depending on uid) container store
     # so we need to use env-vars to override it.
-    volumes = {}
     if storage:
         cmdline = [
             "env",
             f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
         ] + cmdline
-        volumes[storage.storage] = storage.storage
 
-    runner.run_in_container(cmdline, extra_volumes=volumes, need_selinux_privs=True)
+    runner.run_as_root(cmdline)
 
 
 def extract_rpmlist_json(osbuild_manifest):
@@ -380,8 +373,6 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
         builddir = args.build_dir
         os.makedirs(builddir, exist_ok=True)
     validate_builddir(builddir)
-    runner.add_volume(builddir)
-    runner.add_volume("/dev")
 
     cmdline = ["osbuild"]
 
@@ -426,21 +417,17 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
 
         cmdline += [osbuild_manifest]
 
-        volumes = {}
         if storage:
             cmdline = [
                 "env",
                 f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
             ] + cmdline
-            volumes[storage.storage] = storage.storage
 
-        runner.run_in_container(
+        runner.run_as_root(
             cmdline,
-            need_osbuild_privs=True,
             progress=args.progress,
             verbose=args.verbose,
             log_file=args.log_file(tmpdir),
-            extra_volumes=volumes,
         )
 
         return outputdir.detach()
@@ -470,12 +457,11 @@ def partition_can_format(p):
 
 
 def export_disk_image_file(runner, args, tmpdir, image_file, out, fmt):
-    runner.add_volume_for(out)
     if args.separate_partitions:
         runner.rm_rf(out)
         os.mkdir(out)
 
-        disk_json = runner.run_in_container(
+        disk_json = runner.run_as_root(
             ["sfdisk", "--json", image_file], capture_output=True
         )
         parts = json.loads(disk_json)

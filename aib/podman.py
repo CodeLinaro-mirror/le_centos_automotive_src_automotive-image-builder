@@ -118,7 +118,7 @@ def run_podman_cmd(
 
 
 class ContainerStorage:
-    def __init__(self, storage=None, tmpdir="/tmp", user_container=False):
+    def __init__(self, storage=None, tmpdir="/tmp"):
         state = ContainerState.query()
 
         if state.in_rootless_container:
@@ -131,7 +131,7 @@ class ContainerStorage:
             self.runroot = f"/run/user/{uid}/containers"
             self.driver = "overlay"
         else:
-            self.with_sudo = not user_container
+            self.with_sudo = True
             state = ContainerStorageState.query(self.with_sudo)
             self.storage = state.graphroot
             self.runroot = state.runroot
@@ -479,7 +479,6 @@ def podman_bootc_inject_pubkey(
     dest_container,
     pub_key,
     build_container,
-    user_container,
     verbose,
 ):
     with tempfile.TemporaryDirectory(prefix="initrd-append-") as td:
@@ -514,7 +513,7 @@ def podman_bootc_inject_pubkey(
                 ],
                 storage=storage,
                 check=True,
-                with_sudo=not user_container,
+                with_sudo=True,
                 stdout_pipe=None if verbose else subprocess.DEVNULL,
             )
 
@@ -568,7 +567,7 @@ def podman_bootc_inject_pubkey(
                     ],
                     check=True,
                     cmd_prefix=mount.unshared,
-                    with_sudo=not user_container,
+                    with_sudo=True,
                     storage=storage,
                     stdout_pipe=None if verbose else subprocess.DEVNULL,
                 )

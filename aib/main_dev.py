@@ -188,10 +188,8 @@ def main():
     args = AIBParameters(parsed_args, base_dir)
 
     runner = Runner(args)
-    runner.add_volume(os.getcwd())
 
     with SudoTemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
-        runner.add_volume(tmpdir)
         try:
             with contextlib.ExitStack() as cm:
                 args.cm = cm

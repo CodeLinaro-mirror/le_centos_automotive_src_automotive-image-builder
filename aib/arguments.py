@@ -179,7 +179,7 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
     # SUPPRESS prevents subparsers from setting a default value, which would otherwise
     # overwrite any value already captured by the main parser. This allows shareable
     # arguments to work both before and after subcommands (e.g., both
-    # `aib --container build ...` and `aib build --container ...`)
+    # `aib --container-storage foo build ...` and `aib build --container-storage foo ...`)
     if suppress_default:
         default = argparse.SUPPRESS
     elif t == "bool":

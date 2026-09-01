@@ -67,7 +67,7 @@ class TestGetOsbuildMajorVersion(unittest.TestCase):
         mock_runner = Mock()
         mock_runner.run_as_user.return_value = "osbuild 1.7.5"
 
-        result = utils.get_osbuild_major_version(mock_runner, use_container=True)
+        result = utils.get_osbuild_major_version(mock_runner)
 
         self.assertEqual(result, 1)
         mock_runner.run_as_user.assert_called_once_with(
@@ -81,32 +81,13 @@ class TestGetOsbuildMajorVersion(unittest.TestCase):
 
         # Test version 2.x
         mock_runner.run_as_user.return_value = "osbuild 2.4.0"
-        result = utils.get_osbuild_major_version(mock_runner, use_container=False)
+        result = utils.get_osbuild_major_version(mock_runner)
         self.assertEqual(result, 2)
 
         # Test version 3.x
         mock_runner.run_as_user.return_value = "osbuild 3.0.1"
-        result = utils.get_osbuild_major_version(mock_runner, use_container=True)
+        result = utils.get_osbuild_major_version(mock_runner)
         self.assertEqual(result, 3)
-
-    def test_get_osbuild_major_version_container_param(self):
-        """Test that use_container parameter is passed correctly"""
-        mock_runner = Mock()
-        mock_runner.run_as_user.return_value = "osbuild 1.7.5"
-
-        # Test with use_container=False
-        utils.get_osbuild_major_version(mock_runner, use_container=False)
-        mock_runner.run_as_user.assert_called_with(
-            ["/usr/bin/osbuild", "--version"],
-            capture_output=True,
-        )
-
-        # Test with use_container=True
-        utils.get_osbuild_major_version(mock_runner, use_container=True)
-        mock_runner.run_as_user.assert_called_with(
-            ["/usr/bin/osbuild", "--version"],
-            capture_output=True,
-        )
 
 
 class TestCountTrailingZeros(unittest.TestCase):

@@ -182,8 +182,6 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
         )
 
         # Fall back to the use of image-builder instead of bc-i-b container
-        runner.add_volume("/dev")
-        runner.add_volume(tmpdir)
         cachedir = os.path.join(tmpdir, "cache")
         os.mkdir(cachedir)
         rpmmddir = os.path.join(tmpdir, "rpmmd")
@@ -212,19 +210,15 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
         if args.vm:
             cmdline += ["--in-vm"]
 
-        volumes = {}
         if storage:
             cmdline = [
                 "env",
                 f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
             ] + cmdline
-            volumes[storage.storage] = storage.storage
 
-        runner.run_in_container(
+        runner.run_as_root(
             cmdline,
-            need_osbuild_privs=True,
             verbose=args.verbose,
-            extra_volumes=volumes,
         )
 
         export_disk_image_file(runner, args, tmpdir, output_file, out, fmt)
@@ -322,7 +316,6 @@ def build(args, tmpdir, runner):
                 containername = temporary_container_name(args, storage)
                 bootc_archive_to_store(runner, output_file, storage, containername)
 
-            runner.add_volume_for(args.out)
             runner.move_chown(output_file, args.out)
         else:
             # "-" to not store result in store
@@ -431,7 +424,6 @@ def build_builder(args, tmpdir, runner):
         output_file = os.path.join(outputdir.name, "bootc-archive/image.oci-archive")
 
         if args.oci_archive:
-            runner.add_volume_for(args.out)
             runner.move_chown(output_file, args.out)
         else:
             bootc_archive_to_store(runner, output_file, storage, dest_image)
@@ -562,9 +554,7 @@ def do_reseal_image(
 
     # rpm-ostree only looks in the default (host or user depending on uid) container store
     # so we need to use env-vars to override it.
-    volumes = {storage.storage: storage.storage}
-
-    runner.run_in_container(
+    runner.run_as_root(
         [
             "env",
             f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
@@ -579,9 +569,7 @@ def do_reseal_image(
             f"--from={src_container}",
             f"--output={storage.skopeo(dst_container)}",
         ],
-        extra_volumes=volumes,
         stdout_to_devnull=not args.verbose,
-        need_osbuild_privs=True,
     )
 
 
@@ -738,7 +726,6 @@ def reseal(args, tmpdir, runner):
             None,
             pubkey_file,
             build_container,
-            False,
             args.verbose,
         )
 
@@ -800,7 +787,6 @@ def prepare_reseal(args, tmpdir, runner):
         args.new_container,
         pubkey_file,
         build_container,
-        False,
         args.verbose,
     )
 
@@ -810,7 +796,6 @@ def main():
     args = AIBParameters(parsed_args, base_dir)
 
     runner = Runner(args)
-    runner.add_volume(os.getcwd())
 
     # Working directory for intermediate build files. Defaults to /var/tmp, but
     # can be redirected via AIB_TMPDIR_BASE -- needed in environments where
@@ -818,7 +803,6 @@ def main():
     # where only the user's home is mounted into the Linux VM).
     tmpdir_base = os.environ.get("AIB_TMPDIR_BASE", "/var/tmp")
     with SudoTemporaryDirectory(prefix="aib-", dir=tmpdir_base) as tmpdir:
-        runner.add_volume(tmpdir)
         try:
             with contextlib.ExitStack() as cm:
                 args.cm = cm

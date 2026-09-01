@@ -59,7 +59,7 @@ def test_run_args_container_without_progress_no_capture(
     use_sudo_for_root,
     verbose,
 ):
-    """Test run_in_container without progress and without capturing output."""
+    """Test run_as_root without progress and without capturing output."""
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
 
@@ -68,7 +68,7 @@ def test_run_args_container_without_progress_no_capture(
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(cmd, progress=False, capture_output=False, verbose=verbose)
+    runner.run_as_root(cmd, progress=False, capture_output=False, verbose=verbose)
 
     subprocess_run.assert_called_once_with(ListNotContaining("podman"), check=True)
 
@@ -86,7 +86,7 @@ def test_run_args_container_without_progress_with_capture(
     use_sudo_for_root,
     verbose,
 ):
-    """Test run_in_container without progress but with capturing output."""
+    """Test run_as_root without progress but with capturing output."""
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
 
@@ -95,7 +95,7 @@ def test_run_args_container_without_progress_with_capture(
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(cmd, progress=False, capture_output=True, verbose=verbose)
+    runner.run_as_root(cmd, progress=False, capture_output=True, verbose=verbose)
 
     # When capturing, subprocess.run should have capture_output=True
     subprocess_run.assert_called_once_with(
@@ -138,7 +138,7 @@ def test_run_args_container_with_progress(
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
         progress=True,
         capture_output=capture_output,
@@ -167,7 +167,7 @@ def test_run_args_osbuild_without_progress_no_capture(
     use_sudo_for_root,
     verbose,
 ):
-    """Test run_in_container with osbuild privs, without progress and without capturing output."""
+    """Test run_as_root with osbuild privs, without progress and without capturing output."""
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
 
@@ -176,9 +176,8 @@ def test_run_args_osbuild_without_progress_no_capture(
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
-        need_osbuild_privs=True,
         progress=False,
         capture_output=False,
         verbose=verbose,
@@ -200,7 +199,7 @@ def test_run_args_osbuild_without_progress_with_capture(
     use_sudo_for_root,
     verbose,
 ):
-    """Test run_in_container with osbuild privs, without progress but with capturing output."""
+    """Test run_as_root with osbuild privs, without progress but with capturing output."""
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
 
@@ -209,9 +208,8 @@ def test_run_args_osbuild_without_progress_with_capture(
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
-        need_osbuild_privs=True,
         progress=False,
         capture_output=True,
         verbose=verbose,
@@ -258,9 +256,8 @@ def test_run_args_osbuild_with_progress(
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
-        need_osbuild_privs=True,
         progress=True,
         capture_output=capture_output,
         verbose=verbose,
@@ -303,7 +300,7 @@ def test_run_with_log_file(
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
         progress=True,
         verbose=verbose,
@@ -336,53 +333,7 @@ def test_run_args_user(subprocess_mock, use_sudo_for_root):
     subprocess_run.assert_called_once_with(ListNotContaining("sudo"), check=True)
 
 
-@pytest.mark.parametrize(
-    "container_autoupdate,use_non_root,volumes",
-    [
-        (False, False, []),
-        (False, False, ["vol1"]),
-        (False, False, ["vol1", "vol2"]),
-        (True, False, []),
-        (True, False, ["vol1"]),
-        (True, False, ["vol1", "vol2"]),
-        (False, True, []),
-        (False, True, ["vol1"]),
-        (False, True, ["vol1", "vol2"]),
-        (True, True, []),
-        (True, True, ["vol1"]),
-        (True, True, ["vol1", "vol2"]),
-    ],
-)
-def test_collect_podman_args(container_autoupdate, use_non_root, volumes):
-    runner = make_runner()
-    runner.container_autoupdate = container_autoupdate
-    for v in volumes:
-        runner.add_volume(v)
-    podman_args = runner._collect_podman_args(False, use_non_root, False, False, None)
-
-    index = 3
-    assert podman_args[:2] == ["--rm", "--workdir"]
-    assert podman_args[index] == "--read-only=false"
-    index = index + 1
-    # Check volumes are added
-    if podman_args[index : index + 2] == ["-v", f"{BASE_DIR}:{BASE_DIR}"]:  # noqa: E203
-        index += 2  # Due to volume sorted by path this can appear before or after the other volumes
-    for v in volumes:
-        assert podman_args[index] == "-v"
-        assert v in podman_args[index + 1] and ":" in podman_args[index + 1]
-        index += 2
-    if podman_args[index : index + 2] == ["-v", f"{BASE_DIR}:{BASE_DIR}"]:  # noqa: E203
-        index += 2  # Due to volume sorted by path this can appear before or after the other volumes
-    # Check container autoupdate
-    if container_autoupdate:
-        assert podman_args[index] == "--pull=newer"
-        index += 1
-    # Check use non root options
-    if use_non_root:
-        assert podman_args[index] == "--user"
-
-
-def test_run_in_container_progress_without_log_file_raises_exception():
+def test_run_as_root_progress_without_log_file_raises_exception():
     runner = make_runner()
     runner.ensure_sudo = MagicMock()
 
@@ -390,7 +341,7 @@ def test_run_in_container_progress_without_log_file_raises_exception():
 
     # Should raise MissingLogFile when progress=True but log_file=None
     with pytest.raises(exceptions.MissingLogFile):
-        runner.run_in_container(cmd, progress=True, log_file=None)
+        runner.run_as_root(cmd, progress=True, log_file=None)
 
 
 @patch("aib.runner.threading.Thread")

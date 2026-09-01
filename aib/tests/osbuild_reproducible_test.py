@@ -115,8 +115,8 @@ class CreateManifestReproducibleTest(unittest.TestCase):
                 osbuild.create_osbuild_manifest(
                     args, self.tmpdir, self.out_path, runner, storage=None
                 )
-        runner.run_in_container.assert_called_once()
-        cmdline = runner.run_in_container.call_args[0][0]
+        runner.run_as_root.assert_called_once()
+        cmdline = runner.run_as_root.call_args[0][0]
         defines = {}
         it = iter(cmdline)
         for tok in it:
