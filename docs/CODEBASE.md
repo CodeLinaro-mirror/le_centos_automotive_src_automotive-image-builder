@@ -53,7 +53,7 @@ graph TD
 
 - **osbuild as execution engine**: All filesystem operations happen inside osbuild's sandboxed pipelines, not directly on the host. This provides reproducibility and security isolation.
 - **bootc over traditional images**: The primary output is an OCI container image with ostree-based atomic updates, not a traditional mutable rootfs. Traditional `aib-dev` mode exists for development convenience.
-- **Privilege escalation via Runner**: Instead of requiring the tool to run as root, `Runner` manages sudo with a keepalive thread and delegates privileged operations to podman containers. Rootless mode is supported via `--user-container`.
+- **Privilege escalation via Runner**: Instead of requiring the tool to run as root, `Runner` manages sudo with a keepalive thread for privileged operations.
 
 ## Project Structure
 

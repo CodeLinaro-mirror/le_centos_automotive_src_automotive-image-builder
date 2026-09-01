@@ -122,9 +122,7 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
         "arch": args.arch,
         "distro_name": args.distro,
         "image_mode": args.mode,
-        "osbuild_major_version": get_osbuild_major_version(
-            runner, use_container=args.container
-        ),
+        "osbuild_major_version": get_osbuild_major_version(runner, use_container=False),
         # This is a leftover for backwards compatibilty:
         "image_type": "ostree" if args.mode == "image" else "regular",
         # Last-resort timestamp when SOURCE_DATE_EPOCH is unset and no RPM

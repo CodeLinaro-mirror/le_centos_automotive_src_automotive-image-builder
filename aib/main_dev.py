@@ -144,7 +144,7 @@ def build(args, tmpdir, runner):
     if args.vm:
         in_vm.append("image")
 
-    storage = ContainerStorage(args.container_storage, tmpdir, args.user_container)
+    storage = ContainerStorage(args.container_storage, tmpdir)
 
     with run_osbuild(
         args, tmpdir, runner, exports, in_vm=in_vm, storage=storage

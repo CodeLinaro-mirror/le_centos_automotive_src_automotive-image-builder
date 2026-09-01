@@ -42,10 +42,10 @@ class Volumes(set):
 
 class Runner:
     def __init__(self, args):
-        self.use_container = args.container or args.user_container
-        self.container_needs_root = not args.user_container
-        self.container_image = args.container_image
-        self.container_autoupdate = args.container_autoupdate
+        self.use_container = False
+        self.container_needs_root = True
+        self.container_image = None
+        self.container_autoupdate = False
         self.use_sudo_for_root = os.getuid() != 0
         self.keepalive_thread = None
         self.volumes = Volumes()

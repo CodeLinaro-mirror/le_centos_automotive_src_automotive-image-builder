@@ -147,7 +147,7 @@ class ContainerStorage:
 
     @classmethod
     def from_args(cls, args, tmpdir):
-        return ContainerStorage(args.container_storage, tmpdir, args.user_container)
+        return ContainerStorage(args.container_storage, tmpdir)
 
     def args(self):
         return [

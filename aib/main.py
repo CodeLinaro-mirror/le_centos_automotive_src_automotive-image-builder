@@ -516,7 +516,7 @@ def extract_for_signing(args, tmpdir, runner):
     often involves sending them to a 3rd party. Once these files are signed, the modified
     file can then be injected using inject-signed.
     """
-    storage = ContainerStorage(args.container_storage, tmpdir, args.user_container)
+    storage = ContainerStorage(args.container_storage, tmpdir)
 
     if not podman_image_exists(storage, args.src_container):
         raise ContainerNotFound(args.src_container)
@@ -738,7 +738,7 @@ def reseal(args, tmpdir, runner):
             None,
             pubkey_file,
             build_container,
-            args.user_container,
+            False,
             args.verbose,
         )
 
@@ -800,7 +800,7 @@ def prepare_reseal(args, tmpdir, runner):
         args.new_container,
         pubkey_file,
         build_container,
-        args.user_container,
+        False,
         args.verbose,
     )
 
