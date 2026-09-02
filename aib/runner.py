@@ -9,15 +9,17 @@ import time
 
 from . import log
 from . import exceptions
+from .execmode import ExecMode
 from .progress import OSBuildProgressMonitor
 
 # Runner is a mechanism to run commands either as the current user or as
-# root (using sudo when not already root).
+# root. How root is reached (directly, via sudo, or not at all because the
+# tools handle rootless operation themselves) is decided by ExecMode.
 
 
 class Runner:
     def __init__(self, args):
-        self.use_sudo_for_root = os.getuid() != 0
+        self.mode = ExecMode.current()
         self.keepalive_thread = None
 
     def _start_sudo_keepalive(self):
@@ -35,7 +37,7 @@ class Runner:
         self.keepalive_thread.start()
 
     def ensure_sudo(self):
-        if not self.use_sudo_for_root:
+        if not self.mode.uses_sudo:
             return
 
         if self.keepalive_thread and self.keepalive_thread.is_alive():
@@ -55,21 +57,10 @@ class Runner:
         verbose=False,
         log_file=None,
     ):
-        if as_root and self.use_sudo_for_root:
-            self.ensure_sudo()
-
-            allowed_env_vars = [
-                "REGISTRY_AUTH_FILE",
-                "CONTAINERS_CONF",
-                "CONTAINERS_REGISTRIES_CONF",
-                "CONTAINERS_STORAGE_CONF",
-            ]
-
-            sudo_cmd = [
-                "sudo",
-                "--preserve-env={}".format(",".join(allowed_env_vars)),
-            ]
-            cmdline = sudo_cmd + cmdline
+        if as_root:
+            if self.mode.uses_sudo:
+                self.ensure_sudo()
+            cmdline = self.mode.run_prefix + cmdline
 
         if with_progress:
             log.debug("Running with progress: %s", shlex.join(cmdline))
@@ -109,6 +100,8 @@ class Runner:
                 sys.exit(1)  # cmd will have printed the error
 
     # Run the commandline as root, i.e. with sudo if not already root.
+    # Note: In the rootless case we never actually run as root, and all launched
+    # tools are supposed to correctly handle this.
     def run_as_root(
         self,
         cmdline,
@@ -136,7 +129,8 @@ class Runner:
     ):
         return self._run(cmdline, as_root=False, capture_output=capture_output)
 
-    # Tries to remove a path, if needed (and allowed) with sudo
+    # Tries to remove a path, falling back to a privileged helper for trees
+    # that may hold files owned by root or by mapped subuids.
     def rm_rf(self, path):
         if not os.path.exists(path):
             return
@@ -147,15 +141,22 @@ class Runner:
         except (OSError, PermissionError) as e:
             last_err = e
 
-        # If useful (not already root), try sudo:
-        if self.use_sudo_for_root:
-            self.run_as_root(["rm", "-rf", path])
+        prefix = self.mode.reap_prefix
+        if prefix:
+            if self.mode.uses_sudo:
+                self.ensure_sudo()
+            self.run_as_user(prefix + ["rm", "-rf", path])
             return  # Above will exit on error
 
         raise last_err
 
-    # Move a file (possibly root owned) to a destination and chown it to the
-    # current user
+    # Move a build artifact to a destination, owned by the current user. Only
+    # the sudo case needs a chown: elsewhere the artifact is already ours (real
+    # root, or our uid inside the tool's user namespace).
     def move_chown(self, src, dst):
-        self.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", src])
-        self.run_as_root(["mv", src, dst])
+        if self.mode.uses_sudo:
+            self.ensure_sudo()
+            self.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", src])
+            self.run_as_root(["mv", src, dst])
+        else:
+            shutil.move(src, dst)

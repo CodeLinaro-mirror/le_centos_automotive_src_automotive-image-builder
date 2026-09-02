@@ -5,7 +5,6 @@ import contextlib
 import sys
 import os
 import json
-import subprocess
 
 from .utils import (
     read_public_key,
@@ -148,10 +147,7 @@ def bootc_archive_to_store(runner, archive_file, storage, container_name):
         storage.skopeo(container_name),
     ]
 
-    if storage.with_sudo:
-        runner.run_as_root(cmdline)
-    else:
-        subprocess.run(cmdline, check=True)
+    runner.run_as_root(cmdline)
 
 
 def store_to_bootc_archive(runner, storage, container_name, archive_file):
@@ -166,10 +162,7 @@ def store_to_bootc_archive(runner, storage, container_name, archive_file):
         "oci-archive:" + archive_file,
     ]
 
-    if storage.with_sudo:
-        runner.run_as_root(cmdline)
-    else:
-        subprocess.run(cmdline, check=True)
+    runner.run_as_root(cmdline)
 
 
 def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, out):
@@ -441,6 +434,8 @@ def get_build_container_for(storage, container):
     if info.build_info:
         distro = info.build_info.get("DISTRO", distro)
 
+    # The build helper container lives in the same store as the image being
+    # converted: image-builder pulls it alongside the bootc-ref to run things in.
     build_container = aib_build_container_name(distro)
     if not podman_image_exists(storage, build_container):
         raise BuildContainerNotFound(build_container, distro)

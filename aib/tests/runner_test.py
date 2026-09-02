@@ -5,7 +5,12 @@ import aib.main  # noqa: F401
 from aib import AIBParameters
 from aib import exceptions
 from aib.arguments import parse_args
+from aib.execmode import ExecMode, Privilege
 from aib.runner import Runner
+
+
+def set_sudo(runner, use_sudo):
+    runner.mode = ExecMode(Privilege.SUDO if use_sudo else Privilege.ROOT)
 
 
 BASE_DIR = "/usr/lib/automotive-image-builder"
@@ -39,7 +44,7 @@ def test_run_args_root(subprocess_mock, use_sudo_for_root):
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -64,7 +69,7 @@ def test_run_args_container_without_progress_no_capture(
     subprocess_mock.run = subprocess_run
 
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -91,7 +96,7 @@ def test_run_args_container_without_progress_with_capture(
     subprocess_mock.run = subprocess_run
 
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -134,7 +139,7 @@ def test_run_args_container_with_progress(
     log_file_path = str(tmp_path / "test.log")
 
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -172,7 +177,7 @@ def test_run_args_osbuild_without_progress_no_capture(
     subprocess_mock.run = subprocess_run
 
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -204,7 +209,7 @@ def test_run_args_osbuild_without_progress_with_capture(
     subprocess_mock.run = subprocess_run
 
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -252,7 +257,7 @@ def test_run_args_osbuild_with_progress(
     log_file_path = str(tmp_path / "test.log")
 
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -296,7 +301,7 @@ def test_run_with_log_file(
     log_file_path = str(tmp_path / "test.log")
 
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -322,7 +327,7 @@ def test_run_args_user(subprocess_mock, use_sudo_for_root):
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
     runner = make_runner()
-    runner.use_sudo_for_root = use_sudo_for_root
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -353,7 +358,7 @@ def test_ensure_sudo_success(subprocess_mock, thread_mock):
     args.include_dirs = []
 
     runner = Runner(args)
-    runner.use_sudo_for_root = True
+    set_sudo(runner, True)
 
     # Execution
     runner.ensure_sudo()
@@ -375,7 +380,7 @@ def test_ensure_sudo_already_running():
     args.include_dirs = []
 
     runner = Runner(args)
-    runner.use_sudo_for_root = True
+    set_sudo(runner, True)
 
     # Mock existing thread
     mock_thread = MagicMock()

@@ -19,7 +19,7 @@ from typing import Callable, List, Dict, Any
 from enum import Enum
 from pathlib import Path
 
-from .podman import ContainerState
+from .execmode import ExecMode
 from .utils import DiskFormat
 from .version import get_version
 from . import log
@@ -196,8 +196,9 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
     if t == "bool":
         a = dst.add_argument(*names, default=default, action="store_true")
     elif t == "bool-optional":
-        # bool-optional doesn't need suppress_default handling
-        a = dst.add_argument(*names, action=argparse.BooleanOptionalAction)
+        a = dst.add_argument(
+            *names, action=argparse.BooleanOptionalAction, default=default
+        )
     elif t == "diskformat":
         a = dst.add_argument(
             *names,
@@ -305,6 +306,15 @@ GLOBAL_ARGS = {
 # Arguments for all subcommands
 COMMON_ARGS = {
     "--verbose": {"help": "Print verbose output"},
+    "--sudo": {
+        "type": "bool-optional",
+        "default": True,
+        "help": (
+            "When not running as root, use sudo for privileged build steps "
+            "(default). --no-sudo instead runs them rootless. Ignored when "
+            "already root or inside a container."
+        ),
+    },
     "--volume": {
         "type": "append",
         "metavar": "PATH",
@@ -541,9 +551,11 @@ def parse_args(args, prog="aib"):
 
     res = parser.parse_args(args)
 
-    # Default to --vm if running in a rootless container, because this is the
-    # only way it would ever work anyway.
+    mode = ExecMode.resolve(getattr(res, "sudo", True))
+
+    # Default to --vm in the rootless modes, because building a disk image is
+    # otherwise impossible there.
     if "vm" in res and res.vm is None:
-        res.vm = ContainerState.query().in_rootless_container
+        res.vm = mode.force_in_vm
 
     return res
