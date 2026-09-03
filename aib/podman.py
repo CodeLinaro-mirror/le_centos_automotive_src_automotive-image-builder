@@ -106,6 +106,14 @@ def run_podman_cmd(
 
 
 class ContainerStorage:
+    """This tracks the location of the container storage that is used
+    to consume and store built images. By default it is standard
+    location, but it can be overridden by --container-store There is
+    also various helper functions that makes it possible to override
+    the container storage used in tool that we need to call. Some work
+    for some tools, others for other.
+    """
+
     def __init__(self, storage=None, tmpdir="/tmp"):
         if ContainerState.query().in_rootless_container:
             # Typically we in a rootless container the user store is
@@ -149,6 +157,12 @@ class ContainerStorage:
         return f"containers-storage:[{self.driver}@{self.storage}+{self.runroot}]{image_name}"
 
     def get_config_path(self):
+        """This returns the path to a config file that sets graphroot/runroot to an empty writable
+        location, with the storage as an additional iamge store. This is useful for code that
+        respects CONTAINERS_STORAGE_CONF and handles additional image stores. The use of an
+        additional image store is useful, because podman sometimes dislikes when storage is
+        accessed via a different path, which often happens when mounting the user storage
+        at /var/lib/containers inside rootless containers."""
         if self.config_path is None:
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -175,6 +189,14 @@ class ContainerStorage:
             self.config_path = tmpfile.name
 
         return self.config_path
+
+    def get_override_env(self):
+        """This returns the env variables CONTAINERS_GRAPHROOT/RUNROOT
+        that podman unshare also sets, and some tools respect"""
+        return [
+            f"CONTAINERS_GRAPHROOT={self.storage}",
+            f"CONTAINERS_RUNROOT={self.runroot}",
+        ]
 
     def __str__(self):
         parts = []

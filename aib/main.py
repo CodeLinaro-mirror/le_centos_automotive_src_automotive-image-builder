@@ -204,10 +204,16 @@ def container_to_disk_image(args, tmpdir, runner, storage, src_container, fmt, o
             cmdline += ["--in-vm"]
 
         if storage:
-            cmdline = [
-                "env",
-                f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
-            ] + cmdline
+            # This uses both CONTAINERS_STORAGE_CONF and CONTAINERS_GRAPHROOT, because image-builder doesn't
+            # respect CONTAINERS_STORAGE_CONF, but skopeo doesn't do CONTAINERS_GRAPHROOT.
+            cmdline = (
+                [
+                    "env",
+                    f"CONTAINERS_STORAGE_CONF={storage.get_config_path()}",
+                ]
+                + storage.get_override_env()
+                + cmdline
+            )
 
         runner.run_as_root(
             cmdline,
