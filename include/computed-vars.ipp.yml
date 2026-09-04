@@ -289,7 +289,6 @@ mpp-vars:
     mpp-eval: "'180s' if use_debug or use_kernel_debug_package else systemd_timeout"
   coredump_storage:
     mpp-eval: "'external' if use_debug or use_kernel_debug_package else coredump_storage"
-  _dash_escape: "\\x2d"
   denylist_rpms:
     mpp-join:
       - mpp-eval: denylist_rpms
@@ -833,10 +832,11 @@ mpp-vars:
     mpp-join:
       - mpp-eval: image_services_skipped_on_container
       - - mpp-if: use_efipart_mount and not policy_disable_efi_features
-          then: dev-disk-by\x2dlabel-ESP.device
+          then:
+            mpp-format-string: "{_systemd_escape('dev/disk/by-label/ESP')}.device"
         - mpp-if: use_efipart_mount and not policy_disable_efi_features
           then:
-            mpp-format-string: "dev-disk-by{_dash_escape}uuid-{qm_varfs_uuid.replace('-', _dash_escape)}.device"
+            mpp-format-string: "{_systemd_escape('dev/disk/by-uuid/' + qm_varfs_uuid)}.device"
         - mpp-if: selinux_booleans
           then: selinux-bools.service
   # Extra directories that will be created in the image, list amended by moode-*.ipp

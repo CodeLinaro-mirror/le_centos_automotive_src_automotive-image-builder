@@ -5,7 +5,7 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       Before=local-fs.target
-      After=blockdev@dev-disk-by\\x2duuid-{bootfs_uuid.replace("-", _dash_escape)}.target
+      After=blockdev@{_systemd_escape('dev/disk/by-uuid/' + bootfs_uuid)}.target
       ConditionVirtualization=!container
 
       [Mount]
@@ -19,7 +19,7 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       Before=local-fs.target
-      After=blockdev@dev-disk-by\\x2dlabel-ESP.target
+      After=blockdev@{_systemd_escape('dev/disk/by-label/ESP')}.target
       ConditionVirtualization=!container
 
       [Mount]
@@ -33,7 +33,7 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       Before=local-fs.target
-      After=blockdev@dev-disk-by\\x2duuid-{varfs_uuid.replace("-", _dash_escape)}.target
+      After=blockdev@{_systemd_escape('dev/disk/by-uuid/' + varfs_uuid)}.target
       ConditionVirtualization=!container
 
       [Mount]
@@ -47,7 +47,7 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       Before=local-fs.target
-      After=blockdev@dev-disk-by\\x2duuid-{qm_varfs_uuid.replace("-", _dash_escape)}.target
+      After=blockdev@{_systemd_escape('dev/disk/by-uuid/' + qm_varfs_uuid)}.target
       ConditionVirtualization=!container
 
       [Mount]

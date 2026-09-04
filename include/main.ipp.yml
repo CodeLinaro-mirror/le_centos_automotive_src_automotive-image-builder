@@ -96,6 +96,17 @@ mpp-vars:
   _var:
     mpp-eval: "_WithDefault(None)"
 
+  # Escape a string the way systemd does for device/mount unit names
+  # (like `systemd-escape`): "/" becomes "-", and every character that is
+  # not [A-Za-z0-9:_.] is escaped to \xNN (so a literal "-" becomes \x2d,
+  # which is why the separator is escaped in the first place).
+  _systemd_escape:
+    mpp-eval: |
+      lambda s: _re.sub(
+          r'[^a-zA-Z0-9:_.]',
+          lambda m: '-' if m.group() == '/' else ''.join('\\x%02x' % b for b in m.group().encode()),
+          s)
+
 pipelines:
   - mpp-import-pipelines:
       path: defaults.ipp.yml
