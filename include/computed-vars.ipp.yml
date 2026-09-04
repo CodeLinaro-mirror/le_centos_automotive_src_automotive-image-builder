@@ -102,6 +102,9 @@ mpp-vars:
   aboot_compress_kernel:
     mpp-eval: False if use_ukiboot and arch == 'aarch64' else aboot_compress_kernel
 
+  use_generate_machine_id:
+    mpp-eval: use_ostree and locals().get("use_generate_machine_id", use_transient_etc)
+
   # Enable as needed
   use_abootpart:
     mpp-if: not "use_abootpart" in locals()
@@ -271,11 +274,15 @@ mpp-vars:
             then: systemd-journald
           - mpp-if: use_repart
             then: systemd-repart
+          - mpp-if: use_generate_machine_id
+            then: aib-machine-id
   dracut_add_modules:
     mpp-join:
       - mpp-eval: dracut_add_modules
       - - mpp-if: use_repart
           then: systemd-repart
+        - mpp-if: use_generate_machine_id
+          then: aib-machine-id
   dracut_add_drivers:
     mpp-join:
       - mpp-eval: dracut_add_drivers
@@ -804,6 +811,11 @@ mpp-vars:
             path: /usr/lib/systemd/system/systemd-repart.service.d
             parents: true
             exist_ok: true
+        - mpp-if: use_generate_machine_id
+          then:
+            path: /usr/lib/dracut/modules.d/50aib-machine-id
+            parents: true
+            exist_ok: true
       - mpp-eval: |
           [
             {
@@ -939,6 +951,14 @@ mpp-vars:
           then:
             from: input://extra-tree/root_sshd_authorized_keys
             to: tree:///etc/ssh/authorized_keys/root
+      - mpp-if: use_generate_machine_id
+        then:
+          - from: input://extra-tree/machineid_dracut_module
+            to: tree:///usr/lib/dracut/modules.d/50aib-machine-id/module-setup.sh
+          - from: input://extra-tree/aib-machine-id-generate.service
+            to: tree:///usr/lib/systemd/system/aib-machine-id-generate.service
+          - from: input://extra-tree/aib-machine-id-apply.service
+            to: tree:///usr/lib/systemd/system/aib-machine-id-apply.service
       - mpp-eval: |
           [
             {
