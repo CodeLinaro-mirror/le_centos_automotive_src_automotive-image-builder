@@ -74,6 +74,28 @@ mpp-vars:
     mpp-eval: |
       lambda data, lookup:  next((v for k, v in data.items() if _re.fullmatch(k, lookup)), next(reversed(data.values())))
 
+  # Easy lookup of global variables with a default, allowing us to write
+  #     mpp-eval: _with_default(use_ostree).sign_kernel_modules
+  # instead of the quote-heavy, and less readable:
+  #     mpp-eval: "locals().get('sign_kernel_modules', use_ostree)"
+  #  _var is the common "default is None" case:
+  #     _var.aboot_partition_b != None    # was it set?
+  _WithDefault:
+    mpp-eval: |
+      type(
+          "WithDefault",
+          (),
+          {
+              "__slots__": ("_dflt",),
+              "__init__": lambda self, dflt: setattr(self, "_dflt", dflt),
+              "__getattr__": lambda self, name: _sys._getframe(1).f_locals.get(name, self._dflt),
+          },
+      )
+  _with_default:
+    mpp-eval: "lambda dflt=None: _WithDefault(dflt)"
+  _var:
+    mpp-eval: "_WithDefault(None)"
+
 pipelines:
   - mpp-import-pipelines:
       path: defaults.ipp.yml

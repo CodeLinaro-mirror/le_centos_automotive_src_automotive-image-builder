@@ -37,11 +37,11 @@ mpp-vars:
 
   # Note: setting [qm_]varpart_size to -1 means "use externel image with the given uuid"
   _varpart_size:
-    mpp-eval: locals().get('varpart_size', int(int(image_size) * varpart_relative_size / 512))
+    mpp-eval: _with_default(int(int(image_size) * varpart_relative_size / 512)).varpart_size
   _use_separate_var:
     mpp-eval: _varpart_size != 0
   _qm_varpart_size:
-    mpp-eval: locals().get('qm_varpart_size', int(int(image_size) * qm_varpart_relative_size / 512))
+    mpp-eval: _with_default(int(int(image_size) * qm_varpart_relative_size / 512)).qm_varpart_size
   _qm_use_separate_var:
     mpp-eval: use_qm and _qm_varpart_size != 0
   _qm_containers:
@@ -59,8 +59,7 @@ mpp-vars:
               name: $qm_wayland_compositor_name
     else: []
   ostree_os_version:
-    mpp-if: not "ostree_os_version" in locals()
-    then: $version
+    mpp-eval: _with_default(version).ostree_os_version
 
   # Compute dynamic uuids if requested, but allow override
   _compute_uuid:
@@ -137,33 +136,25 @@ mpp-vars:
     mpp-eval: use_aboot or use_ukiboot
 
   use_generate_machine_id:
-    mpp-eval: use_ostree and locals().get("use_generate_machine_id", use_transient_etc)
+    mpp-eval: use_ostree and _with_default(use_transient_etc).use_generate_machine_id
 
   # Enable as needed
   use_abootpart:
-    mpp-if: not "use_abootpart" in locals()
-    then:
-      mpp-eval: use_aboot
+    mpp-eval: _with_default(use_aboot).use_abootpart
   use_ukibootpart:
-    mpp-if: not "use_ukibootpart" in locals()
-    then:
-      mpp-eval: use_ukiboot
+    mpp-eval: _with_default(use_ukiboot).use_ukibootpart
   use_vbmetapart:
-    mpp-if: not "use_vbmetapart" in locals()
-    then:
-      mpp-eval: use_aboot
+    mpp-eval: _with_default(use_aboot).use_vbmetapart
   use_ablpart:
-    mpp-eval: locals().get('use_ablpart', False)
+    mpp-eval: _with_default(False).use_ablpart
   use_efipart:
-    mpp-if: not "use_efipart" in locals()
-    then:
-      mpp-eval: use_ukiboot
+    mpp-eval: _with_default(use_ukiboot).use_efipart
   use_efipart_mount:
     mpp-eval: use_efipart
   use_bootpart:
-    mpp-eval: locals().get('use_bootpart', False)
+    mpp-eval: _with_default(False).use_bootpart
   use_sblpart:
-    mpp-eval: locals().get('use_sblpart', False)
+    mpp-eval: _with_default(False).use_sblpart
 
   aboot_boot_type:
     mpp-eval: "'ukiboot' if use_ukiboot else aboot_boot_type"
@@ -247,7 +238,7 @@ mpp-vars:
       boot_check_qm_digest_default_per_arch[arch]
 
   _boot_check_qm_digest:
-    mpp-eval: "[] if not (policy_require_qm_digest and use_qm) else locals().get('boot_check_qm_digest', _boot_check_qm_digest_default)"
+    mpp-eval: "[] if not (policy_require_qm_digest and use_qm) else _with_default(_boot_check_qm_digest_default).boot_check_qm_digest"
 
   need_boot_check:
     mpp-eval: "use_static_ip or len(_boot_check_qm_digest) > 0"
@@ -274,9 +265,9 @@ mpp-vars:
   sign_kernel_modules:
     mpp-if: kernel_package.startswith('kernel-automotive') or kernel_package.startswith('kernel-ivos')
     then:
-      mpp-eval: locals().get('sign_kernel_modules', use_ostree)
+      mpp-eval: _with_default(use_ostree).sign_kernel_modules
     else:
-      mpp-eval: locals().get('sign_kernel_modules', False)
+      mpp-eval: _with_default(False).sign_kernel_modules
   use_kernel_debug_package:
     mpp-if: "'debug' in locals().get('kernel_package')"
     then: true
@@ -542,7 +533,7 @@ mpp-vars:
   rootpart_label:
     mpp-eval: aboot_partlabel if use_aboot else "root"
   autoinit_root:
-    mpp-eval: locals().get("autoinit_root", f"PARTLABEL={rootpart_label}")
+    mpp-eval: _with_default(f"PARTLABEL={rootpart_label}").autoinit_root
   sysroot_unit:
     mpp-if: use_autoinit
     then: mount-sysroot.service
@@ -552,11 +543,11 @@ mpp-vars:
     then: "qm"
     else: "empty"
   enable_oom_protection:
-    mpp-eval: locals().get("enable_oom_protection", use_qm)
+    mpp-eval: _with_default(use_qm).enable_oom_protection
   enable_reclaim_protection:
-    mpp-eval: locals().get("enable_reclaim_protection", use_qm)
+    mpp-eval: _with_default(use_qm).enable_reclaim_protection
   cg_memory_min:
-    mpp-eval: locals().get("cg_memory_min", 67108864)
+    mpp-eval: _with_default(67108864).cg_memory_min
   image_enabled_services:
     mpp-join:
       - mpp-eval: image_enabled_services
@@ -796,47 +787,47 @@ mpp-vars:
               boot_type:
                 mpp-eval: aboot_boot_type
               pagesize:
-                mpp-if: "locals().get('aboot_pagesize',) != None"
+                mpp-if: _var.aboot_pagesize != None
                 then:
                   mpp-format-string: "{aboot_pagesize}"
               kernel_offset:
-                mpp-if: "locals().get('aboot_kernel_offset') != None"
+                mpp-if: _var.aboot_kernel_offset != None
                 then:
                   mpp-format-string: "{aboot_kernel_offset}"
               partition_a:
-                mpp-if: "locals().get('aboot_partition_a') != None"
+                mpp-if: _var.aboot_partition_a != None
                 then:
                   mpp-format-string: "{aboot_partition_a}"
               partition_b:
-                mpp-if: "locals().get('aboot_partition_b') != None"
+                mpp-if: _var.aboot_partition_b != None
                 then:
                   mpp-format-string: "{aboot_partition_b}"
               partition_ctl:
-                mpp-if: "locals().get('partition_ctl') != None"
+                mpp-if: _var.partition_ctl != None
                 then:
                   mpp-format-string: "{partition_ctl}"
               second_offset:
-                mpp-if: "locals().get('aboot_second_offset') != None"
+                mpp-if: _var.aboot_second_offset != None
                 then:
                   mpp-format-string: "{aboot_second_offset}"
               tags_offset:
-                mpp-if: "locals().get('aboot_tags_offset') != None"
+                mpp-if: _var.aboot_tags_offset != None
                 then:
                   mpp-format-string: "{aboot_tags_offset}"
               base:
-                mpp-if: "locals().get('aboot_base') != None"
+                mpp-if: _var.aboot_base != None
                 then:
                   mpp-format-string: "{aboot_base}"
               dtb_file:
-                mpp-if: "locals().get('aboot_dtb_file') != None"
+                mpp-if: _var.aboot_dtb_file != None
                 then:
                   mpp-format-string: "{aboot_dtb_file}"
               compress_kernel:
-                mpp-if: "aboot_compress_kernel != None"
+                mpp-if: aboot_compress_kernel != None
                 then:
                   mpp-eval: aboot_compress_kernel
               ramdisk_offset:
-                mpp-if: "locals().get('aboot_ramdisk_offset') != None"
+                mpp-if: _var.aboot_ramdisk_offset != None
                 then:
                   mpp-format-string: "{aboot_ramdisk_offset}"
   image_services_skipped_on_container:
