@@ -3,7 +3,7 @@ version: "2"
 mpp-vars:
   kernel_package: kernel-ivos-qualcomm
   use_debug_kernel:
-    mpp-eval: "'debug' in locals().get('kernel_package')"
+    mpp-eval: "'debug' in kernel_package"
 
   target_rpms:
     mpp-join:
