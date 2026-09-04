@@ -59,8 +59,8 @@ base_dir = os.path.realpath(sys.argv[1])
 def listrpms(args, tmpdir, runner):
     """List the rpms that a manifest would use when build"""
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
-
-    create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner)
+    storage = ContainerStorage.from_args(args, tmpdir)
+    create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage)
 
     data = extract_rpmlist_json(osbuild_manifest)
 
