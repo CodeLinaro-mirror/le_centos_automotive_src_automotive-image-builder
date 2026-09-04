@@ -269,8 +269,7 @@ mpp-vars:
     else:
       mpp-eval: _with_default(False).sign_kernel_modules
   use_kernel_debug_package:
-    mpp-if: "'debug' in locals().get('kernel_package')"
-    then: true
+    mpp-eval: "'debug' in kernel_package"
   _kernel_subdir:
     mpp-eval: _kernel_evra + ("+debug" if use_kernel_debug_package else "")
   _kernel_dir:
