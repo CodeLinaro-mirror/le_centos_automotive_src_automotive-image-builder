@@ -399,6 +399,11 @@ BUILD_ARGS = {
         "type": "path",
         "help": "Path to export the generated osbuild manifest that was used when building the image",
     },
+    "--lockfile": {
+        "type": "path",
+        "help": "Use a lockfile to skip dependency resolution. "
+        "Generate with the resolve command.",
+    },
     "--local-repo": {
         "type": "path",
         "default": None,
@@ -429,6 +434,7 @@ BUILD_ARGS = {
         "help": "Set the hashed root password. This overwrites the hashed root password from the manifest.",
     },
 }
+RESOLVE_BUILD_ARGS = {k: v for k, v in BUILD_ARGS.items() if k not in ("--lockfile",)}
 DISK_FORMAT_ARGS = {
     "--format": {
         "type": "diskformat",

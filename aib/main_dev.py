@@ -20,6 +20,7 @@ from .arguments import (
     POLICY_ARGS,
     TARGET_ARGS,
     BUILD_ARGS,
+    RESOLVE_BUILD_ARGS,
     DISK_FORMAT_ARGS,
     CommandGroup,
 )
@@ -36,6 +37,44 @@ from .osbuild import (
 from . import list_ops  # noqa: F401
 
 base_dir = os.path.realpath(sys.argv[1])
+
+
+@command(
+    name="resolve",
+    help="Resolve dependencies and generate a lockfile",
+    shared_args=["container", "include"],
+    args=[
+        TARGET_ARGS,
+        RESOLVE_BUILD_ARGS,
+        {
+            "--output": {
+                "type": "path",
+                "default": None,
+                "help": "Output lockfile path (default: <manifest>.lock)",
+            },
+            "manifest": "The source aib manifest path",
+        },
+    ],
+)
+def resolve(args, tmpdir, runner):
+    """Resolve external dependencies and generate a lockfile."""
+    args.mode = "package"
+    storage = ContainerStorage(args.container_storage, tmpdir, args.user_container)
+
+    src = args.simple_manifest or args.manifest
+    lockfile_path = args.output or os.path.splitext(src)[0] + ".lock"
+
+    args.generate_lockfile = os.path.abspath(lockfile_path)
+
+    osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
+    create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage)
+
+    if runner.use_container and runner.container_needs_root:
+        runner.run_as_root(
+            ["chown", f"{os.getuid()}:{os.getgid()}", args.generate_lockfile]
+        )
+
+    log.info("Lockfile written to %s", lockfile_path)
 
 
 @command(
