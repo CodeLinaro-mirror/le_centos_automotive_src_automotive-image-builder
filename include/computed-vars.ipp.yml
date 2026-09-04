@@ -151,6 +151,8 @@ mpp-vars:
     mpp-eval: _with_default(use_ukiboot).use_efipart
   use_efipart_mount:
     mpp-eval: use_efipart
+  use_efi_features:
+    mpp-eval: use_efipart_mount and not policy_disable_efi_features
   use_bootpart:
     mpp-eval: _with_default(False).use_bootpart
   use_sblpart:
@@ -553,7 +555,7 @@ mpp-vars:
       - - mpp-if: tmp_is_tmpfs
           then: tmp.mount
         - rcu-normal.service
-        - mpp-if: use_efipart_mount and not policy_disable_efi_features
+        - mpp-if: use_efi_features
           then: boot-efi.mount
         - mpp-if: use_bootpart
           then: boot.mount
@@ -831,10 +833,10 @@ mpp-vars:
   image_services_skipped_on_container:
     mpp-join:
       - mpp-eval: image_services_skipped_on_container
-      - - mpp-if: use_efipart_mount and not policy_disable_efi_features
+      - - mpp-if: use_efi_features
           then:
             mpp-format-string: "{_systemd_escape('dev/disk/by-label/ESP')}.device"
-        - mpp-if: use_efipart_mount and not policy_disable_efi_features
+        - mpp-if: use_efi_features
           then:
             mpp-format-string: "{_systemd_escape('dev/disk/by-uuid/' + qm_varfs_uuid)}.device"
         - mpp-if: selinux_booleans
@@ -1003,7 +1005,7 @@ mpp-vars:
           then:
             from: input://extra-tree/boot.mount
             to: tree:////usr/lib/systemd/system/boot.mount
-        - mpp-if: use_efipart_mount and not policy_disable_efi_features
+        - mpp-if: use_efi_features
           then:
             from: input://extra-tree/boot-efi.mount
             to: tree:////usr/lib/systemd/system/boot-efi.mount
