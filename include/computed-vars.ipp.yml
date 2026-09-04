@@ -272,6 +272,8 @@ mpp-vars:
       mpp-eval: _with_default(False).sign_kernel_modules
   use_kernel_debug_package:
     mpp-eval: "'debug' in kernel_package"
+  use_debug_build:
+    mpp-eval: use_debug or use_kernel_debug_package
   _kernel_subdir:
     mpp-eval: _kernel_evra + ("+debug" if use_kernel_debug_package else "")
   _kernel_dir:
@@ -288,9 +290,9 @@ mpp-vars:
       mpp-eval: |
         "/boot/" + _aboot_img
   systemd_timeout:
-    mpp-eval: "'180s' if use_debug or use_kernel_debug_package else systemd_timeout"
+    mpp-eval: "'180s' if use_debug_build else systemd_timeout"
   coredump_storage:
-    mpp-eval: "'external' if use_debug or use_kernel_debug_package else coredump_storage"
+    mpp-eval: "'external' if use_debug_build else coredump_storage"
   denylist_rpms:
     mpp-join:
       - mpp-eval: denylist_rpms
@@ -304,7 +306,7 @@ mpp-vars:
       - mpp-if: is_autoinit_supported and use_autoinit
         then:
           - systemd-initrd-automotive
-          - mpp-if: use_debug or use_kernel_debug_package
+          - mpp-if: use_debug_build
             then: systemd-journal-automotive
           - mpp-if: use_repart
             then: systemd-repart
@@ -411,7 +413,7 @@ mpp-vars:
       - mpp-if: disable_ipv6
         then:
           - ipv6.disable=1
-      - mpp-if: use_debug or use_kernel_debug_package
+      - mpp-if: use_debug_build
         then:
           - ignore_loglevel
           - earlycon
@@ -428,7 +430,7 @@ mpp-vars:
               then:
                 - mount-sysroot.root=$autoinit_root
                 - mount-sysroot.rw
-            - mpp-if: use_debug or use_kernel_debug_package
+            - mpp-if: use_debug_build
               then:
                 - mount-sysroot.debug
       - mpp-if: use_module_sig_enforce
