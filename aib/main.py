@@ -368,7 +368,7 @@ def download(args, tmpdir, runner):
     if not args.build_dir:
         raise InvalidBuildDir()
     args.out = None
-    args.mode = "image"
+    args.mode = "bootc"
     exports = []
 
     outputdir = run_osbuild(args, tmpdir, runner, exports)
