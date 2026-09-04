@@ -281,6 +281,14 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
         # By default we use an isolated dnf cache to avoid stale caches
         cmdline += ["--cache", os.path.join(tmpdir, "dnf-cache")]
 
+    if getattr(args, "lockfile", None):
+        cmdline += ["--lockfile", args.lockfile]
+        runner.add_volume_for(args.lockfile)
+
+    if getattr(args, "generate_lockfile", None):
+        cmdline += ["--generate-lockfile", args.generate_lockfile]
+        runner.add_volume_for(args.generate_lockfile)
+
     variables_manifest = {
         "version": manifest["version"],
         "mpp-vars": manifest.get("mpp-vars", {}),
@@ -355,6 +363,9 @@ def get_osbuild_state_dir(builddir):
 
 
 def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
+    if getattr(args, "lockfile", None) and not os.path.exists(args.lockfile):
+        raise exceptions.AIBException(f"Lockfile not found: {args.lockfile}")
+
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     if args.osbuild_manifest:
         osbuild_manifest = args.osbuild_manifest

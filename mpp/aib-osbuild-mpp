@@ -628,6 +628,39 @@ class PkgInfo:
     def __str__(self):
         return self.nevra
 
+    def to_dict(self):
+        data = {
+            "checksum": self.checksum,
+            "name": self.name,
+            "evr": self.evr,
+            "arch": self.arch,
+            "url": self.url,
+            "license": self.license_tag,
+            "summary": self.summary,
+            "sourcerpm": self.sourcerpm,
+            "buildtime": self.buildtime,
+            "vendor": self.vendor,
+            "secrets": self.secrets,
+        }
+        return {k: v for k, v in data.items() if v is not None}
+
+    @classmethod
+    def from_dict(cls, data):
+        pkg = cls(
+            checksum=data["checksum"],
+            name=data["name"],
+            evr=data["evr"],
+            arch=data["arch"],
+            license_tag=data.get("license"),
+            summary=data.get("summary"),
+            sourcerpm=data.get("sourcerpm"),
+            buildtime=data.get("buildtime"),
+            vendor=data.get("vendor"),
+        )
+        pkg.url = data.get("url")
+        pkg.secrets = data.get("secrets")
+        return pkg
+
 
 class PacmanSolver():
 
@@ -738,18 +771,14 @@ class OsbuildSolver:
         self._root_dir = root_dir
         # Only detect releasever from root_dir if not explicitly provided.
         # If neither is set, use None - repos must have explicit URLs without $releasever.
-        if releasever:
-            self._releasever = releasever
-        elif root_dir:
-            self._releasever = self._get_releasever(root_dir)
-        else:
-            self._releasever = None
+        self._releasever = self.resolve_releasever(releasever, root_dir)
         self._repo_descs = []
 
     def add_repo(self, desc, baseurl):
         self._repo_descs.append((desc, baseurl))
 
-    def _get_releasever(self, root_dir):
+    @staticmethod
+    def _get_releasever(root_dir):
         os_release_path = os.path.join(root_dir, "etc/os-release")
         try:
             with open(os_release_path, encoding="utf-8") as f:
@@ -759,6 +788,14 @@ class OsbuildSolver:
         except OSError:
             pass
         return ""
+
+    @classmethod
+    def resolve_releasever(cls, releasever, root_dir):
+        if releasever:
+            return releasever
+        if root_dir:
+            return cls._get_releasever(root_dir)
+        return None
 
     _SUPPORTED_REPO_KEYS = {
         "id", "baseurl", "metalink", "mirrorlist", "gpgcheck",
@@ -1156,6 +1193,8 @@ class ManifestFile:
         self.source_urls = {}
         self.format_stack = []
         self.solver_factory = None
+        self.lockfile_data = None
+        self.lockfile_output = None
 
         self.vars = default_vars.copy()
         self.overrides = overrides
@@ -1218,6 +1257,122 @@ class ManifestFile:
         with f:
             return ManifestFile.load_from_fd(f, fullpath, self.overrides, self.vars, self.searchdirs)
 
+    # Drop host-specific paths and standalone repo credentials. Resolved URLs
+    # remain usable and lockfile generation warns if they contain passwords.
+    _LOCK_DROP_FIELDS = frozenset({
+        "root-dir", "sslclientkey", "sslclientcert", "sslcacert",
+        "username", "password",
+    })
+
+    @staticmethod
+    def _lock_omit_none(obj):
+        if isinstance(obj, dict):
+            return {k: ManifestFile._lock_omit_none(v)
+                    for k, v in obj.items() if v is not None}
+        if isinstance(obj, list):
+            return [ManifestFile._lock_omit_none(i) for i in obj]
+        return obj
+
+    @classmethod
+    def _lock_sanitize_request(cls, descriptor):
+        def _strip(obj):
+            if isinstance(obj, dict):
+                out = {}
+                for k, v in obj.items():
+                    if k in cls._LOCK_DROP_FIELDS or v is None:
+                        continue
+                    out[k] = _strip(v)
+                return out
+            if isinstance(obj, list):
+                return [_strip(i) for i in obj]
+            return obj
+        return _strip(descriptor)
+
+    @staticmethod
+    def _lock_contains_password(obj):
+        if isinstance(obj, dict):
+            return any(
+                (k.lower() in {"password", "passwd"} and v is not None)
+                or ManifestFile._lock_contains_password(v)
+                for k, v in obj.items()
+            )
+        if isinstance(obj, list):
+            return any(ManifestFile._lock_contains_password(i) for i in obj)
+        if isinstance(obj, str):
+            try:
+                parsed = urllib.parse.urlparse(obj)
+                if parsed.password is not None:
+                    return True
+                return any(
+                    k.lower() in {"password", "passwd"}
+                    for k, _v in urllib.parse.parse_qsl(parsed.query)
+                )
+            except ValueError:
+                return False
+        return False
+
+    @classmethod
+    def _lock_warn_passwords(cls, lockfile, path):
+        if cls._lock_contains_password(lockfile):
+            print(
+                f"WARNING: lockfile {path!r} contains embedded passwords; "
+                "store it securely.",
+                file=sys.stderr,
+            )
+
+    @classmethod
+    def _lock_key(cls, descriptor):
+        normalized = cls._lock_sanitize_request(descriptor)
+        canonical = json.dumps(normalized, sort_keys=True, ensure_ascii=True)
+        return hashlib.sha256(canonical.encode()).hexdigest()
+
+    @classmethod
+    def _lock_container_request(cls, image, oci_arch, ostype):
+        return cls._lock_sanitize_request({
+            "source": image["source"],
+            "tag": image.get("tag"),
+            "digest": image.get("digest"),
+            "arch": oci_arch,
+            "os": ostype,
+            "variant": image.get("variant"),
+            "transport": image.get("containers-transport"),
+            "index": image.get("index", False),
+        })
+
+    def _lock_read(self, section, key, label, current_request=None):
+        if not self.lockfile_data:
+            return None
+        entries = self.lockfile_data.get(section, {})
+        if key in entries:
+            print(f"Using locked {label}", file=sys.stderr)
+            return entries[key]
+        msg = f"Lockfile miss for {label} (key {key})."
+        if current_request and entries:
+            safe_request = self._lock_sanitize_request(current_request)
+            safe_entries = {lk: self._lock_sanitize_request(lv.get("request", {}))
+                           for lk, lv in entries.items()}
+            nearest_key = min(safe_entries, key=lambda lk: sum(
+                1 for k in set(safe_entries[lk]) | set(safe_request)
+                if safe_entries[lk].get(k) != safe_request.get(k)
+            ))
+            stored = safe_entries[nearest_key]
+            diffs = []
+            for k in sorted(set(stored) | set(safe_request)):
+                sv = stored.get(k, "<absent>")
+                cv = safe_request.get(k, "<absent>")
+                if sv != cv:
+                    diffs.append(f"  {k}: lock={sv!r} vs current={cv!r}")
+            if diffs:
+                msg += f"\n  Nearest entry (key {nearest_key}) differs:\n" + "\n".join(diffs)
+        msg += "\nRe-run `aib resolve` to update the lockfile."
+        raise RuntimeError(msg)
+
+    def _lock_write(self, section, key, entry):
+        if self.lockfile_output is None:
+            return
+        entries = self.lockfile_output.setdefault(section, {})
+        entries[key] = self._lock_omit_none(entry)
+
     def depsolve(self, desc: Dict):
         repos = desc.get("repos", [])
         packages = desc.get("packages", [])
@@ -1227,10 +1382,21 @@ class ManifestFile:
         releasever = desc.get("releasever")
         root_dir = desc.get("root-dir")
         enabled_repo_ids = desc.get("enabled-repo-ids")
-        solver = self.solver_factory.get_depsolver(desc.get("solver", "dnf"))
 
         if not packages:
             return []
+
+        releasever = OsbuildSolver.resolve_releasever(releasever, root_dir)
+        lock_request = dict(desc, releasever=releasever)
+        lock_key = self._lock_key(lock_request)
+
+        locked = self._lock_read("depsolves", lock_key,
+                                 f"depsolve ({len(packages)} packages, {arch})",
+                                 current_request=lock_request)
+        if locked:
+            return [PkgInfo.from_dict(entry) for entry in locked["packages"]]
+
+        solver = self.solver_factory.get_depsolver(desc.get("solver", "dnf"))
 
         module_platform_id = desc["module-platform-id"]
         ignore_weak_deps = bool(desc.get("ignore-weak-deps"))
@@ -1241,7 +1407,14 @@ class ManifestFile:
         for repo in repos:
             solver.add_repo(repo, baseurl)
 
-        return solver.resolve(packages, excludes, enabled_repo_ids=enabled_repo_ids)
+        deps = solver.resolve(packages, excludes, enabled_repo_ids=enabled_repo_ids)
+
+        self._lock_write("depsolves", lock_key, {
+            "request": self._lock_sanitize_request(lock_request),
+            "packages": [dep.to_dict() for dep in deps],
+        })
+
+        return deps
 
     def add_packages(self, deps, pipeline_name):
         checksums = []
@@ -1668,12 +1841,21 @@ class ManifestFileV2(ManifestFile):
                 with f:
                     data = f.read()
             elif url:
-                response = urllib.request.urlopen(url)
-                if hasattr(hashlib, "file_digest"):
-                    h = hashlib.file_digest(response.fp, 'sha256')
-                    checksum = h.hexdigest()
+                lock_key = self._lock_key({"url": url})
+                locked = self._lock_read(
+                    "embedded_files", lock_key, f"embedded file {uid}"
+                )
+                if locked:
+                    checksum = locked["checksum"]
                 else:
-                    data = response.fp.read()
+                    h = hashlib.sha256()
+                    with urllib.request.urlopen(url) as response:
+                        for chunk in iter(lambda: response.read(1024 * 1024), b""):
+                            h.update(chunk)
+                    checksum = h.hexdigest()
+                    self._lock_write(
+                        "embedded_files", lock_key, {"checksum": checksum}
+                    )
             else:
                 data = bytes(text, "utf-8")
 
@@ -1754,8 +1936,6 @@ class ManifestFileV2(ManifestFile):
             # the installed container will be source:tag.
             name = image.get("name", f"{source}:{tag}" if tag else source)
 
-            main_manifest = ImageManifest.load(source, tag=tag, digest=digest, transport=transport)
-
             ostype = image.get("os", "linux")
 
             default_rpm_arch = self.get_vars()["arch"]
@@ -1764,16 +1944,41 @@ class ManifestFileV2(ManifestFile):
 
             variant = image.get("variant", None)
 
-            resolved_manifest = main_manifest.resolve_list(oci_arch, ostype, variant, transport)
+            container_desc = self._lock_container_request(image, oci_arch, ostype)
+            container_lock_key = self._lock_key(container_desc)
 
-            image_id = resolved_manifest.get_config_digest()
+            locked = self._lock_read("containers", container_lock_key,
+                                     f"container {source}:{tag or 'latest'} ({oci_arch})",
+                                     current_request=container_desc)
+            if locked:
+                image_id = locked["config_digest"]
+                resolved_digest = locked["manifest_digest"]
+                main_manifest_digest = locked.get("index_digest")
+                if index and not main_manifest_digest:
+                    raise RuntimeError(
+                        f"Container {source} requires index but lockfile has no "
+                        f"index_digest. Re-run `aib resolve`."
+                    )
+            else:
+                main_manifest = ImageManifest.load(source, tag=tag, digest=digest, transport=transport)
+                resolved_manifest = main_manifest.resolve_list(oci_arch, ostype, variant, transport)
+                image_id = resolved_manifest.get_config_digest()
+                resolved_digest = resolved_manifest.digest
+                main_manifest_digest = main_manifest.digest
+
+                self._lock_write("containers", container_lock_key, {
+                    "request": container_desc,
+                    "config_digest": image_id,
+                    "manifest_digest": resolved_digest,
+                    "index_digest": main_manifest_digest if index else None,
+                })
 
             container_image_source = element_enter(self.sources, "org.osbuild.skopeo", {})
             items = element_enter(container_image_source, "items", {})
             items[image_id] = {
                 "image": {
                     "name": source,
-                    "digest": resolved_manifest.digest,
+                    "digest": resolved_digest,
                 }
             }
             if transport:
@@ -1783,11 +1988,11 @@ class ManifestFileV2(ManifestFile):
                 "name": name
             }
 
-            if index:
-                manifest_lists.append(main_manifest.digest)
+            if index and main_manifest_digest:
+                manifest_lists.append(main_manifest_digest)
                 container_index_source = element_enter(self.sources, "org.osbuild.skopeo-index", {})
                 index_items = element_enter(container_index_source, "items", {})
-                index_items[main_manifest.digest] = {
+                index_items[main_manifest_digest] = {
                     "image": {
                         "name": source
                     }
@@ -1840,20 +2045,35 @@ class ManifestFileV2(ManifestFile):
             # then just re-use source ref.
             target = commit.get("target", ref)
 
-            with tempfile.TemporaryDirectory() as tmprepo:
-                ostree.cli("init", mode="archive", repo=tmprepo)
-                # This is a temporary repo so we'll just use a random name
-                remote_name = "tmpremote"
-                ostree.setup_remote(tmprepo, remote_name, remote)
-                ostree.cli("pull", "--commit-metadata-only",
-                           "--mirror", remote_name, ref, repo=tmprepo)
-                checksum = ostree.rev_parse(tmprepo, ref)
-                items[checksum] = {
-                    "remote": remote
-                }
-                refs[checksum] = {
-                    "ref": target
-                }
+            ostree_desc = {"remote": remote, "ref": ref}
+            ostree_lock_key = self._lock_key(ostree_desc)
+
+            locked = self._lock_read("ostree_commits", ostree_lock_key,
+                                     f"ostree {remote} {ref}",
+                                     current_request=ostree_desc)
+            if locked:
+                checksum = locked["checksum"]
+            else:
+                with tempfile.TemporaryDirectory() as tmprepo:
+                    ostree.cli("init", mode="archive", repo=tmprepo)
+                    # This is a temporary repo so we'll just use a random name
+                    remote_name = "tmpremote"
+                    ostree.setup_remote(tmprepo, remote_name, remote)
+                    ostree.cli("pull", "--commit-metadata-only",
+                               "--mirror", remote_name, ref, repo=tmprepo)
+                    checksum = ostree.rev_parse(tmprepo, ref)
+
+                self._lock_write("ostree_commits", ostree_lock_key, {
+                    "request": self._lock_sanitize_request(ostree_desc),
+                    "checksum": checksum,
+                })
+
+            items[checksum] = {
+                "remote": remote
+            }
+            refs[checksum] = {
+                "ref": target
+            }
 
 
 def main():
@@ -1888,6 +2108,20 @@ def main():
         help="Set/Override variable, format is key=Json"
     )
     parser.add_argument(
+        "--lockfile",
+        dest="lockfile",
+        metavar="PATH",
+        default=None,
+        help="Use a lockfile to skip dependency resolution",
+    )
+    parser.add_argument(
+        "--generate-lockfile",
+        dest="generate_lockfile",
+        metavar="PATH",
+        default=None,
+        help="Generate a lockfile from resolved dependencies",
+    )
+    parser.add_argument(
         "src",
         metavar="SRCPATH",
         help="Input manifest",
@@ -1917,6 +2151,20 @@ def main():
 
     m = ManifestFile.load(args.src, overrides, defaults, args.searchdirs)
 
+    if args.lockfile:
+        with open(args.lockfile, encoding="utf8") as f:
+            m.lockfile_data = json.load(f)
+        lock_ver = m.lockfile_data.get("version")
+        if lock_ver != 1:
+            print(f"ERROR: unsupported lockfile version {lock_ver} (expected 1)",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    if args.generate_lockfile:
+        m.lockfile_output = {
+            "version": 1,
+        }
+
     cachedir = args.cachedir
     if cachedir is None:
         cachedir = os.getenv("OSBUILD_MPP_CACHEDIR")
@@ -1930,6 +2178,11 @@ def main():
         m.solver_factory = DepSolverFactory(cachedir, persistdir)
         m.process_format()
         m.solver_factory = None
+
+    if args.generate_lockfile and m.lockfile_output is not None:
+        m._lock_warn_passwords(m.lockfile_output, args.generate_lockfile)
+        with open(args.generate_lockfile, "w", encoding="utf8") as f:
+            json.dump(m.lockfile_output, f, indent=2, sort_keys=True)
 
     with sys.stdout if args.dst == "-" else open(args.dst, "w", encoding="utf8") as f:
         m.write(f, args.sort_keys)
