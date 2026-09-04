@@ -225,7 +225,11 @@ mpp-vars:
     biospart: fac7f1fb-3e8d-4137-a512-961de09a5549
     rootpart: 6264d520-3fb9-423f-8ab8-7a0a8e3d3562
     luks: aedd1eef-f24e-425e-a9f3-bb5a1c996a95
-  use_module_sig_enforce: true
+
+  # Disable for mutable images
+  use_module_sig_enforce:
+    mpp-eval: image_mode != 'package'
+
   use_efi_runtime: true
   # Policy variables - default to empty/false when no policy is applied
   policy_require_boot_check: false
