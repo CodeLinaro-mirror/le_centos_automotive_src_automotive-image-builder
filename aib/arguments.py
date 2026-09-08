@@ -19,11 +19,11 @@ from typing import Callable, List, Dict, Any
 from enum import Enum
 from pathlib import Path
 
-from .podman import ContainerState
+from .execmode import ExecMode
 from .utils import DiskFormat
 from .version import get_version
 from . import log
-from .globals import default_distro, default_container_image_name
+from .globals import default_distro
 
 
 def aib_build_container_name(distro):
@@ -179,7 +179,7 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
     # SUPPRESS prevents subparsers from setting a default value, which would otherwise
     # overwrite any value already captured by the main parser. This allows shareable
     # arguments to work both before and after subcommands (e.g., both
-    # `aib --container build ...` and `aib build --container ...`)
+    # `aib --container-storage foo build ...` and `aib build --container-storage foo ...`)
     if suppress_default:
         default = argparse.SUPPRESS
     elif t == "bool":
@@ -196,8 +196,9 @@ def add_arg(parser, groups, name, data, suppress_default=False, suppress_help=Fa
     if t == "bool":
         a = dst.add_argument(*names, default=default, action="store_true")
     elif t == "bool-optional":
-        # bool-optional doesn't need suppress_default handling
-        a = dst.add_argument(*names, action=argparse.BooleanOptionalAction)
+        a = dst.add_argument(
+            *names, action=argparse.BooleanOptionalAction, default=default
+        )
     elif t == "diskformat":
         a = dst.add_argument(
             *names,
@@ -305,6 +306,15 @@ GLOBAL_ARGS = {
 # Arguments for all subcommands
 COMMON_ARGS = {
     "--verbose": {"help": "Print verbose output"},
+    "--sudo": {
+        "type": "bool-optional",
+        "default": True,
+        "help": (
+            "When not running as root, use sudo for privileged build steps "
+            "(default). --no-sudo instead runs them rootless. Ignored when "
+            "already root or inside a container."
+        ),
+    },
     "--volume": {
         "type": "append",
         "metavar": "PATH",
@@ -318,22 +328,11 @@ COMMON_ARGS = {
 # Shareable argument groups that can be used before or after subcommands (for historical reasons)
 SHAREABLE_ARGS = {
     "container": {
-        "--container": "Run build commands in a container (see --container-image)",
-        "--user-container": "Use rootless containerized build",
         "--container-storage": {
             "type": "path",
             "help": "Use custom container storage directory for input/output",
             "default-env": "AIB_CONTAINER_STORAGE",
         },
-        "--container-image": {
-            "type": "str",
-            "metavar": "IMAGE",
-            "default-env": "AIB_CONTAINER_IMAGE",
-            "default": default_container_image_name,
-            "help": f"Container image user for --container (default: {default_container_image_name})",
-            "aliases": ["--container-image-name"],
-        },
-        "--container-autoupdate": "Automatically pull new container image if available",
     },
     "include": {
         "--include": {
@@ -552,9 +551,11 @@ def parse_args(args, prog="aib"):
 
     res = parser.parse_args(args)
 
-    # Default to --vm for --user-container and if running in rootless container, because
-    # this is the only way those would ever work anyway.
+    mode = ExecMode.resolve(getattr(res, "sudo", True))
+
+    # Default to --vm in the rootless modes, because building a disk image is
+    # otherwise impossible there.
     if "vm" in res and res.vm is None:
-        res.vm = res.user_container or ContainerState.query().in_rootless_container
+        res.vm = mode.force_in_vm
 
     return res

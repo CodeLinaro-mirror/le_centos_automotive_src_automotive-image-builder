@@ -11,6 +11,7 @@ from .utils import (
     detect_initrd_compression,
     create_cpio_archive,
 )
+from .execmode import ContainerState, ExecMode
 from . import log
 from .exceptions import (
     PodmanCommandFailed,
@@ -28,21 +29,8 @@ def run_cmd(
     stderr_pipe=None,
     check=False,
 ):
-    allowed_env_vars = [
-        "REGISTRY_AUTH_FILE",
-        "CONTAINERS_CONF",
-        "CONTAINERS_REGISTRIES_CONF",
-        "CONTAINERS_STORAGE_CONF",
-    ]
-
-    if with_sudo and os.getuid() != 0:
-        sudo_path = shutil.which("sudo")
-        if sudo_path is None:
-            raise FileNotFoundError("sudo command not found in PATH")
-        cmdline = [
-            sudo_path,
-            "--preserve-env={}".format(",".join(allowed_env_vars)),
-        ] + args
+    if with_sudo:
+        cmdline = ExecMode.current().run_prefix + args
     else:
         cmdline = args
 
@@ -118,10 +106,16 @@ def run_podman_cmd(
 
 
 class ContainerStorage:
-    def __init__(self, storage=None, tmpdir="/tmp", user_container=False):
-        state = ContainerState.query()
+    """This tracks the location of the container storage that is used
+    to consume and store built images. By default it is standard
+    location, but it can be overridden by --container-store There is
+    also various helper functions that makes it possible to override
+    the container storage used in tool that we need to call. Some work
+    for some tools, others for other.
+    """
 
-        if state.in_rootless_container:
+    def __init__(self, storage=None, tmpdir="/tmp"):
+        if ContainerState.query().in_rootless_container:
             # Typically we in a rootless container the user store is
             # mapped at /var/lib/containers/storage and we have to explicitly
             # name it or podman fails with an error of it being in the wrong place.
@@ -131,7 +125,7 @@ class ContainerStorage:
             self.runroot = f"/run/user/{uid}/containers"
             self.driver = "overlay"
         else:
-            self.with_sudo = not user_container
+            self.with_sudo = ExecMode.current().uses_sudo
             state = ContainerStorageState.query(self.with_sudo)
             self.storage = state.graphroot
             self.runroot = state.runroot
@@ -147,7 +141,7 @@ class ContainerStorage:
 
     @classmethod
     def from_args(cls, args, tmpdir):
-        return ContainerStorage(args.container_storage, tmpdir, args.user_container)
+        return ContainerStorage(args.container_storage, tmpdir)
 
     def args(self):
         return [
@@ -163,6 +157,12 @@ class ContainerStorage:
         return f"containers-storage:[{self.driver}@{self.storage}+{self.runroot}]{image_name}"
 
     def get_config_path(self):
+        """This returns the path to a config file that sets graphroot/runroot to an empty writable
+        location, with the storage as an additional iamge store. This is useful for code that
+        respects CONTAINERS_STORAGE_CONF and handles additional image stores. The use of an
+        additional image store is useful, because podman sometimes dislikes when storage is
+        accessed via a different path, which often happens when mounting the user storage
+        at /var/lib/containers inside rootless containers."""
         if self.config_path is None:
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -190,6 +190,14 @@ class ContainerStorage:
 
         return self.config_path
 
+    def get_override_env(self):
+        """This returns the env variables CONTAINERS_GRAPHROOT/RUNROOT
+        that podman unshare also sets, and some tools respect"""
+        return [
+            f"CONTAINERS_GRAPHROOT={self.storage}",
+            f"CONTAINERS_RUNROOT={self.runroot}",
+        ]
+
     def __str__(self):
         parts = []
         parts.append(f"storage={self.storage}")
@@ -204,11 +212,8 @@ class PodmanImageMount:
     def __init__(self, storage, image, writable=False, commit_image=None):
         self.storage = storage
         self.podman = storage.podman()
-        state = ContainerState.query()
         self.unshared = (
-            []
-            if storage.with_sudo or state.in_rootless_container
-            else ["podman", "unshare"]
+            ["podman", "unshare"] if ExecMode.current().podman_needs_unshare else []
         )
         self.unshared_podman = self.unshared + self.podman
         self.with_sudo = storage.with_sudo
@@ -479,7 +484,6 @@ def podman_bootc_inject_pubkey(
     dest_container,
     pub_key,
     build_container,
-    user_container,
     verbose,
 ):
     with tempfile.TemporaryDirectory(prefix="initrd-append-") as td:
@@ -514,7 +518,7 @@ def podman_bootc_inject_pubkey(
                 ],
                 storage=storage,
                 check=True,
-                with_sudo=not user_container,
+                with_sudo=storage.with_sudo,
                 stdout_pipe=None if verbose else subprocess.DEVNULL,
             )
 
@@ -568,7 +572,7 @@ def podman_bootc_inject_pubkey(
                     ],
                     check=True,
                     cmd_prefix=mount.unshared,
-                    with_sudo=not user_container,
+                    with_sudo=storage.with_sudo,
                     storage=storage,
                     stdout_pipe=None if verbose else subprocess.DEVNULL,
                 )
@@ -619,33 +623,3 @@ class ContainerStorageState:
             if not cls._cache_nosudo:
                 cls._cache_nosudo = cls(with_sudo)
             return cls._cache_nosudo
-
-
-class ContainerState:
-    _cache = None
-
-    def __init__(self):
-        self.in_container = False
-        self.in_rootless_container = False
-
-        p = Path("/run/.containerenv")
-        if p.exists():
-            self.in_container = True
-            with p.open("r") as f:
-                for line in f.read().splitlines():
-                    if line == "rootless=1":
-                        self.in_rootless_container = True
-                        break
-
-    def __str__(self):
-        state_parts = [
-            f"in_container={self.in_container}",
-            f"in_rootless_container={self.in_rootless_container}",
-        ]
-        return f"ContainerState({', '.join(state_parts)})"
-
-    @classmethod
-    def query(cls):
-        if not cls._cache:
-            cls._cache = cls()
-        return cls._cache

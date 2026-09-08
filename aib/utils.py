@@ -13,6 +13,8 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Optional
 
+from .execmode import ExecMode
+
 
 class _Statfs(ctypes.Structure):
     _fields_ = [("f_type", ctypes.c_long), ("_pad", ctypes.c_byte * 512)]
@@ -66,7 +68,7 @@ def extract_comment_header(file):
     return "\n".join(lines)
 
 
-def get_osbuild_major_version(runner, use_container):
+def get_osbuild_major_version(runner):
     osbuild_version = runner.run_as_user(
         ["/usr/bin/osbuild", "--version"],
         capture_output=True,
@@ -352,26 +354,21 @@ class SudoTemporaryDirectory:
         # Require minimum length to avoid deleting very short critical paths
         return len(str(rp)) > len(str(self._base)) + 3
 
+    def _reap_prefix(self):
+        return ExecMode.current().reap_prefix if self._use_sudo else []
+
     def _unmount_subdirs(self, path):
         """Find and unmount any mountpoints under the given directory."""
-        mountpoints = find_mountpoints_under(path)
+        prefix = self._reap_prefix()
 
-        for mount_point in mountpoints:
+        for mount_point in find_mountpoints_under(path):
             try:
-                if self._use_sudo and os.getuid() != 0:
-                    subprocess.run(
-                        ["sudo", "umount", mount_point],
-                        check=False,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-                else:
-                    subprocess.run(
-                        ["umount", mount_point],
-                        check=False,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
+                subprocess.run(
+                    prefix + ["umount", mount_point],
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
             except Exception:
                 pass
 
@@ -394,11 +391,13 @@ class SudoTemporaryDirectory:
         except (OSError, PermissionError) as e:
             last_err = e
 
-        # Optionally try sudo fallback
-        if self._use_sudo and self._is_safe_to_delete(p):
+        # Fall back to a privileged helper (sudo, or `podman unshare` when
+        # rootless) for files owned by root or mapped subuids.
+        prefix = self._reap_prefix()
+        if prefix and self._is_safe_to_delete(p):
             try:
                 subprocess.run(
-                    ["sudo", "rm", "-rf", "--", str(p)],
+                    prefix + ["rm", "-rf", "--", str(p)],
                     check=True,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
@@ -744,9 +743,8 @@ class DiskFormat(Enum):
 
     def convert_image(self, runner, src, dest):
         if self.convert:
-            runner.run_in_container(self.convert + [src, dest], need_selinux_privs=True)
-            if runner.container_needs_root:
-                runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", dest])
+            runner.run_as_root(self.convert + [src, dest])
+            runner.run_as_root(["chown", f"{os.getuid()}:{os.getgid()}", dest])
         else:
             if self == DiskFormat.SIMG:
                 convert_to_simg(src, dest)

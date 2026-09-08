@@ -11,10 +11,10 @@ from aib.arguments import parse_args, parse_root_password, RootPasswordOptionPre
     [
         (
             "build",
-            "--container",
-            [],
+            "--container-storage",
+            ["/some/storage"],
             ["--target", "qemu", "test.mpp.yml", "output"],
-            True,
+            "/some/storage",
         ),
         (
             "build",
@@ -29,7 +29,7 @@ from aib.arguments import parse_args, parse_root_password, RootPasswordOptionPre
 def test_args_work_before_and_after_subcommands(
     arg_before_subcommand, subcommand, arg_name, arg_value, extra_args, expected_value
 ):
-    """Test that --container, and --include work both before and after subcommands."""
+    """Test that --container-storage, and --include work both before and after subcommands."""
     if arg_before_subcommand:
         args = [arg_name] + arg_value + [subcommand] + extra_args
     else:

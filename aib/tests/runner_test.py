@@ -5,7 +5,13 @@ import aib.main  # noqa: F401
 from aib import AIBParameters
 from aib import exceptions
 from aib.arguments import parse_args
+from aib.execmode import ExecMode, Privilege
 from aib.runner import Runner
+
+
+def set_sudo(runner, use_sudo):
+    runner.mode = ExecMode(Privilege.SUDO if use_sudo else Privilege.ROOT)
+
 
 BASE_DIR = "/usr/lib/automotive-image-builder"
 
@@ -23,33 +29,22 @@ class ListNotContaining(str):
         return True
 
 
-def args_for(use_container, use_user_container):
-    args = []
-    if use_container:
-        args.append("--container")
-    if use_user_container:
-        args.append("--user-container")
-    return args
-
-
-@pytest.mark.parametrize("use_sudo_for_root", [True, False])
-@pytest.mark.parametrize(
-    "use_container,use_user_container", [(False, False), (True, False), (False, True)]
-)
-@patch("aib.runner.subprocess")
-def test_run_args_root(
-    subprocess_mock, use_sudo_for_root, use_container, use_user_container
-):
-    subprocess_run = MagicMock()
-    subprocess_mock.run = subprocess_run
-    args = args_for(use_container, use_user_container)
-    runner = Runner(
+def make_runner(args=None):
+    return Runner(
         AIBParameters(
-            parse_args(args),
+            parse_args(args or []),
             base_dir=BASE_DIR,
         )
     )
-    runner.use_sudo_for_root = use_sudo_for_root
+
+
+@pytest.mark.parametrize("use_sudo_for_root", [True, False])
+@patch("aib.runner.subprocess")
+def test_run_args_root(subprocess_mock, use_sudo_for_root):
+    subprocess_run = MagicMock()
+    subprocess_mock.run = subprocess_run
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
@@ -62,93 +57,59 @@ def test_run_args_root(
 
 
 @pytest.mark.parametrize("use_sudo_for_root", [True, False])
-@pytest.mark.parametrize(
-    "use_container,use_user_container", [(False, False), (True, False), (False, True)]
-)
 @pytest.mark.parametrize("verbose", [True, False])
 @patch("aib.runner.subprocess")
 def test_run_args_container_without_progress_no_capture(
     subprocess_mock,
     use_sudo_for_root,
-    use_container,
-    use_user_container,
     verbose,
 ):
-    """Test run_in_container without progress and without capturing output."""
+    """Test run_as_root without progress and without capturing output."""
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
 
-    args = args_for(use_container, use_user_container)
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
-    runner.use_sudo_for_root = use_sudo_for_root
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(cmd, progress=False, capture_output=False, verbose=verbose)
+    runner.run_as_root(cmd, progress=False, capture_output=False, verbose=verbose)
 
-    # When not capturing, subprocess.run should not have capture_output parameter
-    subprocess_run.assert_called_once_with(
-        (
-            ListNotContaining("podman")
-            if not (use_container or use_user_container)
-            else AnyListContaining("podman")
-        ),
-        check=True,
-    )
+    subprocess_run.assert_called_once_with(ListNotContaining("podman"), check=True)
 
-    if use_sudo_for_root and not use_user_container:
+    if use_sudo_for_root:
         subprocess_run.assert_called_once_with(AnyListContaining("sudo"), check=True)
     else:
         subprocess_run.assert_called_once_with(ListNotContaining("sudo"), check=True)
 
 
 @pytest.mark.parametrize("use_sudo_for_root", [True, False])
-@pytest.mark.parametrize(
-    "use_container,use_user_container", [(False, False), (True, False), (False, True)]
-)
 @pytest.mark.parametrize("verbose", [True, False])
 @patch("aib.runner.subprocess")
 def test_run_args_container_without_progress_with_capture(
     subprocess_mock,
     use_sudo_for_root,
-    use_container,
-    use_user_container,
     verbose,
 ):
-    """Test run_in_container without progress but with capturing output."""
+    """Test run_as_root without progress but with capturing output."""
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
 
-    args = args_for(use_container, use_user_container)
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
-    runner.use_sudo_for_root = use_sudo_for_root
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(cmd, progress=False, capture_output=True, verbose=verbose)
+    runner.run_as_root(cmd, progress=False, capture_output=True, verbose=verbose)
 
     # When capturing, subprocess.run should have capture_output=True
     subprocess_run.assert_called_once_with(
-        (
-            ListNotContaining("podman")
-            if not (use_container or use_user_container)
-            else AnyListContaining("podman")
-        ),
+        ListNotContaining("podman"),
         capture_output=True,
         check=True,
     )
 
-    if use_sudo_for_root and not use_user_container:
+    if use_sudo_for_root:
         subprocess_run.assert_called_once_with(
             AnyListContaining("sudo"), capture_output=True, check=True
         )
@@ -159,17 +120,12 @@ def test_run_args_container_without_progress_with_capture(
 
 
 @pytest.mark.parametrize("use_sudo_for_root", [True, False])
-@pytest.mark.parametrize(
-    "use_container,use_user_container", [(False, False), (True, False), (False, True)]
-)
 @pytest.mark.parametrize("capture_output", [True, False])
 @pytest.mark.parametrize("verbose", [True, False])
 @patch("aib.runner.OSBuildProgressMonitor")
 def test_run_args_container_with_progress(
     progress_monitor_mock,
     use_sudo_for_root,
-    use_container,
-    use_user_container,
     capture_output,
     verbose,
     tmp_path,
@@ -182,18 +138,12 @@ def test_run_args_container_with_progress(
     # Create a log file path
     log_file_path = str(tmp_path / "test.log")
 
-    args = args_for(use_container, use_user_container)
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
-    runner.use_sudo_for_root = use_sudo_for_root
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
         progress=True,
         capture_output=capture_output,
@@ -206,100 +156,65 @@ def test_run_args_container_with_progress(
         log_file=log_file_path, verbose=verbose
     )
 
-    if use_container or use_user_container:
-        monitor_instance.run.assert_called_once_with(AnyListContaining("podman"))
-    else:
-        monitor_instance.run.assert_called_once_with(ListNotContaining("podman"))
+    monitor_instance.run.assert_called_once_with(ListNotContaining("podman"))
 
-    if use_sudo_for_root and not use_user_container:
+    if use_sudo_for_root:
         monitor_instance.run.assert_called_once_with(AnyListContaining("sudo"))
     else:
         monitor_instance.run.assert_called_once_with(ListNotContaining("sudo"))
 
 
 @pytest.mark.parametrize("use_sudo_for_root", [True, False])
-@pytest.mark.parametrize(
-    "use_container,use_user_container", [(False, False), (True, False), (False, True)]
-)
 @pytest.mark.parametrize("verbose", [True, False])
 @patch("aib.runner.subprocess")
 def test_run_args_osbuild_without_progress_no_capture(
     subprocess_mock,
     use_sudo_for_root,
-    use_container,
-    use_user_container,
     verbose,
 ):
-    """Test run_in_container with osbuild privs, without progress and without capturing output."""
+    """Test run_as_root with osbuild privs, without progress and without capturing output."""
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
 
-    args = args_for(use_container, use_user_container)
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
-    runner.use_sudo_for_root = use_sudo_for_root
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
-        need_osbuild_privs=True,
         progress=False,
         capture_output=False,
         verbose=verbose,
     )
 
-    # When not capturing, subprocess.run should not have capture_output parameter
-    subprocess_run.assert_called_once_with(
-        (
-            ListNotContaining("podman")
-            if not (use_container or use_user_container)
-            else AnyListContaining("podman")
-        ),
-        check=True,
-    )
+    subprocess_run.assert_called_once_with(ListNotContaining("podman"), check=True)
 
-    if use_sudo_for_root and not use_user_container:
+    if use_sudo_for_root:
         subprocess_run.assert_called_once_with(AnyListContaining("sudo"), check=True)
     else:
         subprocess_run.assert_called_once_with(ListNotContaining("sudo"), check=True)
 
 
 @pytest.mark.parametrize("use_sudo_for_root", [True, False])
-@pytest.mark.parametrize(
-    "use_container,use_user_container", [(False, False), (True, False), (False, True)]
-)
 @pytest.mark.parametrize("verbose", [True, False])
 @patch("aib.runner.subprocess")
 def test_run_args_osbuild_without_progress_with_capture(
     subprocess_mock,
     use_sudo_for_root,
-    use_container,
-    use_user_container,
     verbose,
 ):
-    """Test run_in_container with osbuild privs, without progress but with capturing output."""
+    """Test run_as_root with osbuild privs, without progress but with capturing output."""
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
 
-    args = args_for(use_container, use_user_container)
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
-    runner.use_sudo_for_root = use_sudo_for_root
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
-        need_osbuild_privs=True,
         progress=False,
         capture_output=True,
         verbose=verbose,
@@ -307,16 +222,12 @@ def test_run_args_osbuild_without_progress_with_capture(
 
     # When capturing, subprocess.run should have capture_output=True
     subprocess_run.assert_called_once_with(
-        (
-            ListNotContaining("podman")
-            if not (use_container or use_user_container)
-            else AnyListContaining("podman")
-        ),
+        ListNotContaining("podman"),
         capture_output=True,
         check=True,
     )
 
-    if use_sudo_for_root and not use_user_container:
+    if use_sudo_for_root:
         subprocess_run.assert_called_once_with(
             AnyListContaining("sudo"), capture_output=True, check=True
         )
@@ -327,17 +238,12 @@ def test_run_args_osbuild_without_progress_with_capture(
 
 
 @pytest.mark.parametrize("use_sudo_for_root", [True, False])
-@pytest.mark.parametrize(
-    "use_container,use_user_container", [(False, False), (True, False), (False, True)]
-)
 @pytest.mark.parametrize("capture_output", [True, False])
 @pytest.mark.parametrize("verbose", [True, False])
 @patch("aib.runner.OSBuildProgressMonitor")
 def test_run_args_osbuild_with_progress(
     progress_monitor_mock,
     use_sudo_for_root,
-    use_container,
-    use_user_container,
     capture_output,
     verbose,
     tmp_path,
@@ -350,20 +256,13 @@ def test_run_args_osbuild_with_progress(
     # Create a log file path
     log_file_path = str(tmp_path / "test.log")
 
-    args = args_for(use_container, use_user_container)
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
-    runner.use_sudo_for_root = use_sudo_for_root
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
-        need_osbuild_privs=True,
         progress=True,
         capture_output=capture_output,
         verbose=verbose,
@@ -375,12 +274,9 @@ def test_run_args_osbuild_with_progress(
         log_file=log_file_path, verbose=verbose
     )
 
-    if use_container or use_user_container:
-        monitor_instance.run.assert_called_once_with(AnyListContaining("podman"))
-    else:
-        monitor_instance.run.assert_called_once_with(ListNotContaining("podman"))
+    monitor_instance.run.assert_called_once_with(ListNotContaining("podman"))
 
-    if use_sudo_for_root and not use_user_container:
+    if use_sudo_for_root:
         monitor_instance.run.assert_called_once_with(AnyListContaining("sudo"))
     else:
         monitor_instance.run.assert_called_once_with(ListNotContaining("sudo"))
@@ -404,13 +300,12 @@ def test_run_with_log_file(
     # Create a log file path
     log_file_path = str(tmp_path / "test.log")
 
-    args = args_for(False, False)
-    runner = Runner(AIBParameters(parse_args(args), base_dir=BASE_DIR))
-    runner.use_sudo_for_root = use_sudo_for_root
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
-    runner.run_in_container(
+    runner.run_as_root(
         cmd,
         progress=True,
         verbose=verbose,
@@ -427,109 +322,31 @@ def test_run_with_log_file(
 
 
 @pytest.mark.parametrize("use_sudo_for_root", [True, False])
-@pytest.mark.parametrize(
-    "use_container,use_user_container", [(False, False), (True, False), (False, True)]
-)
 @patch("aib.runner.subprocess")
-def test_run_args_user(
-    subprocess_mock, use_sudo_for_root, use_container, use_user_container
-):
+def test_run_args_user(subprocess_mock, use_sudo_for_root):
     subprocess_run = MagicMock()
     subprocess_mock.run = subprocess_run
-    args = args_for(use_container, use_user_container)
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
-    runner.use_sudo_for_root = use_sudo_for_root
+    runner = make_runner()
+    set_sudo(runner, use_sudo_for_root)
     runner.ensure_sudo = MagicMock()
 
     cmd = ["touch", "example"]
     runner.run_as_user(cmd)
 
-    # run_as_user always calls with capture_output=False (no return needed)
-    if use_container or use_user_container:
-        subprocess_run.assert_called_once_with(AnyListContaining("podman"), check=True)
-    else:
-        subprocess_run.assert_called_once_with(ListNotContaining("podman"), check=True)
-
-    if use_sudo_for_root and use_container:
-        subprocess_run.assert_called_once_with(AnyListContaining("sudo"), check=True)
-    else:
-        subprocess_run.assert_called_once_with(ListNotContaining("sudo"), check=True)
+    # run_as_user runs directly, never in a container and never as root
+    subprocess_run.assert_called_once_with(ListNotContaining("podman"), check=True)
+    subprocess_run.assert_called_once_with(ListNotContaining("sudo"), check=True)
 
 
-@pytest.mark.parametrize(
-    "container_autoupdate,use_non_root,volumes",
-    [
-        (False, False, []),
-        (False, False, ["vol1"]),
-        (False, False, ["vol1", "vol2"]),
-        (True, False, []),
-        (True, False, ["vol1"]),
-        (True, False, ["vol1", "vol2"]),
-        (False, True, []),
-        (False, True, ["vol1"]),
-        (False, True, ["vol1", "vol2"]),
-        (True, True, []),
-        (True, True, ["vol1"]),
-        (True, True, ["vol1", "vol2"]),
-    ],
-)
-def test_collect_podman_args(container_autoupdate, use_non_root, volumes):
-    args = ["--container"]
-    if container_autoupdate:
-        args += ["--container-autoupdate"]
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
-    for v in volumes:
-        runner.add_volume(v)
-    podman_args = runner._collect_podman_args(False, use_non_root, False, False, None)
-
-    index = 3
-    assert podman_args[:2] == ["--rm", "--workdir"]
-    assert podman_args[index] == "--read-only=false"
-    index = index + 1
-    # Check volumes are added
-    if podman_args[index : index + 2] == ["-v", f"{BASE_DIR}:{BASE_DIR}"]:  # noqa: E203
-        index += 2  # Due to volume sorted by path this can appear before or after the other volumes
-    for v in volumes:
-        assert podman_args[index] == "-v"
-        assert v in podman_args[index + 1] and ":" in podman_args[index + 1]
-        index += 2
-    if podman_args[index : index + 2] == ["-v", f"{BASE_DIR}:{BASE_DIR}"]:  # noqa: E203
-        index += 2  # Due to volume sorted by path this can appear before or after the other volumes
-    # Check container autoupdate
-    if container_autoupdate:
-        assert podman_args[index] == "--pull=newer"
-        index += 1
-    # Check use non root options
-    if use_non_root:
-        assert podman_args[index] == "--user"
-
-
-@pytest.mark.parametrize("use_container", [True, False])
-def test_run_in_container_progress_without_log_file_raises_exception(use_container):
-    args = ["--container"] if use_container else []
-    runner = Runner(
-        AIBParameters(
-            parse_args(args),
-            base_dir=BASE_DIR,
-        )
-    )
+def test_run_as_root_progress_without_log_file_raises_exception():
+    runner = make_runner()
     runner.ensure_sudo = MagicMock()
 
     cmd = ["osbuild", "manifest.json"]
 
     # Should raise MissingLogFile when progress=True but log_file=None
     with pytest.raises(exceptions.MissingLogFile):
-        runner.run_in_container(cmd, progress=True, log_file=None)
+        runner.run_as_root(cmd, progress=True, log_file=None)
 
 
 @patch("aib.runner.threading.Thread")
@@ -538,12 +355,10 @@ def test_ensure_sudo_success(subprocess_mock, thread_mock):
     """Test that ensure_sudo calls sudo -v and starts keepalive thread."""
     # Setup
     args = MagicMock()
-    args.container = False
-    args.user_container = False
     args.include_dirs = []
 
     runner = Runner(args)
-    runner.use_sudo_for_root = True
+    set_sudo(runner, True)
 
     # Execution
     runner.ensure_sudo()
@@ -562,12 +377,10 @@ def test_ensure_sudo_success(subprocess_mock, thread_mock):
 def test_ensure_sudo_already_running():
     """Test that ensure_sudo does nothing if keepalive thread is alive."""
     args = MagicMock()
-    args.container = False
-    args.user_container = False
     args.include_dirs = []
 
     runner = Runner(args)
-    runner.use_sudo_for_root = True
+    set_sudo(runner, True)
 
     # Mock existing thread
     mock_thread = MagicMock()

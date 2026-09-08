@@ -144,7 +144,7 @@ def build(args, tmpdir, runner):
     if args.vm:
         in_vm.append("image")
 
-    storage = ContainerStorage(args.container_storage, tmpdir, args.user_container)
+    storage = ContainerStorage(args.container_storage, tmpdir)
 
     with run_osbuild(
         args, tmpdir, runner, exports, in_vm=in_vm, storage=storage
@@ -188,10 +188,8 @@ def main():
     args = AIBParameters(parsed_args, base_dir)
 
     runner = Runner(args)
-    runner.add_volume(os.getcwd())
 
     with SudoTemporaryDirectory(prefix="aib-", dir="/var/tmp") as tmpdir:
-        runner.add_volume(tmpdir)
         try:
             with contextlib.ExitStack() as cm:
                 args.cm = cm
