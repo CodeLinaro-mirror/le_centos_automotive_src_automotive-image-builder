@@ -22,6 +22,7 @@ import yaml
 
 from aib import exceptions
 from aib import osbuild
+from aib.runner import Runner
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -107,7 +108,7 @@ class CreateManifestReproducibleTest(unittest.TestCase):
         Parses the ``-D key=<json>`` pairs back out of the captured mpp cmdline.
         """
         args = args or self._args()
-        runner = Mock()
+        runner = Mock(spec=Runner)
         with patch.dict(os.environ, env or {}, clear=False):
             if env is not None and "SOURCE_DATE_EPOCH" not in env:
                 os.environ.pop("SOURCE_DATE_EPOCH", None)
@@ -117,6 +118,7 @@ class CreateManifestReproducibleTest(unittest.TestCase):
                 )
         runner.run_as_root.assert_called_once()
         cmdline = runner.run_as_root.call_args[0][0]
+        self.cmdline = cmdline
         defines = {}
         it = iter(cmdline)
         for tok in it:
@@ -124,6 +126,18 @@ class CreateManifestReproducibleTest(unittest.TestCase):
                 k, v = next(it).split("=", 1)
                 defines[k] = json.loads(v)
         return defines
+
+    def test_lockfile_options_are_passed_to_mpp(self):
+        args = self._args()
+        args.lockfile = "/input.lock"
+        args.generate_lockfile = "/output.lock"
+
+        self._run(args)
+
+        self.assertIn("--lockfile", self.cmdline)
+        self.assertIn("/input.lock", self.cmdline)
+        self.assertIn("--generate-lockfile", self.cmdline)
+        self.assertIn("/output.lock", self.cmdline)
 
     def test_source_date_epoch_valid(self):
         defines = self._run(env={"SOURCE_DATE_EPOCH": "1700000000"})

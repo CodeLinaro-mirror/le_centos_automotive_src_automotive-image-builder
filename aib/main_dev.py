@@ -59,7 +59,7 @@ base_dir = os.path.realpath(sys.argv[1])
 def resolve(args, tmpdir, runner):
     """Resolve external dependencies and generate a lockfile."""
     args.mode = "package"
-    storage = ContainerStorage(args.container_storage, tmpdir, args.user_container)
+    storage = ContainerStorage.from_args(args, tmpdir)
 
     src = args.simple_manifest or args.manifest
     lockfile_path = args.output or os.path.splitext(src)[0] + ".lock"
@@ -69,10 +69,9 @@ def resolve(args, tmpdir, runner):
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage)
 
-    if runner.use_container and runner.container_needs_root:
-        runner.run_as_root(
-            ["chown", f"{os.getuid()}:{os.getgid()}", args.generate_lockfile]
-        )
+    runner.run_as_root(
+        ["chown", f"{os.getuid()}:{os.getgid()}", args.generate_lockfile]
+    )
 
     log.info("Lockfile written to %s", lockfile_path)
 

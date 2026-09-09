@@ -127,10 +127,9 @@ def resolve(args, tmpdir, runner):
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage)
 
-    if runner.use_container and runner.container_needs_root:
-        runner.run_as_root(
-            ["chown", f"{os.getuid()}:{os.getgid()}", args.generate_lockfile]
-        )
+    runner.run_as_root(
+        ["chown", f"{os.getuid()}:{os.getgid()}", args.generate_lockfile]
+    )
 
     log.info("Lockfile written to %s", lockfile_path)
 
