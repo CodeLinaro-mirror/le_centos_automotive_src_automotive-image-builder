@@ -276,11 +276,9 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
 
     if getattr(args, "lockfile", None):
         cmdline += ["--lockfile", args.lockfile]
-        runner.add_volume_for(args.lockfile)
 
     if getattr(args, "generate_lockfile", None):
         cmdline += ["--generate-lockfile", args.generate_lockfile]
-        runner.add_volume_for(args.generate_lockfile)
 
     variables_manifest = {
         "version": manifest["version"],
