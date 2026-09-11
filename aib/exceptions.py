@@ -209,3 +209,10 @@ class InitramfsNotFound(AIBException):
 
     def __str__(self):
         return f"Can't find initramfs in bootc image '{self.container_name}'"
+
+
+class NotBuildByEtag(AIBException):
+    """Raised when build is not needed due to matching etag."""
+
+    def __str__(self):
+        return "Image was already built, skipping"

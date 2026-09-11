@@ -385,6 +385,17 @@ def podman_image_exists(storage, image):
     )
 
 
+def podman_image_labels(storage, image):
+    if not podman_image_exists(storage, image):
+        return {}
+    result = run_cmd(
+        storage.podman() + ["image", "inspect", "--format", "{{json .Labels}}", image],
+        capture_output=True,
+        with_sudo=storage.with_sudo,
+    )
+    return json.loads(result) or {}
+
+
 def podman_image_rm(storage, image):
     return (
         run_cmd(storage.podman() + ["image", "rm", image], with_sudo=storage.with_sudo)
