@@ -229,7 +229,7 @@ pipelines:
           os_version:
             mpp-eval: ostree_os_version
           parent:
-            mpp-if: ostree_ref in locals().get("ostree_parent_refs", {})
+            mpp-if: ostree_ref in _with_default({}).ostree_parent_refs
             then:
               mpp-eval: ostree_parent_refs[ostree_ref]
           selinux-label-version:

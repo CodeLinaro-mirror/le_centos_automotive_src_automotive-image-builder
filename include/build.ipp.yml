@@ -98,42 +98,21 @@ mpp-vars:
     attrs:
       mpp-eval: inactive_gpt_attrs
   base_partitions:
-    - mpp-if: use_sblpart
-      then:
-        mpp-eval: sbl_partition
-    - mpp-if: use_efipart
-      then:
-        mpp-eval: efi_partition
-    - mpp-if: use_bootpart
-      then:
-        mpp-eval: boot_partition
-    - mpp-if: use_abootpart
-      then:
-        mpp-eval: aboot_a_partition
-    - mpp-if: use_abootpart
-      then:
-        mpp-eval: aboot_b_partition
-    - mpp-if: use_vbmetapart
-      then:
-        mpp-eval: vbmeta_a_partition
-    - mpp-if: use_vbmetapart
-      then:
-        mpp-eval: vbmeta_b_partition
-    - mpp-if: use_ablpart
-      then:
-        mpp-eval: abl_a_partition
-    - mpp-if: use_ablpart
-      then:
-        mpp-eval: abl_b_partition
-    - mpp-if: use_ukibootpart
-      then:
-        mpp-eval: ukiboot_a_partition
-    - mpp-if: use_ukibootpart
-      then:
-        mpp-eval: ukiboot_b_partition
-    - mpp-if: use_ukibootpart
-      then:
-        mpp-eval: ukibootctl_partition
+    mpp-eval: |
+      [part for use, part in [
+          (use_sblpart, sbl_partition),
+          (use_efipart, efi_partition),
+          (use_bootpart, boot_partition),
+          (use_abootpart, aboot_a_partition),
+          (use_abootpart, aboot_b_partition),
+          (use_vbmetapart, vbmeta_a_partition),
+          (use_vbmetapart, vbmeta_b_partition),
+          (use_ablpart, abl_a_partition),
+          (use_ablpart, abl_b_partition),
+          (use_ukibootpart, ukiboot_a_partition),
+          (use_ukibootpart, ukiboot_b_partition),
+          (use_ukibootpart, ukibootctl_partition),
+      ] if use]
   separate_var_partition:
     id: var
     name: var
@@ -151,12 +130,11 @@ mpp-vars:
       mpp-eval: "partition_type_var_qm if partition_label == 'gpt' else '83'"
     uuid: $qm_varpart_uuid
   separate_var_partitions:
-    - mpp-if: _use_separate_var and _varpart_size > 0
-      then:
-        mpp-eval: separate_var_partition
-    - mpp-if: _qm_use_separate_var and _qm_varpart_size > 0
-      then:
-        mpp-eval: separate_qm_var_partition
+    mpp-eval: |
+      [part for use, part in [
+          (_use_separate_var and _varpart_size > 0, separate_var_partition),
+          (_qm_use_separate_var and _qm_varpart_size > 0, separate_qm_var_partition),
+      ] if use]
 
 mpp-define-images:
   - id: image

@@ -37,11 +37,11 @@ mpp-vars:
 
   # Note: setting [qm_]varpart_size to -1 means "use externel image with the given uuid"
   _varpart_size:
-    mpp-eval: locals().get('varpart_size', int(int(image_size) * varpart_relative_size / 512))
+    mpp-eval: _with_default(int(int(image_size) * varpart_relative_size / 512)).varpart_size
   _use_separate_var:
     mpp-eval: _varpart_size != 0
   _qm_varpart_size:
-    mpp-eval: locals().get('qm_varpart_size', int(int(image_size) * qm_varpart_relative_size / 512))
+    mpp-eval: _with_default(int(int(image_size) * qm_varpart_relative_size / 512)).qm_varpart_size
   _qm_use_separate_var:
     mpp-eval: use_qm and _qm_varpart_size != 0
   _qm_containers:
@@ -59,8 +59,7 @@ mpp-vars:
               name: $qm_wayland_compositor_name
     else: []
   ostree_os_version:
-    mpp-if: not "ostree_os_version" in locals()
-    then: $version
+    mpp-eval: _with_default(version).ostree_os_version
 
   # Compute dynamic uuids if requested, but allow override
   _compute_uuid:
@@ -137,33 +136,27 @@ mpp-vars:
     mpp-eval: use_aboot or use_ukiboot
 
   use_generate_machine_id:
-    mpp-eval: use_ostree and locals().get("use_generate_machine_id", use_transient_etc)
+    mpp-eval: use_ostree and _with_default(use_transient_etc).use_generate_machine_id
 
   # Enable as needed
   use_abootpart:
-    mpp-if: not "use_abootpart" in locals()
-    then:
-      mpp-eval: use_aboot
+    mpp-eval: _with_default(use_aboot).use_abootpart
   use_ukibootpart:
-    mpp-if: not "use_ukibootpart" in locals()
-    then:
-      mpp-eval: use_ukiboot
+    mpp-eval: _with_default(use_ukiboot).use_ukibootpart
   use_vbmetapart:
-    mpp-if: not "use_vbmetapart" in locals()
-    then:
-      mpp-eval: use_aboot
+    mpp-eval: _with_default(use_aboot).use_vbmetapart
   use_ablpart:
-    mpp-eval: locals().get('use_ablpart', False)
+    mpp-eval: _with_default(False).use_ablpart
   use_efipart:
-    mpp-if: not "use_efipart" in locals()
-    then:
-      mpp-eval: use_ukiboot
+    mpp-eval: _with_default(use_ukiboot).use_efipart
   use_efipart_mount:
     mpp-eval: use_efipart
+  use_efi_features:
+    mpp-eval: use_efipart_mount and not policy_disable_efi_features
   use_bootpart:
-    mpp-eval: locals().get('use_bootpart', False)
+    mpp-eval: _with_default(False).use_bootpart
   use_sblpart:
-    mpp-eval: locals().get('use_sblpart', False)
+    mpp-eval: _with_default(False).use_sblpart
 
   aboot_boot_type:
     mpp-eval: "'ukiboot' if use_ukiboot else aboot_boot_type"
@@ -247,7 +240,7 @@ mpp-vars:
       boot_check_qm_digest_default_per_arch[arch]
 
   _boot_check_qm_digest:
-    mpp-eval: "[] if not (policy_require_qm_digest and use_qm) else locals().get('boot_check_qm_digest', _boot_check_qm_digest_default)"
+    mpp-eval: "[] if not (policy_require_qm_digest and use_qm) else _with_default(_boot_check_qm_digest_default).boot_check_qm_digest"
 
   need_boot_check:
     mpp-eval: "use_static_ip or len(_boot_check_qm_digest) > 0"
@@ -274,12 +267,13 @@ mpp-vars:
   sign_kernel_modules:
     mpp-if: kernel_package.startswith('kernel-automotive') or kernel_package.startswith('kernel-ivos')
     then:
-      mpp-eval: locals().get('sign_kernel_modules', use_ostree)
+      mpp-eval: _with_default(use_ostree).sign_kernel_modules
     else:
-      mpp-eval: locals().get('sign_kernel_modules', False)
+      mpp-eval: _with_default(False).sign_kernel_modules
   use_kernel_debug_package:
-    mpp-if: "'debug' in locals().get('kernel_package')"
-    then: true
+    mpp-eval: "'debug' in kernel_package"
+  use_debug_build:
+    mpp-eval: use_debug or use_kernel_debug_package
   _kernel_subdir:
     mpp-eval: _kernel_evra + ("+debug" if use_kernel_debug_package else "")
   _kernel_dir:
@@ -296,10 +290,9 @@ mpp-vars:
       mpp-eval: |
         "/boot/" + _aboot_img
   systemd_timeout:
-    mpp-eval: "'180s' if use_debug or use_kernel_debug_package else systemd_timeout"
+    mpp-eval: "'180s' if use_debug_build else systemd_timeout"
   coredump_storage:
-    mpp-eval: "'external' if use_debug or use_kernel_debug_package else coredump_storage"
-  _dash_escape: "\\x2d"
+    mpp-eval: "'external' if use_debug_build else coredump_storage"
   denylist_rpms:
     mpp-join:
       - mpp-eval: denylist_rpms
@@ -313,7 +306,7 @@ mpp-vars:
       - mpp-if: is_autoinit_supported and use_autoinit
         then:
           - systemd-initrd-automotive
-          - mpp-if: use_debug or use_kernel_debug_package
+          - mpp-if: use_debug_build
             then: systemd-journal-automotive
           - mpp-if: use_repart
             then: systemd-repart
@@ -420,7 +413,7 @@ mpp-vars:
       - mpp-if: disable_ipv6
         then:
           - ipv6.disable=1
-      - mpp-if: use_debug or use_kernel_debug_package
+      - mpp-if: use_debug_build
         then:
           - ignore_loglevel
           - earlycon
@@ -437,7 +430,7 @@ mpp-vars:
               then:
                 - mount-sysroot.root=$autoinit_root
                 - mount-sysroot.rw
-            - mpp-if: use_debug or use_kernel_debug_package
+            - mpp-if: use_debug_build
               then:
                 - mount-sysroot.debug
       - mpp-if: use_module_sig_enforce
@@ -542,7 +535,7 @@ mpp-vars:
   rootpart_label:
     mpp-eval: aboot_partlabel if use_aboot else "root"
   autoinit_root:
-    mpp-eval: locals().get("autoinit_root", f"PARTLABEL={rootpart_label}")
+    mpp-eval: _with_default(f"PARTLABEL={rootpart_label}").autoinit_root
   sysroot_unit:
     mpp-if: use_autoinit
     then: mount-sysroot.service
@@ -552,11 +545,11 @@ mpp-vars:
     then: "qm"
     else: "empty"
   enable_oom_protection:
-    mpp-eval: locals().get("enable_oom_protection", use_qm)
+    mpp-eval: _with_default(use_qm).enable_oom_protection
   enable_reclaim_protection:
-    mpp-eval: locals().get("enable_reclaim_protection", use_qm)
+    mpp-eval: _with_default(use_qm).enable_reclaim_protection
   cg_memory_min:
-    mpp-eval: locals().get("cg_memory_min", 67108864)
+    mpp-eval: _with_default(67108864).cg_memory_min
   image_enabled_services:
     mpp-join:
       - mpp-eval: image_enabled_services
@@ -564,7 +557,7 @@ mpp-vars:
       - - mpp-if: tmp_is_tmpfs
           then: tmp.mount
         - rcu-normal.service
-        - mpp-if: use_efipart_mount and not policy_disable_efi_features
+        - mpp-if: use_efi_features
           then: boot-efi.mount
         - mpp-if: use_bootpart
           then: boot.mount
@@ -796,57 +789,58 @@ mpp-vars:
               boot_type:
                 mpp-eval: aboot_boot_type
               pagesize:
-                mpp-if: "locals().get('aboot_pagesize',) != None"
+                mpp-if: _var.aboot_pagesize != None
                 then:
                   mpp-format-string: "{aboot_pagesize}"
               kernel_offset:
-                mpp-if: "locals().get('aboot_kernel_offset') != None"
+                mpp-if: _var.aboot_kernel_offset != None
                 then:
                   mpp-format-string: "{aboot_kernel_offset}"
               partition_a:
-                mpp-if: "locals().get('aboot_partition_a') != None"
+                mpp-if: _var.aboot_partition_a != None
                 then:
                   mpp-format-string: "{aboot_partition_a}"
               partition_b:
-                mpp-if: "locals().get('aboot_partition_b') != None"
+                mpp-if: _var.aboot_partition_b != None
                 then:
                   mpp-format-string: "{aboot_partition_b}"
               partition_ctl:
-                mpp-if: "locals().get('partition_ctl') != None"
+                mpp-if: _var.partition_ctl != None
                 then:
                   mpp-format-string: "{partition_ctl}"
               second_offset:
-                mpp-if: "locals().get('aboot_second_offset') != None"
+                mpp-if: _var.aboot_second_offset != None
                 then:
                   mpp-format-string: "{aboot_second_offset}"
               tags_offset:
-                mpp-if: "locals().get('aboot_tags_offset') != None"
+                mpp-if: _var.aboot_tags_offset != None
                 then:
                   mpp-format-string: "{aboot_tags_offset}"
               base:
-                mpp-if: "locals().get('aboot_base') != None"
+                mpp-if: _var.aboot_base != None
                 then:
                   mpp-format-string: "{aboot_base}"
               dtb_file:
-                mpp-if: "locals().get('aboot_dtb_file') != None"
+                mpp-if: _var.aboot_dtb_file != None
                 then:
                   mpp-format-string: "{aboot_dtb_file}"
               compress_kernel:
-                mpp-if: "aboot_compress_kernel != None"
+                mpp-if: aboot_compress_kernel != None
                 then:
                   mpp-eval: aboot_compress_kernel
               ramdisk_offset:
-                mpp-if: "locals().get('aboot_ramdisk_offset') != None"
+                mpp-if: _var.aboot_ramdisk_offset != None
                 then:
                   mpp-format-string: "{aboot_ramdisk_offset}"
   image_services_skipped_on_container:
     mpp-join:
       - mpp-eval: image_services_skipped_on_container
-      - - mpp-if: use_efipart_mount and not policy_disable_efi_features
-          then: dev-disk-by\x2dlabel-ESP.device
-        - mpp-if: use_efipart_mount and not policy_disable_efi_features
+      - - mpp-if: use_efi_features
           then:
-            mpp-format-string: "dev-disk-by{_dash_escape}uuid-{qm_varfs_uuid.replace('-', _dash_escape)}.device"
+            mpp-format-string: "{_systemd_escape('dev/disk/by-label/ESP')}.device"
+        - mpp-if: use_efi_features
+          then:
+            mpp-format-string: "{_systemd_escape('dev/disk/by-uuid/' + qm_varfs_uuid)}.device"
         - mpp-if: selinux_booleans
           then: selinux-bools.service
   # Extra directories that will be created in the image, list amended by moode-*.ipp
@@ -1013,7 +1007,7 @@ mpp-vars:
           then:
             from: input://extra-tree/boot.mount
             to: tree:////usr/lib/systemd/system/boot.mount
-        - mpp-if: use_efipart_mount and not policy_disable_efi_features
+        - mpp-if: use_efi_features
           then:
             from: input://extra-tree/boot-efi.mount
             to: tree:////usr/lib/systemd/system/boot-efi.mount
