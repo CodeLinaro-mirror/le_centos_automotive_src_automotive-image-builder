@@ -349,7 +349,49 @@ def get_osbuild_state_dir(builddir):
     return os.path.join(builddir, ExecMode.current().osbuild_store_subdir)
 
 
-def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
+BUILD_DIGEST_LABEL = "io.github.centos.automotive.build-digest"
+
+
+def add_bootc_archive_labels(path, dest, labels):
+    with open(path, encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    for pipeline in manifest["pipelines"]:
+        if pipeline.get("name") != "bootc-archive":
+            continue
+        for stage in pipeline.get("stages", []):
+            if stage["type"] != "org.osbuild.ostree.encapsulate":
+                continue
+            options = stage.setdefault("options", {})
+            existing = options.get("labels", [])
+            options["labels"] = [
+                label for label in existing if label.split("=", 1)[0] not in labels
+            ] + [f"{key}={value}" for key, value in labels.items()]
+            with open(dest, "w", encoding="utf-8") as f:
+                json.dump(manifest, f, indent=2)
+            return
+
+    raise exceptions.AIBException("No bootc-archive encapsulate stage in manifest")
+
+
+class BuildETag:
+    def __init__(self, old_etag=None):
+        self.old_etag = old_etag
+        self.new_etag = None
+
+    def should_build_from_file(self, path):
+        content_hash = hashlib.sha256()
+        with open(path, "rb") as mf:
+            content_hash.update(mf.read())
+        return self.should_build(content_hash.hexdigest())
+
+    def should_build(self, new_etag):
+        do_build = self.old_etag is None or self.old_etag != new_etag
+        self.new_etag = new_etag
+        return do_build
+
+
+def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None, etag=None):
     if getattr(args, "lockfile", None) and not os.path.exists(args.lockfile):
         raise exceptions.AIBException(f"Lockfile not found: {args.lockfile}")
 
@@ -363,6 +405,15 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None):
         )
 
     create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage=storage)
+
+    if etag:
+        if not etag.should_build_from_file(osbuild_manifest):
+            raise exceptions.NotBuildByEtag()
+        labeled_manifest = os.path.join(tmpdir, "osbuild-labeled.json")
+        add_bootc_archive_labels(
+            osbuild_manifest, labeled_manifest, {BUILD_DIGEST_LABEL: etag.new_etag}
+        )
+        osbuild_manifest = labeled_manifest
 
     builddir = tmpdir
     if args.build_dir:

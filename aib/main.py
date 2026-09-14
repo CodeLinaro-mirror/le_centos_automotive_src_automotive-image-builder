@@ -23,6 +23,7 @@ from .exceptions import (
     BuildContainerNotFound,
     IncompatibleOptions,
     InvalidBuildDir,
+    NotBuildByEtag,
     UnknownSignatureType,
 )
 from . import AIBParameters
@@ -31,6 +32,7 @@ from .podman import (
     ContainerStorage,
     podman_image_exists,
     podman_image_info,
+    podman_image_labels,
     podman_bootc_inject_pubkey,
     PodmanImageMount,
     TemporaryContainer,
@@ -49,6 +51,8 @@ from .arguments import (
     CommandGroup,
 )
 from .osbuild import (
+    BuildETag,
+    BUILD_DIGEST_LABEL,
     create_osbuild_manifest,
     extract_rpmlist_json,
     run_osbuild,
@@ -374,7 +378,7 @@ def download(args, tmpdir, runner):
         BUILD_ARGS,
         {
             "--if-needed": {
-                "help": "Only build the image if its not already built.",
+                "help": "Only build the image if it is missing or its build digest changed.",
             },
             "--oci-archive": {
                 "help": "Build an oci container archive file instead of a container image",
@@ -407,18 +411,23 @@ def build_builder(args, tmpdir, runner):
     args.manifest = os.path.join(args.base_dir, "files/simple.mpp.yml")
     args.target = "qemu"
     args.mode = "bootc"
+    args.reproducible = True
 
     dest_image = args.out or aib_build_container_name(args.distro)
 
     storage = ContainerStorage.from_args(args, tmpdir)
 
-    if args.if_needed:
-        info = podman_image_info(storage, dest_image)
-        if info:
-            print(f"Image {dest_image} already exists, doing nothing.")
-            return
+    etag = BuildETag()
+    if args.if_needed and not args.oci_archive:
+        etag.old_etag = podman_image_labels(storage, dest_image).get(BUILD_DIGEST_LABEL)
 
-    with run_osbuild(args, tmpdir, runner, ["bootc-archive"]) as outputdir:
+    try:
+        outputdir = run_osbuild(args, tmpdir, runner, ["bootc-archive"], etag=etag)
+    except NotBuildByEtag:
+        print(f"Image {dest_image} is up to date, doing nothing.")
+        return
+
+    with outputdir:
         output_file = os.path.join(outputdir.name, "bootc-archive/image.oci-archive")
 
         if args.oci_archive:
