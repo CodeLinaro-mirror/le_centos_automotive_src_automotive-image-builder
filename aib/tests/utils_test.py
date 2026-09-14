@@ -6,6 +6,8 @@ from unittest.mock import Mock
 
 from aib import utils
 
+page_size = os.sysconf("SC_PAGE_SIZE")
+
 
 class TestExtractCommentsHeader(unittest.TestCase):
     def test_extract_comment_header(self):
@@ -323,13 +325,13 @@ class TestExtractPartOfFile(unittest.TestCase):
         dst = os.path.join(self.test_dir, "dest.bin")
 
         # Create sparse file: data at 0, hole, data at 1MB
-        self._create_sparse_file(src, (0, b"start"), (1024 * 1024, b"end"))
+        self._create_sparse_file(src, (0, b"a" * page_size), (1024 * 1024, b"end"))
 
         written = utils.extract_part_of_file(src, dst, 0, 1024 * 1024 + 3)
 
         # Should write data regions (rounded to block boundaries by filesystem)
         # First region: 0-4095 (block-aligned), second region: 1048576-1048578
-        self.assertEqual(written, 4096 + 3)
+        self.assertEqual(written, page_size + 3)
 
         # Check file size (should be sparse)
         self.assertEqual(os.path.getsize(dst), 1024 * 1024 + 3)
@@ -341,7 +343,7 @@ class TestExtractPartOfFile(unittest.TestCase):
 
         # Verify content
         with open(dst, "rb") as f:
-            self.assertEqual(f.read(5), b"start")
+            self.assertEqual(f.read(16), b"a" * 16)
             f.seek(1024 * 1024)
             self.assertEqual(f.read(3), b"end")
 
@@ -366,9 +368,9 @@ class TestExtractPartOfFile(unittest.TestCase):
         written = utils.extract_part_of_file(src, dst, start, size)
 
         # Should write data regions only (not holes)
-        # First region: 600 to first hole (block-aligned ~4096)
+        # First region: 600 to first hole (page-aligned ~4096)
         # Second region: 1048576 to 1048580 (5 bytes)
-        self.assertEqual(written, (4096 - 600) + 5)
+        self.assertEqual(written, (page_size - 600) + 5)
 
         # Verify destination is sparse
         dst_stat = os.stat(dst)
@@ -467,7 +469,9 @@ class TestExtractPartOfFile(unittest.TestCase):
         dst = os.path.join(self.test_dir, "dest.simg")
 
         # Create sparse file: data, hole, data
-        self._create_sparse_file(src, (0, b"A" * 8192), (1024 * 1024, b"B" * 4096))
+        self._create_sparse_file(
+            src, (0, b"A" * page_size * 2), (1024 * 1024, b"B" * page_size)
+        )
 
         utils.convert_to_simg(src, dst)
 
@@ -498,9 +502,9 @@ class TestExtractPartOfFile(unittest.TestCase):
             # Read first chunk (data)
             chunk_hdr = struct.unpack("<HHII", f.read(12))
             self.assertEqual(chunk_hdr[0], 0xCAC1)  # RAW
-            self.assertEqual(chunk_hdr[2], 2)  # 2 blocks (8192 bytes)
-            data = f.read(8192)
-            self.assertEqual(data, b"A" * 8192)
+            self.assertEqual(chunk_hdr[2], 2 * page_size / blk_sz)
+            data = f.read(page_size * 2)
+            self.assertEqual(data, b"A" * page_size * 2)
 
             # Read second chunk (hole)
             chunk_hdr = struct.unpack("<HHII", f.read(12))
@@ -510,7 +514,7 @@ class TestExtractPartOfFile(unittest.TestCase):
             # Read third chunk (data)
             chunk_hdr = struct.unpack("<HHII", f.read(12))
             self.assertEqual(chunk_hdr[0], 0xCAC1)  # RAW
-            self.assertEqual(chunk_hdr[2], 1)  # 1 block (4096 bytes)
+            self.assertEqual(chunk_hdr[2], page_size / blk_sz)
             data = f.read(4096)
             self.assertEqual(data, b"B" * 4096)
 
