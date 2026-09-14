@@ -860,6 +860,11 @@ mpp-vars:
         - path: /usr/lib/systemd/system.conf.d
           parents: true
           exist_ok: true
+        - mpp-if: use_bootc_composefs
+          then:
+            path: /usr/lib/composefs
+            parents: true
+            exist_ok: true
         - mpp-if: enable_reclaim_protection
           then:
             path: /usr/lib/systemd/system/system.slice.d
@@ -988,6 +993,10 @@ mpp-vars:
           then:
             from: input://extra-tree/ostree_prepare_root.conf
             to: tree:///usr/lib/ostree/prepare-root.conf
+        - mpp-if: use_bootc_composefs
+          then:
+            from: input://extra-tree/setup-root-conf.toml
+            to: tree:///usr/lib/composefs/setup-root-conf.toml
         - from: input://build-info/build-info
           to: tree:///etc/build-info
         - mpp-if: load_modules

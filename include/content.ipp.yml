@@ -157,6 +157,10 @@ mpp-vars:
       { "transient=true" if use_transient_etc else "" }
       [composefs]
       enabled={"maybe" if not use_ostree_composefs else "signed" if use_composefs_signed else "verity" }
+  composefs_setup_root_conf:
+    mpp-format-string: |
+      [etc]
+      mount = "{ 'transient' if use_transient_etc else 'bind' }"
   # _Lazy: build_timestamp depends on rpms[], which is filled by depsolve.
   build_info:
     mpp-eval: |
@@ -999,6 +1003,21 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['ostree_prepare_root.conf']}
               to: tree:///ostree_prepare_root.conf
+      - mpp-if: use_bootc_composefs
+        then:
+          type: org.osbuild.copy
+          inputs:
+            inlinefile:
+              type: org.osbuild.files
+              origin: org.osbuild.source
+              mpp-embed:
+                id: setup-root-conf.toml
+                text: $composefs_setup_root_conf
+          options:
+            paths:
+              - from:
+                  mpp-format-string: input://inlinefile/{embedded['setup-root-conf.toml']}
+                to: tree:///setup-root-conf.toml
       - type: org.osbuild.copy
         inputs:
           inlinefile:
