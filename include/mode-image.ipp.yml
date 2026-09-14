@@ -12,14 +12,14 @@ pipelines:
   - name: build-keys
     build: name:build
     stages:
-      - mpp-if: use_composefs
+      - mpp-if: use_ostree_composefs
         then:
           type: org.osbuild.ostree.genkey
           options:
             publickey: /build-key.pub
             secretkey: /build-key
 
-  - name: ostree-tree
+  - name: bootc-tree
     build: name:build
     stages:
       mpp-join:
@@ -87,7 +87,7 @@ pipelines:
                     mpp-if: root_ssh_keys
                     then:
                       mpp-eval: root_ssh_keys
-          - mpp-if: use_composefs
+          - mpp-if: use_ostree_composefs
             then:
               type: org.osbuild.copy
               inputs:
@@ -234,7 +234,7 @@ pipelines:
             type: org.osbuild.tree
             origin: org.osbuild.pipeline
             references:
-              - name:ostree-tree
+              - name:bootc-tree
         options:
           ref:
             mpp-eval: ostree_ref
@@ -247,7 +247,7 @@ pipelines:
           selinux-label-version:
             mpp-if: use_transient_etc
             then: 1
-      - mpp-if: use_composefs
+      - mpp-if: use_ostree_composefs
         then:
           type: org.osbuild.copy
           inputs:
@@ -262,7 +262,7 @@ pipelines:
                 to: tree:///repo/build-key.pub
               - from: input://tree/build-key
                 to: tree:///repo/build-key
-      - mpp-if: use_composefs
+      - mpp-if: use_ostree_composefs
         then:
           type: org.osbuild.ostree.sign
           options:
@@ -297,7 +297,7 @@ pipelines:
             type: org.osbuild.tree
             origin: org.osbuild.pipeline
             references:
-              - name:ostree-tree
+              - name:bootc-tree
         options:
           filename: rootfs.tar
           transform: 's,^usr/etc,etc,'

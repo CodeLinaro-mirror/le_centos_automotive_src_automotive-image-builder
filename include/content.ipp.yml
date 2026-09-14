@@ -156,7 +156,7 @@ mpp-vars:
       [etc]
       { "transient=true" if use_transient_etc else "" }
       [composefs]
-      enabled={"maybe" if not use_composefs else "signed" if use_composefs_signed else "verity" }
+      enabled={"maybe" if not use_ostree_composefs else "signed" if use_composefs_signed else "verity" }
   # _Lazy: build_timestamp depends on rpms[], which is filled by depsolve.
   build_info:
     mpp-eval: |

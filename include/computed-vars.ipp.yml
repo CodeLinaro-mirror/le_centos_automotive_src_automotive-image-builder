@@ -134,7 +134,7 @@ mpp-vars:
     mpp-eval: use_aboot or use_ukiboot
 
   use_generate_machine_id:
-    mpp-eval: use_ostree and _with_default(use_transient_etc).use_generate_machine_id
+    mpp-eval: use_bootc and _with_default(use_transient_etc).use_generate_machine_id
 
   # Enable as needed
   use_abootpart:
@@ -271,7 +271,7 @@ mpp-vars:
   sign_kernel_modules:
     mpp-if: kernel_package.startswith('kernel-automotive') or kernel_package.startswith('kernel-ivos')
     then:
-      mpp-eval: _with_default(use_ostree).sign_kernel_modules
+      mpp-eval: _with_default(use_bootc).sign_kernel_modules
     else:
       mpp-eval: _with_default(False).sign_kernel_modules
   use_kernel_debug_package:
@@ -286,7 +286,7 @@ mpp-vars:
     mpp-eval: |
       "aboot-" + _kernel_subdir + ".img"
   _boot_aboot_img:
-    mpp-if: use_ostree
+    mpp-if: use_bootc
     then:
       mpp-eval: |
         _kernel_dir + "/aboot.img"
@@ -318,6 +318,8 @@ mpp-vars:
             then: nmstate
           - mpp-if: use_generate_machine_id
             then: aib-machine-id
+          - mpp-if: use_bootc_composefs
+            then: bootc
   dracut_add_modules:
     mpp-join:
       - mpp-eval: dracut_add_modules
@@ -327,10 +329,12 @@ mpp-vars:
           then: nmstate
         - mpp-if: use_generate_machine_id
           then: aib-machine-id
+        - mpp-if: use_bootc_composefs
+          then: bootc
   dracut_add_drivers:
     mpp-join:
       - mpp-eval: dracut_add_drivers
-      - mpp-if: use_composefs
+      - mpp-if: use_ostree_composefs or use_bootc_composefs
         then:
           - erofs
           - overlay
@@ -1114,7 +1118,7 @@ mpp-vars:
           - systemd-ukify
           - systemd-boot
 
-  ostree_mode_rpms:
+  bootc_mode_rpms:
     - bootc
     - rpm
     - bubblewrap # Needed for ostree
@@ -1143,9 +1147,9 @@ mpp-vars:
       - mpp-eval: base_rpms
       - mpp-eval: arch_rpms
       - mpp-eval: target_rpms
-      - mpp-if: use_ostree
+      - mpp-if: use_bootc
         then:
-          mpp-eval: ostree_mode_rpms
+          mpp-eval: bootc_mode_rpms
         else:
           mpp-eval: package_mode_rpms
       - mpp-if: is_autoinit_supported and use_autoinit

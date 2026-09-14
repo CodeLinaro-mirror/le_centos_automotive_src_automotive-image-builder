@@ -15,10 +15,17 @@ mpp-vars:
   version: "unversioned"
 
   # Compute these from image mode early as they are needed early
-  use_ostree:
-    mpp-eval: image_mode == 'image' or image_mode == 'bootc'
+  bootc_backend: ostree
+  _check_bootc_backend:
+    mpp-eval: "_validate_enum(bootc_backend, 'bootc_backend', ['ostree', 'composefs'])"
   use_bootc:
     mpp-eval: image_mode == 'bootc'
+  use_ostree:
+    mpp-eval: use_bootc and bootc_backend == 'ostree'
+  use_bootc_composefs:
+    mpp-eval: use_bootc and bootc_backend == 'composefs'
+  use_ostree_composefs: # Override to use traditional ostree
+    mpp-eval: use_ostree
   _image_mode: # Backwards compat, only package or image
     mpp-eval: '"image" if use_bootc else image_mode'
 
@@ -69,7 +76,7 @@ mpp-vars:
 
   containers_configdir: /usr/share/containers
   pregenerate_quadlets:
-    mpp-eval: use_ostree
+    mpp-eval: use_bootc
 
   use_qm: false   # Set to true to add QM container
   qm_use_userns: false  # Enable/disable running QM in user namespace
@@ -198,7 +205,6 @@ mpp-vars:
   aboot_partlabel: system_a
   qm_varpart_label: qm_var
   vbmeta_partlabel: vbmeta_a
-  use_composefs: true
   systemd_timeout: 30s
   grow_rootfs: false
   default_uuids:
@@ -249,7 +255,7 @@ mpp-vars:
   selinux_mode: enforcing
   selinux_policy: targeted
   selinux_secure_mode:
-    mpp-eval: use_ostree
+    mpp-eval: use_bootc
   selinux_booleans: []
   kernel_opts: []
   systemctl_options:

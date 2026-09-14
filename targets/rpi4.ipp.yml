@@ -3,7 +3,7 @@
 version: '2'
 mpp-vars:
   use_autoinit: true
-  extra_image_source_image: ostree-tree
+  extra_image_source_image: bootc-tree
   extra_image_copy_image:
     - from: input://extra-tree/lib/ostree-boot/efi/
       to: mount://root/boot/efi/
