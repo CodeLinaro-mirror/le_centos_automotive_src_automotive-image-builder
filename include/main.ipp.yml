@@ -140,5 +140,26 @@ pipelines:
       path: content.ipp.yml
   - mpp-import-pipelines:
       path: mode-$_image_mode.ipp.yml
-  - mpp-import-pipelines:
-      path: image.ipp.yml
+  - mpp-if: "_error(f'Rootfs contains denied rpms: {space.join(denied)}') if (denied := [rpm for rpm in denylist_rpms if rpm in rpms['rootfs']]) else False"
+  - mpp-if: "_error(f'No separate partition for /var/qm, as required by policy') if policy_require_qm_separate_partition and use_qm and not _qm_use_separate_var else False"
+
+  - name: rpmlist
+    runner: org.osbuild.centos9
+    stages:
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: rpmlist
+              text:
+                mpp-eval: |
+                  _json.dumps(
+                  {pipeline:{name:{'url':info.url,'arch':info.arch,'evr':info.evr,'license':getattr(info, 'license_tag', None),'summary':getattr(info, 'summary', None), 'sourcerpm':getattr(info, 'sourcerpm', None), 'buildtime':getattr(info, 'buildtime', None), 'vendor':getattr(info, 'vendor', None)} for (name, info) in rpms[pipeline].items()} for pipeline in rpms.keys()}
+                  , indent=True, sort_keys=True)
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['rpmlist']}
+              to: tree:///rpmlist
