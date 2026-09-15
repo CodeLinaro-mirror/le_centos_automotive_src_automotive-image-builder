@@ -901,6 +901,9 @@ mpp-vars:
         - path: /usr/lib/bootc/install
           parents: true
           exist_ok: true
+        - path: /usr/lib/bootc/kargs.d
+          parents: true
+          exist_ok: true
         - path: /usr/lib/bootc-image-builder
           parents: true
           exist_ok: true
@@ -1055,6 +1058,8 @@ mpp-vars:
           to: tree://///etc/signing_info.json
         - from: input://extra-tree/bootc.install
           to: tree://///usr/lib/bootc/install/05-aib.toml
+        - from: input://extra-tree/bootc.kargs
+          to: tree://///usr/lib/bootc/kargs.d/10-aib.toml
         - from: input://extra-tree/disk.yaml
           to: tree://///usr/lib/bootc-image-builder/disk.yaml
         - mpp-if: use_ukibootpart

@@ -476,6 +476,10 @@ mpp-vars:
       kargs = {_json.dumps(kernel_opts)}
       { 'bootloader = "none"' if use_aboot else "" }
 
+  bootc_kargs:
+    mpp-format-string: |
+      kargs = {_json.dumps(kernel_opts)}
+
   disk_yaml:
     mount_configuration: none
     partition_table:
@@ -1270,6 +1274,20 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['bootc.install']}
               to: tree:///bootc.install
+
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: bootc.kargs
+              text: $bootc_kargs
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['bootc.kargs']}
+              to: tree:///bootc.kargs
 
       - type: org.osbuild.copy
         inputs:
