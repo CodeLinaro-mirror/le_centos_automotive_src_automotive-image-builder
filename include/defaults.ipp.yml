@@ -400,6 +400,9 @@ mpp-vars:
   arch_rpms: []
   arch_build_rpms: []
 
+  # tmpfs sizing
+  tmp_size: "30%"
+
   build_rpms:
     - dnf
     - dosfstools

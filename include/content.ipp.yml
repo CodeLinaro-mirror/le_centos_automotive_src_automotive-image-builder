@@ -92,6 +92,10 @@ mpp-vars:
       ExecStart=
       ExecStart=-systemd-repart --dry-run=no --definitions=/usr/lib/repart.d
       ExecStart=-/usr/lib/systemd/systemd-growfs /sysroot
+  systemd_tmp_mount_dropin:
+    mpp-format-string: |
+      [Mount]
+      Options=mode=1777,strictatime,nosuid,nodev,size={tmp_size},nr_inodes=1m
   containers_conf:
     mpp-format-string: |
       [containers]
@@ -780,6 +784,19 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['repart.dropin']}
               to: tree:///repart.dropin
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: tmp.mount.dropin
+              text: $systemd_tmp_mount_dropin
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['tmp.mount.dropin']}
+              to: tree:///tmp.mount.dropin
       - type: org.osbuild.copy
         inputs:
           inlinefile:
