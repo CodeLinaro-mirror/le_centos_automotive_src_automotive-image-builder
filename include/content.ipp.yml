@@ -96,6 +96,21 @@ mpp-vars:
     mpp-format-string: |
       [Mount]
       Options=mode=1777,strictatime,nosuid,nodev,size={tmp_size},nr_inodes=1m
+  systemd_shm_size_svc:
+    mpp-format-string: |
+      [Unit]
+      Description=Set size of /dev/shm
+      DefaultDependencies=no
+      Conflicts=umount.target
+      Before=local-fs.target umount.target
+      After=swap.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=mount -o remount,size={shm_size} /dev/shm
+
+      [Install]
+      WantedBy=local-fs.target
   containers_conf:
     mpp-format-string: |
       [containers]
@@ -797,6 +812,19 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['tmp.mount.dropin']}
               to: tree:///tmp.mount.dropin
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: shm.size.service
+              text: $systemd_shm_size_svc
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['shm.size.service']}
+              to: tree:///shm.size.service
       - type: org.osbuild.copy
         inputs:
           inlinefile:

@@ -555,6 +555,7 @@ mpp-vars:
       - mpp-eval: image_enabled_services
       - mpp-eval: policy_enabled_services
       - - tmp.mount
+        - shm-size.service
         - rcu-normal.service
         - mpp-if: use_efi_features
           then: boot-efi.mount
@@ -963,6 +964,8 @@ mpp-vars:
           to: tree:///usr/lib/systemd/system/rcu-normal.service
         - from: input://extra-tree/tmp.mount.dropin
           to: tree:///etc/systemd/system/tmp.mount.d/override.conf
+        - from: input://extra-tree/shm.size.service
+          to: tree:///etc/systemd/system/shm-size.service
         - mpp-if: disable_emergency_shell
           then:
             from: input://extra-tree/emergency.service

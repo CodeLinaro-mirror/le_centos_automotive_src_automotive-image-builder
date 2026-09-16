@@ -402,6 +402,7 @@ mpp-vars:
 
   # tmpfs sizing
   tmp_size: "30%"
+  shm_size: "20%"
 
   build_rpms:
     - dnf
