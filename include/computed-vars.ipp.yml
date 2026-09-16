@@ -147,6 +147,13 @@ mpp-vars:
     mpp-eval: _with_default(False).use_ablpart
   use_efipart:
     mpp-eval: _with_default(use_ukiboot).use_efipart
+  # With the bootc composefs backend, /boot is the normal /boot/efi ESP mount
+  use_boot_efi_at_boot:
+    mpp-eval: use_bootc_composefs
+  boot_efi_mount_name:
+    mpp-eval: "'boot-efi.mount' if not use_boot_efi_at_boot else 'boot.mount'"
+  boot_efi_mount_path:
+    mpp-eval: "'/boot/efi' if not use_boot_efi_at_boot else '/boot'"
   use_efipart_mount:
     mpp-eval: use_efipart
   use_efi_features:
@@ -567,7 +574,7 @@ mpp-vars:
         - shm-size.service
         - rcu-normal.service
         - mpp-if: use_efi_features
-          then: boot-efi.mount
+          then: $boot_efi_mount_name
         - mpp-if: use_bootpart
           then: boot.mount
         - mpp-if: _use_separate_var
@@ -1040,7 +1047,8 @@ mpp-vars:
         - mpp-if: use_efi_features
           then:
             from: input://extra-tree/boot-efi.mount
-            to: tree:////usr/lib/systemd/system/boot-efi.mount
+            to:
+              mpp-format-string: tree:////usr/lib/systemd/system/{boot_efi_mount_name}
         - mpp-if: _use_separate_var
           then:
             from: input://extra-tree/fstab

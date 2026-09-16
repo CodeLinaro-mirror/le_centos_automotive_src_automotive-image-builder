@@ -24,7 +24,7 @@ mpp-vars:
 
       [Mount]
       What=/dev/disk/by-label/ESP
-      Where=/boot/efi
+      Where={boot_efi_mount_path}
       Type=vfat
 
       [Install]
