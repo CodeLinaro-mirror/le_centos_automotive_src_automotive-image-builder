@@ -1147,7 +1147,8 @@ mpp-vars:
     - bootc
     - rpm
     - bubblewrap # Needed for ostree
-    - nss-altfiles
+    - mpp-if: use_ostree
+      then: nss-altfiles
     - skopeo  # Needed for upgrading from an OCI remove image
     - mpp-if: use_bootc and use_ukiboot
       then: bootupd

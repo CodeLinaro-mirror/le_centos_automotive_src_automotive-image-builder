@@ -1,0 +1,58 @@
+#!/usr/bin/python3
+
+"""Split the completed kernel/initramfs and seal the native composefs image."""
+
+import argparse
+from pathlib import Path
+import shutil
+import subprocess
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("root", type=Path)
+    parser.add_argument("kver", type=Path)
+    args = parser.parse_args()
+
+    root = args.root.resolve()
+    boot = root / "boot"
+    modules = root / "usr/lib/modules"
+    kernel_version = args.kver
+
+    # This must follow dracut: splitting removes its inputs from the rootfs.
+    subprocess.run(
+        [
+            "bootc",
+            "container",
+            "split-kernel-and-rootfs",
+            "--rootfs",
+            root,
+            "--output",
+            boot,
+        ],
+        check=True,
+    )
+    (boot / "EFI/Linux").mkdir(parents=True, exist_ok=True)
+
+    # Complete all rootfs changes before aboot computes the composefs digest.
+    try:
+        subprocess.run(
+            [
+                "bootc",
+                "container",
+                "aboot",
+                "--rootfs",
+                root,
+                "--kernel-dir",
+                boot / kernel_version,
+                "--write-dumpfile-to",
+                boot / "pre-oci.dump",
+            ],
+            check=True,
+        )
+    finally:
+        shutil.rmtree(boot / kernel_version)
+
+
+if __name__ == "__main__":
+    main()

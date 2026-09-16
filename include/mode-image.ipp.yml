@@ -178,6 +178,80 @@ pipelines:
                   mpp-if: dracut_install
                   then:
                     mpp-eval: dracut_install
+
+  - name: composefs-tree
+    build: name:build
+    stages:
+      mpp-join:
+        - - type: org.osbuild.copy
+            inputs:
+              tree:
+                type: org.osbuild.tree
+                origin: org.osbuild.pipeline
+                references:
+                  - name:bootc-tree
+            options:
+              paths:
+                - from: input://tree/
+                  to: tree:///
+          - type: org.osbuild.tmpfilesd
+            options:
+              filename: aib-composefs.conf
+              config:
+                - type: d
+                  path: /run/media
+                  mode: "0755"
+                  user: root
+                  group: root
+                - type: Z
+                  path: /var/lib/selinux
+          - type: org.osbuild.lorax-script
+            options:
+              path: auto/runcmd
+              product:
+                name: "/usr/bin/composefs_postprocess /run/osbuild/tree"
+          - type: org.osbuild.dracut
+            options:
+              kernel:
+                - mpp-eval: _kernel_subdir()
+              extra:
+                - mpp-format-string: /usr/lib/modules/{_kernel_subdir()}/initramfs.img
+          - type: org.osbuild.lorax-script
+            options:
+              path: auto/runcmd
+              product:
+                name:
+                  mpp-format-string: "/usr/bin/composefs_finalize /run/osbuild/tree  {_kernel_subdir()}"
+          - mpp-if: use_aboot
+            then:
+              type: org.osbuild.copy
+              inputs:
+                extra-tree:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - name:extra-tree-content
+              options:
+                paths:
+                  - from: input://extra-tree/empty_vbmeta
+                    to:
+                      mpp-format-string: tree://{_boot_vbmeta_img()}
+
+  - name: ostree-tree
+    build: name:build
+    stages:
+      mpp-join:
+        - - type: org.osbuild.copy
+            inputs:
+              tree:
+                type: org.osbuild.tree
+                origin: org.osbuild.pipeline
+                references:
+                  - name:bootc-tree
+            options:
+              paths:
+                - from: input://tree/
+                  to: tree:///
           - type: org.osbuild.lorax-script
             options:
               path: auto/runcmd
@@ -235,7 +309,7 @@ pipelines:
             type: org.osbuild.tree
             origin: org.osbuild.pipeline
             references:
-              - name:bootc-tree
+              - name:ostree-tree
         options:
           ref:
             mpp-eval: ostree_ref
@@ -275,19 +349,38 @@ pipelines:
   - name: bootc-archive
     build: name:build
     stages:
-      - type: org.osbuild.ostree.encapsulate
-        inputs:
-          commit:
-            type: org.osbuild.ostree
-            origin: org.osbuild.pipeline
-            references:
-              name:ostree-commit:
-                ref:
-                  mpp-eval: ostree_ref
-        options:
-          filename: image.oci-archive
-          cmd:
-            mpp-eval: container_cmd
+      - mpp-if: use_bootc_composefs
+        then:
+          type: org.osbuild.oci-archive
+          inputs:
+            base:
+              type: org.osbuild.tree
+              origin: org.osbuild.pipeline
+              references:
+                - name:composefs-tree
+          options:
+            filename: image.oci-archive
+            architecture:
+              mpp-eval: goarch
+            config:
+              Cmd:
+                mpp-eval: container_cmd
+              Labels:
+                containers.bootc: "1"
+        else:
+          type: org.osbuild.ostree.encapsulate
+          inputs:
+            commit:
+              type: org.osbuild.ostree
+              origin: org.osbuild.pipeline
+              references:
+                name:ostree-commit:
+                  ref:
+                    mpp-eval: ostree_ref
+          options:
+            filename: image.oci-archive
+            cmd:
+              mpp-eval: container_cmd
 
   - name: bootc-tar
     build: name:build
@@ -298,7 +391,9 @@ pipelines:
             type: org.osbuild.tree
             origin: org.osbuild.pipeline
             references:
-              - name:bootc-tree
+              - mpp-if: use_bootc_composefs
+                then: name:composefs-tree
+                else: name:ostree-tree
         options:
           filename: rootfs.tar
           transform: 's,^usr/etc,etc,'
