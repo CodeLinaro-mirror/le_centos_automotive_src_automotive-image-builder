@@ -26,3 +26,6 @@ fi
 # The difference between requested size and real size can be 1%
 assert_block_partition_size /var 524288000 1
 assert_block_partition_size /var/qm 314572800 1
+
+assert_memory_partition_size /tmp 209715200 1
+assert_memory_partition_size /dev/shm 104857600 1

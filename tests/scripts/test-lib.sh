@@ -268,6 +268,24 @@ assert_block_partition_size() {
     fi
 }
 
+assert_memory_partition_size() {
+    local mount_point=$1
+    local expected_size=$2
+    local tolerance=${3:-0}  # optional tolerance in percent
+    local lower=$(( expected_size - expected_size * tolerance / 100 ))
+    local upper=$(( expected_size + expected_size * tolerance / 100 ))
+    local part_size
+
+    part_size="$(run_vm_command "findmnt -n -o SIZE --bytes $mount_point")" \
+        || fatal "FAIL: Failed to get size of partition '$mount_point'"
+
+    if (( part_size >= lower )) && ((part_size <= upper)); then
+        echo "PASS: Partition '$mount_point' size $part_size bytes matches expected $expected_size ± $tolerance%"
+    else
+        fatal "FAIL: Partition '$mount_point' size $part_size bytes NOT in range [$lower, $upper]"
+    fi
+}
+
 list_tar () {
     tar --list -f $1
 }

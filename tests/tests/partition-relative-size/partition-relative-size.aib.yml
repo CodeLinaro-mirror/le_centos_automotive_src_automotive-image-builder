@@ -11,6 +11,11 @@ image:
       relative_size: 0.1
     var_qm:
       relative_size: 0.05
+  tmpfs:
+    tmp:
+      relative_size: 0.04
+    shm:
+      relative_size: 0.02
 
 auth:
   # "password"

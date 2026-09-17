@@ -1,4 +1,4 @@
-summary: Verify that var and var_qm partitions occupy the expected relative size
+summary: Verify that /var, /var/qm, /tmp and /dev/shm partitions occupy the expected relative size
 description: |
   Builds an AIB image with var and qm_var partitions defined by relative sizes
   and verifies that they occupy the expected fractions of the total image size.
@@ -9,8 +9,10 @@ description: |
 
 
   Expected results:
-    - PASS: "Partition '/var' size 429916160 bytes matches expected 429496729 ± 1%"
-    - PASS: "Partition '/var/qm' size 214958080 bytes matches expected 214748364 ± 1%"
+    - PASS: Partition '/var' size 429916160 bytes matches expected 429496729 ± 1%
+    - PASS: Partition '/var/qm' size 214958080 bytes matches expected 214748364 ± 1%
+    - PASS: Partition '/tmp' size 82329600 bytes matches expected 82328616 ± 1%
+    - PASS: Partition '/dev/shm' size 41164800 bytes matches expected 41164308 ± 1%
 
   Results location:
     output.txt
