@@ -10,7 +10,7 @@ Source0:        automotive-image-builder-%{version}.tar.gz
 BuildArch:	noarch
 BuildRequires:  make
 Requires:       android-tools
-Requires:       osbuild >= 189
+Requires:       osbuild >= 193
 Requires:       osbuild-auto >= 0.2.0
 Requires:       osbuild-luks2
 Requires:       osbuild-lvm2
@@ -26,7 +26,7 @@ Requires:       zstd
 Requires:       qemu-kvm-core
 Requires:       virtiofsd
 Requires:       openssl
-Requires:       image-builder
+Requires:       image-builder >= 82
 Recommends:     python3-rich
 
 %description
