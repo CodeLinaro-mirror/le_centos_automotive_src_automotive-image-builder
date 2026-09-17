@@ -29,6 +29,11 @@ mpp-vars:
 
       [Install]
       RequiredBy=local-fs.target
+  # A line with /var is required for ostree-system-generator to not generate default var.mount. And because we masked
+  # systemd-fstab-generator, our custom var.mount should be used
+  fstab:
+    mpp-format-string: |
+      UUID={varfs_uuid} /var ext4 rw,seclabel,relatime 0 0
   var_mount:
     mpp-format-string: |
       [Unit]
@@ -703,6 +708,19 @@ pipelines:
             type: org.osbuild.files
             origin: org.osbuild.source
             mpp-embed:
+              id: fstab
+              text: $fstab
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['fstab']}
+              to: tree:///fstab
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
               id: var.mount
               text: $var_mount
         options:
@@ -1056,7 +1074,6 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['build-info']}
               to: tree:///build-info
-
       - type: org.osbuild.copy
         inputs:
           inlinefile1:

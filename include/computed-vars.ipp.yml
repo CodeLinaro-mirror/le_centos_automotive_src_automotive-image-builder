@@ -1013,6 +1013,10 @@ mpp-vars:
             to: tree:////usr/lib/systemd/system/boot-efi.mount
         - mpp-if: _use_separate_var
           then:
+            from: input://extra-tree/fstab
+            to: tree:////etc/fstab
+        - mpp-if: _use_separate_var
+          then:
             from: input://extra-tree/var.mount
             to: tree:////usr/lib/systemd/system/var.mount
         - mpp-if: _qm_use_separate_var
