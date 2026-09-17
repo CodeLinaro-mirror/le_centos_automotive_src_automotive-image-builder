@@ -554,8 +554,7 @@ mpp-vars:
     mpp-join:
       - mpp-eval: image_enabled_services
       - mpp-eval: policy_enabled_services
-      - - mpp-if: tmp_is_tmpfs
-          then: tmp.mount
+      - - tmp.mount
         - rcu-normal.service
         - mpp-if: use_efi_features
           then: boot-efi.mount
