@@ -15,5 +15,7 @@ description: |
   Results location:
     output.txt
 
+require+:
+  - bc
 duration: 60m
 id: 44df142f-ba7b-4965-9ad9-4cdbdf7e11c1
