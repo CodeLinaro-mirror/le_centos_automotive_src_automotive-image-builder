@@ -308,7 +308,7 @@ COMMON_ARGS = {
     "--verbose": {"help": "Print verbose output"},
     "--sudo": {
         "type": "bool-optional",
-        "default": True,
+        "default": False,
         "help": (
             "When not running as root, use sudo for privileged build steps "
             "(default). --no-sudo instead runs them rootless. Ignored when "
