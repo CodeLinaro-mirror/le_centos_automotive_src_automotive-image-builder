@@ -7,6 +7,27 @@ mpp-vars:
     mpp-eval: next((p.partnum for p in image.layout.partitions if p.id == 'ukibootctl'), 0)
   ukibootctl_dos:
     mpp-format-string: /dev/disk/by-partuuid/$ukibootctl_dos_id-{ukibootctl_dos_partnum:02d}
+  image_loopdev:
+    mpp-eval: "{p.id: { 'type': 'org.osbuild.loopback', 'options': {'filename': 'disk.img', 'start': p.start, 'size': p.size}}  for p in image.layout.partitions}"
+  image_loopdev_locked:
+    mpp-eval: "{id: {**image_loopdev[id], 'lock': True} for id in image_loopdev.keys()}"
+  # Either the raw root partition, or the root logical volume
+  root_dev:
+    mpp-if: use_luks
+    then:
+      type: org.osbuild.lvm2.lv
+      parent: root-luks
+      options:
+        volume: root
+    else:
+      mpp-eval: image_loopdev[rootpart_label]
+  # The luks2 physical device, should be named root-luks and references root-raw for the raw partition
+  root_luksdev:
+    type: org.osbuild.luks2
+    parent: root-raw
+    options:
+      passphrase:
+        mpp-eval: luks_passphrase
 
 pipelines:
   - name: image-tree
@@ -148,3 +169,274 @@ pipelines:
             options:
               file_contexts:
                 mpp-format-string: etc/selinux/{selinux_policy}/contexts/files/file_contexts
+
+  - name: image
+    build: name:build
+    stages:
+      mpp-join:
+        - - type: org.osbuild.truncate
+            options:
+              filename: disk.img
+              size:
+                mpp-eval: image.size
+          - type: org.osbuild.sfdisk
+            devices:
+              device:
+                type: org.osbuild.loopback
+                options:
+                  filename: disk.img
+            options:
+              mpp-format-json: '{image.layout}'
+          - mpp-if: use_abootpart or use_ukibootpart
+            then:
+              type: org.osbuild.write-device
+              devices:
+                device:
+                  mpp-eval: image_loopdev['boot_a' if use_abootpart else 'ukiboot_a']
+              inputs:
+                tree:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - name:image-tree
+              options:
+                from:
+                  mpp-format-string: "input://tree{ _boot_aboot_img()}"
+          - mpp-if: use_ablpart
+            then:
+              type: org.osbuild.write-device
+              devices:
+                device:
+                  mpp-eval: image_loopdev['abl_a']
+              inputs:
+                tree:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - name:image-tree
+              options:
+                from:
+                  mpp-format-string: "input://tree/usr/share/qcom-abl/abl_noavb.elf"
+          - mpp-if: use_ukibootpart
+            then:
+              type: org.osbuild.write-device
+              devices:
+                device:
+                  mpp-eval: image_loopdev['ukibootctl']
+              inputs:
+                tree:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - name:extra-tree-content
+              options:
+                from:
+                  mpp-format-string: "input://tree/ukibootctl_init.bin"
+          - mpp-if: use_efipart
+            then:
+              type: org.osbuild.mkfs.fat
+              devices:
+                device:
+                  mpp-eval: image_loopdev['efi']
+              options:
+                label: ESP
+                volid: 7B7795E7
+                # Usually disk geometry is obtained automatically, but some platforms
+                # require a specific boot filesystem geometry in order to boot. This
+                # allows you to setup the geometry of the disk.
+                geometry:
+                  mpp-if: "'efipart_geometry' in locals()"
+                  then:
+                    mpp-eval: efipart_geometry
+          - mpp-if: use_bootpart
+            then:
+              type: org.osbuild.mkfs.ext4
+              devices:
+                device:
+                  mpp-eval: image_loopdev['boot']
+              options:
+                uuid:
+                  mpp-eval: bootfs_uuid
+                label: boot
+                lazy_init: false
+          - mpp-if: _use_separate_var and _varpart_size > 0
+            then:
+              type: org.osbuild.mkfs.ext4
+              devices:
+                device:
+                  mpp-eval: image_loopdev['var']
+              options:
+                uuid:
+                  mpp-eval: varfs_uuid
+                label: var
+                lazy_init: false
+          - mpp-if: _qm_use_separate_var and _qm_varpart_size > 0
+            then:
+              type: org.osbuild.mkfs.ext4
+              devices:
+                device:
+                  mpp-eval: image_loopdev[qm_varpart_label]
+              options:
+                uuid:
+                  mpp-eval: qm_varfs_uuid
+                label:
+                  mpp-eval: qm_varpart_label
+                lazy_init: false
+        - mpp-if: use_luks
+          then:
+            - type: org.osbuild.luks2.format
+              devices:
+                device:
+                  mpp-eval: image_loopdev_locked[rootpart_label]
+              options:
+                passphrase:
+                  mpp-eval: luks_passphrase
+                uuid:
+                  mpp-eval: luks_uuid
+                label: luks-rootfs
+                pbkdf:
+                  method: argon2i
+                  memory: 32
+                  parallelism: 1
+                  iterations: 4
+                integrity:
+                  mpp-if: luks_use_integrity
+                  then: hmac-sha256
+            - type: org.osbuild.lvm2.create
+              devices:
+                root-raw:
+                  mpp-eval: image_loopdev[rootpart_label]
+                device:
+                  mpp-eval: root_luksdev
+              options:
+                volumes:
+                  - name: root
+                    extents: 100%FREE
+        - - type: org.osbuild.mkfs.ext4
+            devices:
+              root-raw:
+                mpp-if: use_luks
+                then:
+                  mpp-eval: image_loopdev[rootpart_label]
+              root-luks:
+                mpp-if: use_luks
+                then:
+                  mpp-eval: root_luksdev
+              device:
+                mpp-eval: root_dev
+            options:
+              uuid:
+                mpp-eval: rootfs_uuid
+              label: root
+              lazy_init: false
+              verity: true
+          - type: org.osbuild.copy
+            inputs:
+              tree:
+                type: org.osbuild.tree
+                origin: org.osbuild.pipeline
+                references:
+                  - name:image-tree
+              build-tree:
+                type: org.osbuild.tree
+                origin: org.osbuild.pipeline
+                references:
+                  - name:build
+              extra-tree:
+                mpp-if: "'extra_image_source_' + _image_mode in locals()"
+                then:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - mpp-format-string: "name:{locals().get('extra_image_source_' + _image_mode)}"
+            options:
+              paths:
+                mpp-join:
+                  - - from: input://tree/
+                      to: mount://root/
+                  - mpp-eval: extra_image_copy
+            devices:
+              efi:
+                mpp-if: use_efipart
+                then:
+                  mpp-eval: image_loopdev['efi']
+              boot:
+                mpp-if: use_bootpart
+                then:
+                  mpp-eval: image_loopdev['boot']
+              boot_a:
+                mpp-if: use_abootpart
+                then:
+                  mpp-eval: image_loopdev['boot_a']
+              boot_b:
+                mpp-if: use_abootpart
+                then:
+                  mpp-eval: image_loopdev['boot_b']
+              vbmeta_a:
+                mpp-if: use_vbmetapart
+                then:
+                  mpp-eval: image_loopdev['vbmeta_a']
+              vbmeta_b:
+                mpp-if: use_vbmetapart
+                then:
+                  mpp-eval: image_loopdev['vbmeta_b']
+              var:
+                mpp-if: _use_separate_var and _varpart_size > 0
+                then:
+                  mpp-eval: image_loopdev['var']
+              qm_var:
+                mpp-if: _qm_use_separate_var and _qm_varpart_size > 0
+                then:
+                  mpp-eval: image_loopdev[qm_varpart_label]
+              root:
+                mpp-eval: root_dev
+              root-raw:
+                mpp-if: use_luks
+                then:
+                  mpp-eval: image_loopdev[rootpart_label]
+              root-luks:
+                mpp-if: use_luks
+                then:
+                  mpp-eval: root_luksdev
+            mounts:
+              - name: root
+                type: org.osbuild.ext4
+                source: root
+                target: /
+              - mpp-if: _use_separate_var and _varpart_size > 0
+                then:
+                  name: var
+                  type: org.osbuild.ext4
+                  source: var
+                  target: /var
+              - mpp-if: _qm_use_separate_var and _qm_varpart_size > 0
+                then:
+                  name: $qm_varpart_label
+                  type: org.osbuild.ext4
+                  source: qm_var
+                  target: /var/qm
+              - mpp-if: use_bootpart
+                then:
+                  name: boot
+                  type: org.osbuild.ext4
+                  source: boot
+                  target: /boot
+              - mpp-if: use_efipart
+                then:
+                  name: efi
+                  type: org.osbuild.fat
+                  source: efi
+                  target: /boot/efi
+
+          - mpp-if: use_luks
+            then:
+              type: org.osbuild.lvm2.metadata
+              devices:
+                root-raw:
+                  mpp-eval: image_loopdev[rootpart_label]
+                device:
+                  mpp-eval: root_luksdev
+              options:
+                vg_name: osbuild
+                creation_host: osbuild
+                description: "Built with osbuild"
