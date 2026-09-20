@@ -8,6 +8,10 @@ image:
   image_size: 4 GiB
   partitions:
     var:
-      relative_size: 0.2
-    var_qm:
       relative_size: 0.1
+    var_qm:
+      relative_size: 0.05
+
+auth:
+  # "password"
+  root_password: $6$xoLqEUz0cGGJRx01$H3H/bFm0myJPULNMtbSsOFd/2BnHqHkMD92Sfxd.EKM9hXTWSmELG8cf205l6dktomuTcgKGGtGDgtvHVXSWU.
