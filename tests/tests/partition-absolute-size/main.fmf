@@ -8,8 +8,8 @@ description: |
     in the test.
 
   Expected results:
-    - PASS: "Partition 'var' size 524288000 bytes matches expected 524288000 ± 10240"
-    - PASS: "Partition 'qm_var' size 314572800 bytes matches expected 314572800 ± 10240"
+    - PASS: "Partition '/var' size 524288000 bytes matches expected 524288000 ± 1%"
+    - PASS: "Partition '/var/qm' size 314572800 bytes matches expected 314572800 ± 1%"
 
   Results location:
     output.txt

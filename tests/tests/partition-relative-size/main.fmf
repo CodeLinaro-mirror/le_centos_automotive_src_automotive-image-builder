@@ -9,8 +9,8 @@ description: |
 
 
   Expected results:
-    - PASS: "Partition 'var' relative size 0.2 matches expected 0.2 ± 0.01"
-    - PASS: "Partition 'qm_var' relative size 0.0999999 matches expected 0.1 ± 0.01"
+    - PASS: "Partition '/var' size 429916160 bytes matches expected 429496729 ± 1%"
+    - PASS: "Partition '/var/qm' size 214958080 bytes matches expected 214748364 ± 1%"
 
   Results location:
     output.txt
