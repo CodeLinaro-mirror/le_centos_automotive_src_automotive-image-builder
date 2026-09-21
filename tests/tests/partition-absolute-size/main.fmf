@@ -14,5 +14,10 @@ description: |
   Results location:
     output.txt
 
+require+:
+  - qemu-kvm
+  - expect
+  - socat
 duration: 60m
+tag: [virt-required]
 id: af48c2ba-9022-4ef3-8ddd-0a1ba9197c28
