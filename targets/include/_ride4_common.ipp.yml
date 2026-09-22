@@ -4,9 +4,7 @@ mpp-vars:
   target_supported_arches:
     - aarch64
   use_boot: aboot
-  use_ablpart:
-    # TODO: Temporary limitations until packages are accepted downstream.
-    mpp-eval: distro_name in ('autosd10-latest-sig', 'autosd10-sig')
+  use_ablpart: true
   aboot_boot_type: aboot-gptctl
   qm_varpart_label: system_b
   skip_root_on_cmdline: true # This uses ABL bootloader which appends root= cmdline

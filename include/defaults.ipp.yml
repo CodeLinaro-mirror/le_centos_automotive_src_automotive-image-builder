@@ -189,6 +189,7 @@ mpp-vars:
   # Possible values:
   # aboot, ukiboot, none
   use_boot: ukiboot
+  use_ablpart: false
   skip_root_on_cmdline: false
   qm_pipeline: qm_rootfs
   use_tuned_realtime: false
