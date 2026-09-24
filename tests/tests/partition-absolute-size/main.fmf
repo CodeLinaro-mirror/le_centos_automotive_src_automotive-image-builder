@@ -1,4 +1,4 @@
-summary: Verify that var and var_qm partitions occupy the expected absolute size
+summary: Verify that /var, /var/qm, /tmp and /dev/shm partitions occupy the expected absolute size
 description: |
   Builds an AIB image with explicitly defined absolute partition sizes
   and verifies that the created partitions match the expected sizes.
@@ -8,8 +8,10 @@ description: |
     in the test.
 
   Expected results:
-    - PASS: "Partition '/var' size 524288000 bytes matches expected 524288000 ± 1%"
-    - PASS: "Partition '/var/qm' size 314572800 bytes matches expected 314572800 ± 1%"
+    - PASS: Partition '/var' size 524288000 bytes matches expected 524288000 ± 1%
+    - PASS: Partition '/var/qm' size 314572800 bytes matches expected 314572800 ± 1%
+    - PASS: Partition '/tmp' size 209715200 bytes matches expected 209715200 ± 1%
+    - PASS: Partition '/dev/shm' size 104857600 bytes matches expected 104857600 ± 1%
 
   Results location:
     output.txt

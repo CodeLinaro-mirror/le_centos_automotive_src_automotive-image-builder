@@ -484,6 +484,59 @@ $defs:
                 pattern: "^[0-9A-Za-z]{8}(-[0-9A-Za-z]{4}){3}-[0-9A-Za-z]{12}$"
                 examples:
                   - 9c6ae55b-cf88-45b8-84e8-64990759f39d
+      tmpfs:
+        description: Memory based partition details, like sizes.
+        type: object
+        additionalProperties: false
+        patternProperties:
+          tmp:
+            type: object
+            description: Size of /tmp
+            additionalProperties: false
+            dependencies:
+              relative_size:
+                not:
+                  required: ["size"]
+              size:
+                not:
+                  required: ["relative_size"]
+            properties:
+              relative_size:
+                maximum: 0.5
+                minimum: 0
+                default: 0.3
+                description: |
+                  Size of /tmp mount relative to total memory.
+                type: number
+              size:
+                description: |
+                  Size of /tmp mount in bytes (with suffix).
+                type: string
+                pattern: "^[0-9]+ *(kB|KiB|MB|MiB|GB|GiB|TB|TiB)$"
+          shm:
+            type: object
+            description: Size of /dev/shm
+            additionalProperties: false
+            dependencies:
+              relative_size:
+                not:
+                  required: ["size"]
+              size:
+                not:
+                  required: ["relative_size"]
+            properties:
+              relative_size:
+                maximum: 0.5
+                minimum: 0
+                default: 0.2
+                description: |
+                  Size of /dev/shm mount relative to total memory.
+                type: number
+              size:
+                description: |
+                  Size of /dev/shm mount in bytes (with suffix).
+                type: string
+                pattern: "^[0-9]+ *(kB|KiB|MB|MiB|GB|GiB|TB|TiB)$"
       hostname:
         description: The network hostname
         type: string

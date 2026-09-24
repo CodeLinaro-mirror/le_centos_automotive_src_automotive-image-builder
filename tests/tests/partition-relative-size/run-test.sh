@@ -27,8 +27,13 @@ if ! wait_for_vm_up "$LOGIN_TIMEOUT"; then
     exit 1
 fi
 
+MEM_SIZE="$(run_vm_command "free -b | grep Mem" | awk '{print $2}')"
+EXP_TMP_SIZE="$( echo "$MEM_SIZE * 0.04 / 1" | bc)"
+EXP_SHM_SIZE="$( echo "$MEM_SIZE * 0.02 / 1" | bc)"
+
 # The difference between requested relative size and real size can be 1%
 assert_block_partition_size /var "$EXP_VAR_SIZE" 1
 assert_block_partition_size /var/qm "$EXP_VAR_QM_SIZE" 1
 
-
+assert_memory_partition_size /tmp "$EXP_TMP_SIZE" 1
+assert_memory_partition_size /dev/shm "$EXP_SHM_SIZE" 1

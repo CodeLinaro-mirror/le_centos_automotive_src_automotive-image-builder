@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-import os
-import yaml
-import re
 import glob
+import os
+import re
 from enum import Enum
 
 import jsonschema
+import yaml
 
 from . import exceptions, log
 
@@ -599,6 +599,17 @@ class ManifestLoader:
                 if "size" in part:
                     part_size = parse_size(part["size"])
                     self.set(k + "part_size", int(part_size / 512))
+        tmpfs = image.get("tmpfs", {})
+        for k in tmpfs:
+            part = tmpfs[k]
+            if "size" in part:
+                tmp_size = part.get("size")
+                tmp_size = parse_size(tmp_size)
+                self.set(k + "_size", str(int(tmp_size)))
+            elif "relative_size" in part:
+                rel_tmp_size = part.get("relative_size")
+                self.set(k + "_size", str(int(rel_tmp_size * 100)) + "%")
+
         cg_memory_min_value = parse_size(image.get("cg_memory_min", "64MiB"))
         if cg_memory_min_value == 0:
             raise exceptions.AIBException("cg_memory_min must be > 0")

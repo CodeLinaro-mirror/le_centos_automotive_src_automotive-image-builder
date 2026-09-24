@@ -554,8 +554,8 @@ mpp-vars:
     mpp-join:
       - mpp-eval: image_enabled_services
       - mpp-eval: policy_enabled_services
-      - - mpp-if: tmp_is_tmpfs
-          then: tmp.mount
+      - - tmp.mount
+        - shm-size.service
         - rcu-normal.service
         - mpp-if: use_efi_features
           then: boot-efi.mount
@@ -849,6 +849,9 @@ mpp-vars:
       - - path: /etc/containers
           parents: true
           exist_ok: true
+        - path: /etc/systemd/system/tmp.mount.d
+          parents: true
+          exist_ok: true
         - path: /usr/share/containers
           parents: true
           exist_ok: true
@@ -959,6 +962,10 @@ mpp-vars:
           to: tree:///usr/lib/systemd/coredump.conf.d/10-automotive.conf
         - from: input://extra-tree/rcu-normal.service
           to: tree:///usr/lib/systemd/system/rcu-normal.service
+        - from: input://extra-tree/tmp.mount.dropin
+          to: tree:///etc/systemd/system/tmp.mount.d/override.conf
+        - from: input://extra-tree/shm.size.service
+          to: tree:///etc/systemd/system/shm-size.service
         - mpp-if: disable_emergency_shell
           then:
             from: input://extra-tree/emergency.service

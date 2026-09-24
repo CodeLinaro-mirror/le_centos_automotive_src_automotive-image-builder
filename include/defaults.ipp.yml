@@ -303,7 +303,6 @@ mpp-vars:
   qm_containers_extra_store: /usr/lib/containers/storage
   containers_transient_store: true
   containers_read_only: true
-  tmp_is_tmpfs: true
   image_enabled_services: []
   image_masked_services:
     - systemd-hwdb-update.service
@@ -400,6 +399,10 @@ mpp-vars:
   # These are overridden by the arch file
   arch_rpms: []
   arch_build_rpms: []
+
+  # tmpfs sizing
+  tmp_size: "30%"
+  shm_size: "20%"
 
   build_rpms:
     - dnf
