@@ -29,6 +29,7 @@ $AIB download \
     --distro="$(get_aib_distro)" \
     --cache $OUTDIR/dnf-cache \
     --build-dir $BUILDDIR \
+    --cache-max-size="${AIB_TEST_CACHE_MAX_SIZE:-4GB}" \
     "$MIN_IMAGE_MFT"
 
 rm -f "$MIN_IMAGE_MFT"
