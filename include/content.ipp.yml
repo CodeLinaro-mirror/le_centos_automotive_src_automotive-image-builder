@@ -663,6 +663,24 @@ pipelines:
             key: /kernel.key
             x509: /kernel.x509
 
+  - name: build-info-content
+    build: name:build
+    stages:
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: build-info
+              text:
+                mpp-format-string: '{_materialize(build_info)}'
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['build-info']}
+              to: tree:///build-info
+
   - name: extra-tree-content
     build: name:build
     stages:
@@ -1105,20 +1123,6 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['bootcheck.conf']}
               to: tree:///bootcheck.conf
-      - type: org.osbuild.copy
-        inputs:
-          inlinefile:
-            type: org.osbuild.files
-            origin: org.osbuild.source
-            mpp-embed:
-              id: build-info
-              text:
-                mpp-format-string: '{_materialize(build_info)}'
-        options:
-          paths:
-            - from:
-                mpp-format-string: input://inlinefile/{embedded['build-info']}
-              to: tree:///build-info
       - type: org.osbuild.copy
         inputs:
           inlinefile1:

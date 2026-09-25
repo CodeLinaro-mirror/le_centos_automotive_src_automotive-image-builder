@@ -56,6 +56,11 @@ pipelines:
                 origin: org.osbuild.pipeline
                 references:
                   - name:extra-tree-content
+              build-info:
+                type: org.osbuild.tree
+                origin: org.osbuild.pipeline
+                references:
+                  - name:build-info-content
             options:
               paths:
                 mpp-eval: extra_tree_content

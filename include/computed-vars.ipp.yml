@@ -988,7 +988,7 @@ mpp-vars:
           then:
             from: input://extra-tree/ostree_prepare_root.conf
             to: tree:///usr/lib/ostree/prepare-root.conf
-        - from: input://extra-tree/build-info
+        - from: input://build-info/build-info
           to: tree:///etc/build-info
         - mpp-if: load_modules
           then:
