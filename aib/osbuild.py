@@ -25,6 +25,8 @@ from .utils import (
 )
 from .globals import default_target
 
+DEFAULT_BUILD_CACHE_MAX_SIZE = "4GB"
+
 
 def parse_define(d, option):
     parts = d.split("=", 1)
@@ -416,8 +418,10 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None, etag=No
         osbuild_manifest = labeled_manifest
 
     builddir = tmpdir
+    builddir_created = False
     if args.build_dir:
         builddir = args.build_dir
+        builddir_created = not os.path.exists(builddir)
         os.makedirs(builddir, exist_ok=True)
     validate_builddir(builddir)
 
@@ -448,8 +452,10 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None, etag=No
                 "rootfs",
             ]
 
-        if args.cache_max_size:
+        if args.cache_max_size is not None:
             cmdline += ["--cache-max-size=" + args.cache_max_size]
+        elif builddir_created:
+            cmdline += ["--cache-max-size=" + DEFAULT_BUILD_CACHE_MAX_SIZE]
 
         if args.progress:
             # Add JSONSeqMonitor for progress monitoring
