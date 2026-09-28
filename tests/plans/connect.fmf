@@ -36,6 +36,10 @@ environment:
     # by parallel-test-runner.sh
     PTR_PREPARE_FINISHED: ""
 
+    # Bump this big enough that we don't have to clear the cache during the build, as that can
+    # race in the parallel tests.
+    AIB_TEST_CACHE_MAX_SIZE: "16GB"
+
     AIB: aib
     AIBDEV: aib-dev
     AIB_BASEDIR: /usr/lib/automotive-image-builder
