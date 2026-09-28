@@ -832,6 +832,7 @@ mpp-vars:
                 mpp-if: _var.aboot_ramdisk_offset != None
                 then:
                   mpp-format-string: "{aboot_ramdisk_offset}"
+              destdir: etc
   image_services_skipped_on_container:
     mpp-join:
       - mpp-eval: image_services_skipped_on_container

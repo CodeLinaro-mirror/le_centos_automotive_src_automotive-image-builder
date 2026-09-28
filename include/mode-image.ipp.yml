@@ -186,6 +186,13 @@ pipelines:
           - mpp-if: use_bootc and use_ukiboot
             then:
               type: org.osbuild.bootupd.gen-metadata
+          - mpp-if: use_ostree
+            then:
+              type: org.osbuild.lorax-script
+              options:
+                path: auto/symlink
+                product: # Backwards compat symlink for aboot.cfg in /etc
+                  name: "../../etc/aboot.cfg /usr/lib/ostree-boot/aboot.cfg"
           # Call aboot-update after prep-tree, because that is where the initrd is built
           - mpp-if: use_aboot_like
             then:
