@@ -375,7 +375,7 @@ BUILD_ARGS = {
     "--cache-max-size": {
         "type": "str",
         "metavar": "SIZE",
-        "help": "Max cache size inside build-dir, e.g. '8GB', or 'unlimited'",
+        "help": "Max cache size inside build-dir, e.g. '8GB' or 'unlimited' (defaults to 4GB for new build dirs)",
     },
     "--cache": {
         "type": "str",

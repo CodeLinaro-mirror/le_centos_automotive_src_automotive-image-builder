@@ -25,6 +25,8 @@ from .utils import (
 )
 from .globals import default_target
 
+DEFAULT_BUILD_CACHE_MAX_SIZE = "4GB"
+
 
 def parse_define(d, option):
     parts = d.split("=", 1)
@@ -325,6 +327,23 @@ def extract_rpmlist_json(osbuild_manifest):
     return base64.b64decode(data_b64).decode("utf8")
 
 
+def osbuild_stage_ids(osbuild_manifest, runner, pipeline_name, stage_name):
+    inspected = json.loads(
+        runner.run_as_root(
+            ["osbuild", "--inspect", osbuild_manifest], capture_output=True
+        )
+    )
+    for pipeline in inspected["pipelines"]:
+        if pipeline["name"] != pipeline_name:
+            continue
+        return [
+            stage["id"]
+            for stage in pipeline.get("stages", [])
+            if stage["type"] == stage_name
+        ]
+    return []
+
+
 def validate_builddir(builddir):
     """Check that builddir is on a valid path."""
     try:
@@ -416,8 +435,10 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None, etag=No
         osbuild_manifest = labeled_manifest
 
     builddir = tmpdir
+    builddir_created = False
     if args.build_dir:
         builddir = args.build_dir
+        builddir_created = not os.path.exists(builddir)
         os.makedirs(builddir, exist_ok=True)
     validate_builddir(builddir)
 
@@ -447,9 +468,18 @@ def run_osbuild(args, tmpdir, runner, exports, in_vm=None, storage=None, etag=No
                 "--checkpoint",
                 "rootfs",
             ]
+            # We also want to cache the main rpm stage in the case where no rpms changed
+            # but some later part of the rootfs changed, like an enabled service.
+            rpm_stage_ids = osbuild_stage_ids(
+                osbuild_manifest, runner, "rootfs", "org.osbuild.rpm"
+            )
+            for rpm_stage_id in rpm_stage_ids:
+                cmdline += ["--checkpoint", rpm_stage_id]
 
-        if args.cache_max_size:
+        if args.cache_max_size is not None:
             cmdline += ["--cache-max-size=" + args.cache_max_size]
+        elif builddir_created:
+            cmdline += ["--cache-max-size=" + DEFAULT_BUILD_CACHE_MAX_SIZE]
 
         if args.progress:
             # Add JSONSeqMonitor for progress monitoring
