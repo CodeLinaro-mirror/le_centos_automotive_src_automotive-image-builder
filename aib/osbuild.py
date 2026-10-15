@@ -304,6 +304,17 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
     if getattr(args, "generate_lockfile", None):
         cmdline += ["--generate-lockfile", args.generate_lockfile]
 
+    if getattr(args, "generate_sbom", None) or getattr(args, "sbom_dir", None):
+        default_sbom_dir = (
+            "./sbom"
+            if args.simple_manifest is None
+            else os.path.join(
+                os.path.abspath(os.path.dirname(args.simple_manifest)), "sbom"
+            )
+        )
+        sbom_dir = getattr(args, "sbom_dir", None) or default_sbom_dir
+        cmdline += ["--generate-sbom", sbom_dir]
+
     variables_manifest = {
         "version": manifest["version"],
         "mpp-vars": manifest.get("mpp-vars", {}),

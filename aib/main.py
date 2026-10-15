@@ -48,6 +48,7 @@ from .arguments import (
     RESOLVE_BUILD_ARGS,
     DISK_FORMAT_ARGS,
     SHARED_RESEAL_ARGS,
+    SBOM_ARGS,
     CommandGroup,
 )
 from .osbuild import (
@@ -98,6 +99,7 @@ def listrpms(args, tmpdir, runner):
     args=[
         TARGET_ARGS,
         RESOLVE_BUILD_ARGS,
+        SBOM_ARGS,
         {
             "--output": {
                 "type": "path",
@@ -258,6 +260,7 @@ def temporary_container_name(args, storage):
         BUILD_ARGS,
         DISK_FORMAT_ARGS,
         BIB_ARGS,
+        SBOM_ARGS,
     ],
 )
 def build(args, tmpdir, runner):

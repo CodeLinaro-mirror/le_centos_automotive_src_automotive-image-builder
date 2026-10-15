@@ -39,6 +39,7 @@ install:
 	install  -t $(DESTDIR)$(DATADIR)/aib aib/*.py
 	mkdir -p $(DESTDIR)$(DATADIR)/mpp/aibosbuild/util
 	install  -t $(DESTDIR)$(DATADIR)/mpp mpp/aib-osbuild-mpp
+	install  -t $(DESTDIR)$(DATADIR)/mpp mpp/sbom.py
 	install  -t $(DESTDIR)$(DATADIR)/mpp/aibosbuild/util mpp/aibosbuild/util/*.py
 
 .PHONY: test-unit

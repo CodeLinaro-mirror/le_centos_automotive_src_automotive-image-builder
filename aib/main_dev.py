@@ -22,6 +22,7 @@ from .arguments import (
     BUILD_ARGS,
     RESOLVE_BUILD_ARGS,
     DISK_FORMAT_ARGS,
+    SBOM_ARGS,
     CommandGroup,
 )
 from .podman import (
@@ -46,6 +47,7 @@ base_dir = os.path.realpath(sys.argv[1])
     args=[
         TARGET_ARGS,
         RESOLVE_BUILD_ARGS,
+        SBOM_ARGS,
         {
             "--output": {
                 "type": "path",
@@ -116,6 +118,7 @@ def listrpms(args, tmpdir, runner):
         POLICY_ARGS,
         TARGET_ARGS,
         BUILD_ARGS,
+        SBOM_ARGS,
     ],
 )
 def build(args, tmpdir, runner):
