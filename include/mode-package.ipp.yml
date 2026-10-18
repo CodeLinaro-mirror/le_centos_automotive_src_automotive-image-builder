@@ -9,25 +9,8 @@ mpp-vars:
     mpp-format-string: /dev/disk/by-partuuid/$ukibootctl_dos_id-{ukibootctl_dos_partnum:02d}
   image_loopdev:
     mpp-eval: "{p.id: { 'type': 'org.osbuild.loopback', 'options': {'filename': 'disk.img', 'start': p.start, 'size': p.size}}  for p in image.layout.partitions}"
-  image_loopdev_locked:
-    mpp-eval: "{id: {**image_loopdev[id], 'lock': True} for id in image_loopdev.keys()}"
-  # Either the raw root partition, or the root logical volume
   root_dev:
-    mpp-if: use_luks
-    then:
-      type: org.osbuild.lvm2.lv
-      parent: root-luks
-      options:
-        volume: root
-    else:
-      mpp-eval: image_loopdev[rootpart_label]
-  # The luks2 physical device, should be named root-luks and references root-raw for the raw partition
-  root_luksdev:
-    type: org.osbuild.luks2
-    parent: root-raw
-    options:
-      passphrase:
-        mpp-eval: luks_passphrase
+    mpp-eval: image_loopdev[rootpart_label]
 
 pipelines:
   - name: image-tree
@@ -287,46 +270,8 @@ pipelines:
                 label:
                   mpp-eval: qm_varpart_label
                 lazy_init: false
-        - mpp-if: use_luks
-          then:
-            - type: org.osbuild.luks2.format
-              devices:
-                device:
-                  mpp-eval: image_loopdev_locked[rootpart_label]
-              options:
-                passphrase:
-                  mpp-eval: luks_passphrase
-                uuid:
-                  mpp-eval: luks_uuid
-                label: luks-rootfs
-                pbkdf:
-                  method: argon2i
-                  memory: 32
-                  parallelism: 1
-                  iterations: 4
-                integrity:
-                  mpp-if: luks_use_integrity
-                  then: hmac-sha256
-            - type: org.osbuild.lvm2.create
-              devices:
-                root-raw:
-                  mpp-eval: image_loopdev[rootpart_label]
-                device:
-                  mpp-eval: root_luksdev
-              options:
-                volumes:
-                  - name: root
-                    extents: 100%FREE
         - - type: org.osbuild.mkfs.ext4
             devices:
-              root-raw:
-                mpp-if: use_luks
-                then:
-                  mpp-eval: image_loopdev[rootpart_label]
-              root-luks:
-                mpp-if: use_luks
-                then:
-                  mpp-eval: root_luksdev
               device:
                 mpp-eval: root_dev
             options:
@@ -395,14 +340,6 @@ pipelines:
                   mpp-eval: image_loopdev[qm_varpart_label]
               root:
                 mpp-eval: root_dev
-              root-raw:
-                mpp-if: use_luks
-                then:
-                  mpp-eval: image_loopdev[rootpart_label]
-              root-luks:
-                mpp-if: use_luks
-                then:
-                  mpp-eval: root_luksdev
             mounts:
               - name: root
                 type: org.osbuild.ext4
@@ -432,16 +369,3 @@ pipelines:
                   type: org.osbuild.fat
                   source: efi
                   target: /boot/efi
-
-          - mpp-if: use_luks
-            then:
-              type: org.osbuild.lvm2.metadata
-              devices:
-                root-raw:
-                  mpp-eval: image_loopdev[rootpart_label]
-                device:
-                  mpp-eval: root_luksdev
-              options:
-                vg_name: osbuild
-                creation_host: osbuild
-                description: "Built with osbuild"

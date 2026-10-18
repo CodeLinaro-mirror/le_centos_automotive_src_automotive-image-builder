@@ -104,8 +104,6 @@ mpp-vars:
     mpp-eval: _compute_uuid('biospart')
   rootpart_uuid:
     mpp-eval: _compute_uuid('rootpart')
-  luks_uuid:
-    mpp-eval: _compute_uuid('luks')
 
   # Per https://uapi-group.org/specifications/specs/discoverable_partitions_specification/
   rootfs_partition_type:
@@ -337,8 +335,7 @@ mpp-vars:
   dracut_omit_modules:
     mpp-join:
       - mpp-eval: dracut_omit_modules
-      - - mpp-if: not use_luks
-          then: dm
+      - - dm
   load_modules:
     mpp-join:
       - mpp-eval: load_modules
@@ -374,9 +371,6 @@ mpp-vars:
   dracut_install:
     mpp-join:
       - mpp-eval: dracut_install
-      - mpp-if: use_luks and luks_auto_unlock
-        then:
-          - /usr/.auto-unlock-key
       - mpp-if: use_static_ip and static_ip_modules
         then:
           - /usr/lib/modules-load.d/auto-modules.conf
@@ -401,12 +395,6 @@ mpp-vars:
       - mpp-eval: kernel_opts
       - mpp-eval: simple_kernel_opts
       - mpp-eval: extra_kernel_opts
-      - mpp-if: use_luks
-        then:
-          - rd.luks.uuid=$luks_uuid
-          - rd.luks.options=discard
-          - mpp-if: luks_auto_unlock
-            then: rd.luks.key=$luks_uuid=/usr/.auto-unlock-key
       - mpp-if: consoles
         then:
           mpp-eval: "list(map(lambda c: 'console=' + c, consoles.split()))"
@@ -975,10 +963,6 @@ mpp-vars:
           then:
             from: input://extra-tree/rescue.service
             to: tree:///etc/systemd/system/rescue.service
-        - mpp-if: use_luks and luks_auto_unlock
-          then:
-            from: input://extra-tree/luks-key
-            to: tree:///usr/.auto-unlock-key
         - from: input://extra-tree/containers.conf
           to: tree://$containers_configdir/containers.conf
         - mpp-if: use_qm and qm_wayland_enable
@@ -1102,10 +1086,6 @@ mpp-vars:
       - mpp-eval: target_build_rpms
       - - selinux-policy-$selinux_policy
         - mpp-eval: build_kernel_package
-        - mpp-if: use_luks
-          then: cryptsetup
-        - mpp-if: use_luks
-          then: lvm2
         - mpp-if: use_aboot_like
           then: aboot-update
         - mpp-if: use_aboot_like
@@ -1166,8 +1146,6 @@ mpp-vars:
         - selinux-policy-$selinux_policy
         - mpp-if: linux_firmware_rpm
           then: $linux_firmware_rpm
-        - mpp-if: use_luks
-          then: lvm2
         - mpp-if: use_aboot_like
           then: aboot-deploy
         - mpp-if: use_ukiboot
