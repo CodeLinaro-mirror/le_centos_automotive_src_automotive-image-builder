@@ -286,13 +286,24 @@ mpp-vars:
     mpp-eval: |
       "aboot-" + _kernel_subdir + ".img"
   _boot_aboot_img:
-    mpp-if: use_bootc
+    mpp-if: use_ostree
     then:
       mpp-eval: |
         _kernel_dir + "/aboot.img"
     else:
       mpp-eval: |
         "/boot/" + _aboot_img
+  _vbmeta_img:
+    mpp-eval: |
+      "vbmeta-" + _kernel_subdir + ".img"
+  _boot_vbmeta_img:
+    mpp-if: use_ostree
+    then:
+      mpp-eval: |
+        _kernel_dir + "/vbmeta.img"
+    else:
+      mpp-eval: |
+        "/boot/" + _vbmeta_img
   systemd_timeout:
     mpp-eval: "'180s' if use_debug_build else systemd_timeout"
   coredump_storage:

@@ -221,7 +221,8 @@ pipelines:
                 paths:
                   - from: input://extra-tree/empty_vbmeta
                     to:
-                      mpp-format-string: tree://{_kernel_dir()}/vbmeta.img
+                      mpp-format-string: tree://{_boot_vbmeta_img()}
+
   - name: ostree-commit
     build: name:build
     stages:

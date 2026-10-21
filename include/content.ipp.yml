@@ -389,7 +389,7 @@ mpp-vars:
             - type: efi
               filename: aboot.img
               paths:
-                - mpp-eval: _kernel_dir + "/aboot.img"
+                - mpp-eval: _boot_aboot_img
             - type: efi
               filename:
                 mpp-format-string: ukiboot{efiarch}.efi
@@ -410,13 +410,13 @@ mpp-vars:
             - type: aboot
               filename: aboot.img
               paths:
-                - mpp-eval: _kernel_dir + "/aboot.img"
+                - mpp-eval: _boot_aboot_img
               partition_size:
                 mpp-eval: abootpart_size * 512
             - type: vbmeta
               filename: vbmeta.img
               paths:
-                - mpp-eval: _kernel_dir + "/vbmeta.img"
+                - mpp-eval: _boot_vbmeta_img
 
   podman_clean_transient_at_shutdown_service: |
     [Unit]
@@ -544,7 +544,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/aboot.img"
+                mpp-eval: _boot_aboot_img
         - mpp-if: use_abootpart
           then:
             label: boot_b
@@ -557,7 +557,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/aboot.img"
+                mpp-eval: _boot_aboot_img
         - mpp-if: use_vbmetapart
           then:
             label: vbmeta_a
@@ -568,7 +568,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/vbmeta.img"
+                mpp-eval: _boot_vbmeta_img
         - mpp-if: use_vbmetapart
           then:
             label: vbmeta_b
@@ -579,7 +579,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/vbmeta.img"
+                mpp-eval: _boot_vbmeta_img
         - mpp-if: use_ablpart
           then:
             label: abl_a
@@ -616,7 +616,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/aboot.img"
+                mpp-eval: _boot_aboot_img
         - mpp-if: use_ukibootpart
           then:
             label: ukiboot_b
@@ -628,7 +628,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/aboot.img"
+                mpp-eval: _boot_aboot_img
         - mpp-if: use_ukibootpart
           then:
             label: ukibootctl
