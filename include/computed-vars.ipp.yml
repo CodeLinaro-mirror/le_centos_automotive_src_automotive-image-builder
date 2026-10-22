@@ -791,13 +791,6 @@ mpp-vars:
               path: auto/runcmd
               product:
                 name: "/usr/bin/quadlet_preprocess /run/osbuild/tree"
-        - mpp-if: use_bootc
-          then:
-            type: org.osbuild.lorax-script
-            options:
-              path: auto/runcmd
-              product:
-                name: "/usr/bin/gen_bootc_preprocess /run/osbuild/tree"
       - mpp-if: use_aboot_like
         then:
           - type: org.osbuild-auto.aboot.conf
@@ -878,6 +871,11 @@ mpp-vars:
         - path: /usr/lib/systemd/system.conf.d
           parents: true
           exist_ok: true
+        - mpp-if: use_bootc
+          then:
+            path: /sysroot
+            mode: 0755
+            exist_ok: true
         - mpp-if: use_bootc_composefs
           then:
             path: /usr/lib/composefs

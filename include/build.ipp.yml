@@ -332,19 +332,6 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['quadlet_preprocess']}
               to: tree:///usr/bin/quadlet_preprocess
-      - type: org.osbuild.copy
-        inputs:
-          inlinefile:
-            type: org.osbuild.files
-            origin: org.osbuild.source
-            mpp-embed:
-              id: bootc_preprocess
-              path: $_basedir/files/bootc_preprocess.sh
-        options:
-          paths:
-            - from:
-                mpp-format-string: input://inlinefile/{embedded['bootc_preprocess']}
-              to: tree:///usr/bin/gen_bootc_preprocess
       - type: org.osbuild.chmod
         options:
           items:
@@ -357,8 +344,6 @@ pipelines:
             "/usr/bin/pregen_ssh_host_keys":
               mode: "755"
             "/usr/bin/quadlet_preprocess":
-              mode: "755"
-            "/usr/bin/gen_bootc_preprocess":
               mode: "755"
   - name: data
     build: name:build
