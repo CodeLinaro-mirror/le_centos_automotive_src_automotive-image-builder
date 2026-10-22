@@ -111,6 +111,13 @@ mpp-vars:
 
       [Install]
       WantedBy=local-fs.target
+  automotive_tmpfiles_conf: |
+    # Preseed overlay feature checks to avoid probing during Podman startup.
+    d /run/containers/storage/overlay 0700 root root -
+    f /run/containers/storage/overlay/idmapped-lower-dir-true 0644 root root -
+    f /run/containers/storage/overlay/metacopy(nodev,metacopy=on)-true 0644 root root -
+    f /run/containers/storage/overlay/native-diff(nodev,metacopy=on)-false 0644 root root -
+    f /run/containers/storage/overlay/overlay-true 0644 root root -
   containers_conf:
     mpp-format-string: |
       [containers]
@@ -951,6 +958,19 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['containers.conf']}
               to: tree:///containers.conf
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: automotive-tmpfiles.conf
+              text: $automotive_tmpfiles_conf
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['automotive-tmpfiles.conf']}
+              to: tree:///automotive-tmpfiles.conf
       - type: org.osbuild.copy
         inputs:
           inlinefile:

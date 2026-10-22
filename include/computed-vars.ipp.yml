@@ -844,6 +844,9 @@ mpp-vars:
         - path: /usr/share/containers
           parents: true
           exist_ok: true
+        - path: /usr/lib/tmpfiles.d
+          parents: true
+          exist_ok: true
         - path: /usr/lib/systemd/system.conf.d
           parents: true
           exist_ok: true
@@ -965,6 +968,8 @@ mpp-vars:
             to: tree:///etc/systemd/system/rescue.service
         - from: input://extra-tree/containers.conf
           to: tree://$containers_configdir/containers.conf
+        - from: input://extra-tree/automotive-tmpfiles.conf
+          to: tree:///usr/lib/tmpfiles.d/automotive.conf
         - mpp-if: use_qm and qm_wayland_enable
           then:
             from: input://extra-tree/wayland-compositor.conf
