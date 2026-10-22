@@ -153,6 +153,7 @@ mpp-vars:
   extra_repos: []
   extra_build_rpms: []
   extra_build_repos: []
+  extra_repo_urls: []
   local_repo: null
   local_repo_prio: 15
 

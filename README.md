@@ -95,6 +95,21 @@ When building a manifest, there are some core options that control what gets bui
   with your custom ones by placing them in a directory called "/some/dir/distro" and passing
   `--include /some/dir` on the command line.
 
+* `--local-repo PATH`: Add a local RPM repository to both the build environment and the image.
+
+* `--extra-repo URL`: Add an RPM repository by its base URL. May be repeated.
+
+* `--extra-copr-repo OWNER/PROJECT`: Add a Fedora COPR repository, using the selected distro and
+  architecture. Group projects use `@GROUP/PROJECT`. May be repeated.
+
+The extra repositories are used for both build and image packages, like `--local-repo`.
+They share its priority (`local_repo_prio`, default 15). For example:
+
+```shell
+$ aib build --extra-repo https://example.com/rpms/ my-image.aib.yml localhost/my-image:latest
+$ aib build --extra-copr-repo @mygroup/bootc my-image.aib.yml localhost/my-image:latest
+```
+
 ## Policy System
 
 Automotive Image Builder supports a policy system that allows external policy files to enforce build restrictions and configurations. This replaces hard-coded flags with flexible, external policy definitions.

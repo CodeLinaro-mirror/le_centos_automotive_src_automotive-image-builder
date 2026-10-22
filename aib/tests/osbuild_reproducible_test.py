@@ -190,6 +190,83 @@ class CreateManifestReproducibleTest(unittest.TestCase):
         changed = self._run(args=args, env={})["manifest_content_hash"]
         self.assertNotEqual(base, changed)
 
+    def test_extra_repository_arguments_can_be_repeated(self):
+        import argparse
+        from aib.arguments import BUILD_ARGS, add_args
+
+        parser = argparse.ArgumentParser()
+        add_args(parser, {}, BUILD_ARGS)
+        args = parser.parse_args(
+            [
+                "--extra-repo",
+                "https://example.com/one/",
+                "--extra-repo",
+                "https://example.com/two/",
+                "--extra-copr-repo",
+                "owner/project",
+                "--extra-copr-repo",
+                "@group/project",
+            ]
+        )
+        self.assertEqual(
+            args.extra_repo, ["https://example.com/one/", "https://example.com/two/"]
+        )
+        self.assertEqual(args.extra_copr_repo, ["owner/project", "@group/project"])
+
+    def test_extra_repositories_extend_existing_urls(self):
+        args = self._args()
+        args.define = ['extra_repo_urls=["https://existing.example.com/"]']
+        args.extra_repo = ["https://example.com/one/", "https://example.com/two/"]
+        args.extra_copr_repo = ["owner/project", "@group/project:custom:123"]
+
+        defines = self._run(args)
+
+        self.assertEqual(
+            defines["extra_repo_urls"],
+            [
+                "https://existing.example.com/",
+                "https://example.com/one/",
+                "https://example.com/two/",
+                "https://download.copr.fedorainfracloud.org/results/owner/project/$distro_chroot/",
+                "https://download.copr.fedorainfracloud.org/results/@group/project:custom:123/$distro_chroot/",
+            ],
+        )
+
+    def test_invalid_copr_name(self):
+        for name in (
+            "owner",
+            "/project",
+            "owner/",
+            "owner/project/extra",
+            "../project",
+        ):
+            with self.subTest(name=name):
+                args = self._args()
+                args.extra_copr_repo = [name]
+                with self.assertRaisesRegex(exceptions.AIBException, "OWNER/PROJECT"):
+                    self._run(args)
+
+    def test_content_hash_changes_with_extra_repositories(self):
+        base = self._run(env={})["manifest_content_hash"]
+        for option, value in (
+            ("extra_repo", "https://example.com/one/"),
+            ("extra_copr_repo", "owner/project"),
+        ):
+            with self.subTest(option=option):
+                args = self._args()
+                setattr(args, option, [value])
+                changed = self._run(args, env={})["manifest_content_hash"]
+                self.assertNotEqual(base, changed)
+
+    def test_empty_extra_repositories_preserve_content_hash(self):
+        base = self._run(env={})["manifest_content_hash"]
+        args = self._args()
+        args.extra_repo = []
+        args.extra_copr_repo = []
+        defines = self._run(args, env={})
+        self.assertNotIn("extra_repo_urls", defines)
+        self.assertEqual(base, defines["manifest_content_hash"])
+
     def test_content_hash_changes_with_policy(self):
         # Policy forces vars and denylists rpms/modules/sysctls/selinux, all of
         # which change the image, so it must be part of the deterministic identity.
