@@ -84,18 +84,13 @@ def resolve(args, tmpdir, runner):
         TARGET_ARGS,
         BUILD_ARGS,
         {
-            # TODO: We should drop --mode when build command is dropped
-            "--mode": {
-                "type": "str",
-                "default": "image",
-                "help": "Build this image mode (package, image)",
-            },
             "manifest": "Source manifest file",
         },
     ],
 )
 def listrpms(args, tmpdir, runner):
     """List the rpms that a manifest would use when build"""
+    args.mode = "package"
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
     storage = ContainerStorage.from_args(args, tmpdir)
     create_osbuild_manifest(args, tmpdir, osbuild_manifest, runner, storage)
@@ -175,7 +170,7 @@ def download(args, tmpdir, runner):
         log.error("No build dir specified, refusing to download to temporary directory")
         sys.exit(1)
     args.out = None
-    args.mode = "image"
+    args.mode = "package"
     exports = []
 
     outputdir = run_osbuild(args, tmpdir, runner, exports)
