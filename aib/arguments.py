@@ -408,6 +408,17 @@ BUILD_ARGS = {
         "default": None,
         "help": "Install rpms from a local repository at the given path",
     },
+    "--extra-repo": {
+        "type": "append",
+        "metavar": "URL",
+        "help": "Add a repository URL for build and image rpms (may be repeated)",
+    },
+    "--extra-copr-repo": {
+        "type": "append",
+        "metavar": "OWNER/PROJECT",
+        "help": "Add a Fedora COPR repository for the selected distro and architecture "
+        "(OWNER/PROJECT or @GROUP/PROJECT; may be repeated)",
+    },
     "--reproducible": {
         "type": "bool",
         "help": "Derive a deterministic image UUID from the manifest and build parameters",

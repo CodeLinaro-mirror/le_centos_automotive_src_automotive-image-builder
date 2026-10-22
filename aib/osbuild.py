@@ -4,6 +4,7 @@ import base64
 import hashlib
 import os
 import json
+import re
 import yaml
 
 from .utils import (
@@ -39,6 +40,16 @@ def parse_define(d, option):
     except yaml.parser.ParserError as e:
         raise exceptions.InvalidOption(option, yaml_v) from e
     return k, v
+
+
+def copr_repo_url(name):
+    if not re.fullmatch(
+        r"@?[A-Za-z0-9_-][A-Za-z0-9_.-]*/[A-Za-z0-9_-][A-Za-z0-9_.:+-]*", name
+    ):
+        raise exceptions.AIBException(
+            f"Invalid --extra-copr-repo '{name}': expected OWNER/PROJECT or @GROUP/PROJECT"
+        )
+    return f"https://download.copr.fedorainfracloud.org/results/{name}/$distro_chroot/"
 
 
 def make_embed_path_abs(stage, path):
@@ -240,6 +251,15 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
     if args.local_repo:
         defines["local_repo"] = os.path.abspath(args.local_repo)
 
+    extra_repo_urls = list(getattr(args, "extra_repo", None) or [])
+    extra_repo_urls.extend(
+        copr_repo_url(name) for name in (getattr(args, "extra_copr_repo", None) or [])
+    )
+    if extra_repo_urls:
+        defines["extra_repo_urls"] = (
+            defines.get("extra_repo_urls", []) + extra_repo_urls
+        )
+
     # Hash of the build inputs, used to derive a stable image UUID in reproducible
     # mode (see defaults.ipp.yml). Identifies the manifest and parameters, not the
     # image content. For simple manifests args.manifest is the internal
@@ -259,6 +279,8 @@ def create_osbuild_manifest(args, tmpdir, out, runner, storage):
         "ostree_parent_refs": defines.get("ostree_parent_refs"),
         "policy": args.policy.restrictions if args.policy else None,
     }
+    if extra_repo_urls:
+        identity["extra_repo_urls"] = defines["extra_repo_urls"]
     content_hash.update(json.dumps(identity, sort_keys=True).encode())
     defines["manifest_content_hash"] = content_hash.hexdigest()
 

@@ -167,10 +167,15 @@ mpp-vars:
     then:
       mpp-eval: _error('filesystem resize only supported with GPT partitions')
 
+  _extra_url_repos:
+    mpp-eval: |
+      [{'id': f'extrarepo{i}', 'baseurl': url, 'priority': local_repo_prio}
+       for i, url in enumerate(extra_repo_urls)]
   image_repos:
     mpp-join:
       - mpp-eval: distro_repos
       - mpp-eval: target_repos
+      - mpp-eval: _extra_url_repos
       - mpp-if: local_repo
         then:
           - id: localrepo
@@ -183,6 +188,7 @@ mpp-vars:
       - mpp-eval: target_build_repos
       - mpp-eval: simple_repos
       - mpp-eval: extra_build_repos
+      - mpp-eval: _extra_url_repos
       - mpp-if: local_repo is not None
         then:
           - id: localrepo
