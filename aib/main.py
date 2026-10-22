@@ -73,18 +73,13 @@ base_dir = os.path.realpath(sys.argv[1])
         TARGET_ARGS,
         BUILD_ARGS,
         {
-            # TODO: We should drop --mode when build command is dropped
-            "--mode": {
-                "type": "str",
-                "default": "image",
-                "help": "Build this image mode (package, image)",
-            },
             "manifest": "Source manifest file",
         },
     ],
 )
 def listrpms(args, tmpdir, runner):
     """List the rpms that a manifest would use when build"""
+    args.mode = "bootc"
     osbuild_manifest = os.path.join(tmpdir, "osbuild.json")
 
     storage = ContainerStorage.from_args(args, tmpdir)
