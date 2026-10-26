@@ -35,9 +35,6 @@ mpp-vars:
   kernel_opts:
     mpp-join:
       - mpp-eval: kernel_opts
-      # That's actually a debug helper to get early kernel messages on those
-      # platforms that support it in their device tree.
-      - - earlycon
       - - mpp-if: is_autoinit_supported and use_autoinit
           then: rd.modules-load=sdhci_esdhc_imx
   dracut_drivers:
