@@ -344,6 +344,15 @@ SHAREABLE_ARGS = {
 
 LIST_ARGS = {"--quiet": {"help": "Only print the names, no descriptive text"}}
 
+SBOM_ARGS = {
+    "--generate-sbom": {
+        "type": "bool",
+        "action": "store_true",
+        "help": "Generate a Software Bill of Material (SBOM) for each partition",
+    },
+    "--sbom-dir": {"type": "str", "help": "Directory to store the generated SBOMs in"},
+}
+
 POLICY_ARGS = {
     "--policy": {
         "type": "str",

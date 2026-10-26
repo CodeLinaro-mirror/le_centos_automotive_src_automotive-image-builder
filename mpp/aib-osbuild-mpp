@@ -403,6 +403,8 @@ from aibosbuild.util.rhsm import Subscriptions
 from osbuild.solver.dnf import DNF
 from osbuild.solver.model import Repository
 
+from sbom import SBOM
+
 try:
     from osbuild.solver.dnf5 import DNF5
 except ImportError:
@@ -604,7 +606,8 @@ class EmbeddedFile:
 
 class PkgInfo:
     def __init__(self, checksum, name, evr, arch, license_tag=None,
-                 summary=None, sourcerpm=None, buildtime=None, vendor=None):
+                 summary=None, sourcerpm=None, buildtime=None, vendor=None,
+                 requires=[], provides=[]):
         self.checksum = checksum
         self.name = name
         self.evr = evr
@@ -616,6 +619,8 @@ class PkgInfo:
         self.vendor = vendor
         self.url = None
         self.secrets = None
+        self.requires = requires
+        self.provides = provides
 
     @property
     def evra(self):
@@ -628,7 +633,7 @@ class PkgInfo:
     def __str__(self):
         return self.nevra
 
-    def to_dict(self):
+    def to_lock_dict(self):
         data = {
             "checksum": self.checksum,
             "name": self.name,
@@ -644,6 +649,14 @@ class PkgInfo:
         }
         return {k: v for k, v in data.items() if v is not None}
 
+    def to_dict(self):
+        data = self.to_lock_dict()
+        if self.requires:
+            data["requires"] = [requires.name for requires in self.requires]
+        if self.provides:
+            data["provides"] = [provides.name for provides in self.provides]
+        return data
+
     @classmethod
     def from_dict(cls, data):
         pkg = cls(
@@ -656,6 +669,8 @@ class PkgInfo:
             sourcerpm=data.get("sourcerpm"),
             buildtime=data.get("buildtime"),
             vendor=data.get("vendor"),
+            requires=data.get("requires"),
+            provides=data.get("provides"),
         )
         pkg.url = data.get("url")
         pkg.secrets = data.get("secrets")
@@ -721,6 +736,8 @@ LocalFileSigLevel = Optional
                 pkgdata.get("sourcerpm"),
                 pkgdata.get("Build Date "),
                 pkgdata.get("vendor"),
+                pkgdata.get("Depends On"),
+                pkgdata.get("Provides")
             )
             p.url = pkg["url"]
             packages.append(p)
@@ -865,6 +882,8 @@ class OsbuildSolver:
             sourcerpm=pkg.source_rpm,
             buildtime=pkg.build_time,
             vendor=pkg.vendor,
+            requires=pkg.requires,
+            provides=pkg.provides,
         )
         pkginfo.url = pkg.remote_locations[0] if pkg.remote_locations else None
         pkginfo.secrets = "org.osbuild.rhsm" if pkg.repo_id in solver.repo_ids_with_rhsm else None
@@ -1195,6 +1214,7 @@ class ManifestFile:
         self.solver_factory = None
         self.lockfile_data = None
         self.lockfile_output = None
+        self.sbom = None
 
         self.vars = default_vars.copy()
         self.overrides = overrides
@@ -1265,12 +1285,12 @@ class ManifestFile:
     })
 
     @staticmethod
-    def _lock_omit_none(obj):
+    def _omit_none(obj):
         if isinstance(obj, dict):
-            return {k: ManifestFile._lock_omit_none(v)
+            return {k: ManifestFile._omit_none(v)
                     for k, v in obj.items() if v is not None}
         if isinstance(obj, list):
-            return [ManifestFile._lock_omit_none(i) for i in obj]
+            return [ManifestFile._omit_none(i) for i in obj]
         return obj
 
     @classmethod
@@ -1350,7 +1370,7 @@ class ManifestFile:
         if current_request and entries:
             safe_request = self._lock_sanitize_request(current_request)
             safe_entries = {lk: self._lock_sanitize_request(lv.get("request", {}))
-                           for lk, lv in entries.items()}
+                            for lk, lv in entries.items()}
             nearest_key = min(safe_entries, key=lambda lk: sum(
                 1 for k in set(safe_entries[lk]) | set(safe_request)
                 if safe_entries[lk].get(k) != safe_request.get(k)
@@ -1367,11 +1387,16 @@ class ManifestFile:
         msg += "\nRe-run `aib resolve` to update the lockfile."
         raise RuntimeError(msg)
 
+    def _sbom_write(self, pipeline, packages):
+        if self.sbom is None:
+            return
+        self.sbom[pipeline] = self._omit_none(packages)
+
     def _lock_write(self, section, key, entry):
         if self.lockfile_output is None:
             return
         entries = self.lockfile_output.setdefault(section, {})
-        entries[key] = self._lock_omit_none(entry)
+        entries[key] = self._omit_none(entry)
 
     def depsolve(self, desc: Dict):
         repos = desc.get("repos", [])
@@ -1411,7 +1436,7 @@ class ManifestFile:
 
         self._lock_write("depsolves", lock_key, {
             "request": self._lock_sanitize_request(lock_request),
-            "packages": [dep.to_dict() for dep in deps],
+            "packages": [dep.to_lock_dict() for dep in deps],
         })
 
         return deps
@@ -1709,6 +1734,8 @@ class ManifestFileV1(ManifestFile):
         deps = self.depsolve(mpp)
         checksums = self.add_packages(deps, pipeline_name)
 
+        self._sbom_write(pipeline_name, [dep.to_dict() for dep in deps])
+
         packages += checksums
 
     def get_pipeline_name(self, node):
@@ -1812,9 +1839,10 @@ class ManifestFileV2(ManifestFile):
 
         deps = self.depsolve(mpp)
         checksums = self.add_packages(deps, pipeline_name)
-
         for checksum in checksums:
             refs[checksum] = {}
+
+        self._sbom_write(pipeline_name, [dep.to_dict() for dep in deps])
 
     def _process_embed_files(self, stage):
 
@@ -2122,6 +2150,13 @@ def main():
         help="Generate a lockfile from resolved dependencies",
     )
     parser.add_argument(
+        "--generate-sbom",
+        dest="generate_sbom",
+        metavar="OUT_DIR",
+        default=None,
+        help="Create a Software Bill of Materials (SBOM) for each partition of the built image",
+    )
+    parser.add_argument(
         "src",
         metavar="SRCPATH",
         help="Input manifest",
@@ -2164,6 +2199,8 @@ def main():
         m.lockfile_output = {
             "version": 1,
         }
+    if args.generate_sbom:
+        m.sbom = {}
 
     cachedir = args.cachedir
     if cachedir is None:
@@ -2183,6 +2220,16 @@ def main():
         m._lock_warn_passwords(m.lockfile_output, args.generate_lockfile)
         with open(args.generate_lockfile, "w", encoding="utf8") as f:
             json.dump(m.lockfile_output, f, indent=2, sort_keys=True)
+
+    if args.generate_sbom and m.sbom is not None:
+        # create output directory
+        os.makedirs(f"{args.generate_sbom}", exist_ok=True)
+
+        for env, pkgs in m.sbom.items():
+            sbom = SBOM.from_pkgs(env, pkgs)
+            outpath = os.path.join(args.generate_sbom, f"{env}.spdx")
+            with open(outpath, "w", encoding="utf-8") as f:
+                f.write(sbom.serialize())
 
     with sys.stdout if args.dst == "-" else open(args.dst, "w", encoding="utf8") as f:
         m.write(f, args.sort_keys)
