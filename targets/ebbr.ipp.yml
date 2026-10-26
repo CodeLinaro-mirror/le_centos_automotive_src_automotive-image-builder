@@ -32,12 +32,3 @@ mpp-vars:
   # EBBR-compliant boards provide the console via device tree stdout-path,
   # so no hardcoded console= kernel arguments are needed.
   consoles: ''
-  kernel_opts:
-    mpp-join:
-      - mpp-eval: kernel_opts
-      - - mpp-if: is_autoinit_supported and use_autoinit
-          then: rd.modules-load=sdhci_esdhc_imx
-  dracut_drivers:
-    mpp-join:
-      - mpp-eval: dracut_drivers
-      - - "sdhci_esdhc_imx"
