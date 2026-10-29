@@ -396,11 +396,13 @@ pipelines:
                 else: name:ostree-tree
         options:
           filename: rootfs.tar
-          transform: 's,^usr/etc,etc,'
+          transform:
+            mpp-if: use_ostree
+            then: 's,^usr/etc,etc,'
           root-node:
             mpp-if: not tar_paths
             then: omit
           paths:
             mpp-if: tar_paths
             then:
-              mpp-eval: '[_re.sub(r"^etc(?=$|/)", "usr/etc", p) for p in tar_paths]'
+              mpp-eval: '[_re.sub(r"^etc(?=$|/)", "usr/etc", p) for p in tar_paths] if use_ostree else tar_paths'
