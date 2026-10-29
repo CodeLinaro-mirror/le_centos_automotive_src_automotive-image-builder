@@ -135,6 +135,14 @@ mpp-vars:
 
   use_generate_machine_id:
     mpp-eval: use_bootc and _with_default(use_transient_etc).use_generate_machine_id
+  machineid_path:
+    mpp-eval: "'/sysroot/state/.machine-id' if use_bootc_composefs else '/sysroot/ostree/.machine-id'"
+  machineid_kernel_conditions:
+    mpp-if: use_bootc_composefs
+    then: |
+      ConditionKernelCommandLine=|composefs
+      ConditionKernelCommandLine=|composefs.digest
+    else: ConditionKernelCommandLine=ostree
 
   # Enable as needed
   use_abootpart:
@@ -556,6 +564,8 @@ mpp-vars:
     mpp-if: use_autoinit
     then: mount-sysroot.service
     else: sysroot.mount
+  root_setup_unit:
+    mpp-eval: "'bootc-root-setup.service' if use_bootc_composefs else 'ostree-prepare-root.service'"
   qm_importfile:
     mpp-if: use_qm
     then: "qm"

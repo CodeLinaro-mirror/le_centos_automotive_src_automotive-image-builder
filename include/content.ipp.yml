@@ -85,7 +85,7 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       After={sysroot_unit}
-      Before=ostree-prepare-root.service
+      Before={root_setup_unit}
 
       [Service]
       Type=oneshot
@@ -259,16 +259,16 @@ mpp-vars:
       [Unit]
       Description=Generate and persist a stable machine-id (first boot)
       DefaultDependencies=no
-      ConditionKernelCommandLine=ostree
-      ConditionPathExists=!/sysroot/ostree/.machine-id
+      {machineid_kernel_conditions}
+      ConditionPathExists=!{machineid_path}
       Requires={sysroot_unit}
       After={sysroot_unit}
-      Before=ostree-prepare-root.service
+      Before={root_setup_unit}
 
       [Service]
       Type=oneshot
       RemainAfterExit=yes
-      StandardOutput=truncate:/sysroot/ostree/.machine-id
+      StandardOutput=truncate:{machineid_path}
       ExecStart=/usr/bin/systemd-id128 new
 
       [Install]
@@ -278,17 +278,17 @@ mpp-vars:
       [Unit]
       Description=Publish the persisted machine-id to systemd
       DefaultDependencies=no
-      ConditionKernelCommandLine=ostree
-      ConditionPathExists=/sysroot/ostree/.machine-id
+      {machineid_kernel_conditions}
+      ConditionPathExists={machineid_path}
       Requires={sysroot_unit}
       After={sysroot_unit} aib-machine-id-generate.service
-      Before=ostree-prepare-root.service
+      Before={root_setup_unit}
 
       [Service]
       Type=oneshot
       RemainAfterExit=yes
       ExecStartPre=/usr/bin/mkdir -p /run/credentials/@initrd
-      ExecStart=/usr/bin/dd if=/sysroot/ostree/.machine-id of=/run/credentials/@initrd/system.machine_id bs=1 count=32
+      ExecStart=/usr/bin/dd if={machineid_path} of=/run/credentials/@initrd/system.machine_id bs=1 count=32
 
       [Install]
       WantedBy=initrd.target
