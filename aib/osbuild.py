@@ -412,18 +412,25 @@ def add_bootc_archive_labels(path, dest, labels):
         if pipeline.get("name") != "bootc-archive":
             continue
         for stage in pipeline.get("stages", []):
-            if stage["type"] != "org.osbuild.ostree.encapsulate":
+            stage_type = stage["type"]
+            if stage_type == "org.osbuild.ostree.encapsulate":
+                options = stage.setdefault("options", {})
+                existing = options.get("labels", [])
+                options["labels"] = [
+                    label for label in existing if label.split("=", 1)[0] not in labels
+                ] + [f"{key}={value}" for key, value in labels.items()]
+            elif stage_type == "org.osbuild.oci-archive":
+                config = stage.setdefault("options", {}).setdefault("config", {})
+                config.setdefault("Labels", {}).update(labels)
+            else:
                 continue
-            options = stage.setdefault("options", {})
-            existing = options.get("labels", [])
-            options["labels"] = [
-                label for label in existing if label.split("=", 1)[0] not in labels
-            ] + [f"{key}={value}" for key, value in labels.items()]
             with open(dest, "w", encoding="utf-8") as f:
                 json.dump(manifest, f, indent=2)
             return
 
-    raise exceptions.AIBException("No bootc-archive encapsulate stage in manifest")
+    raise exceptions.AIBException(
+        "No bootc-archive encapsulate or OCI archive stage in manifest"
+    )
 
 
 class BuildETag:
