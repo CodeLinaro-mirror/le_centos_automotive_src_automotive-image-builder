@@ -1,3 +1,4 @@
+import fnmatch
 import json
 import os
 import shlex
@@ -13,7 +14,9 @@ from .utils import (
 )
 from .execmode import ContainerState, ExecMode
 from . import log
+from .composefs import boot_image_cmdline, composefs_digests, patch_boot_image
 from .exceptions import (
+    AIBException,
     PodmanCommandFailed,
     InitramfsNotFound,
 )
@@ -332,6 +335,23 @@ class PodmanImageMount:
         self._ensure_mounted()
         return self.read_dir("/usr/lib/modules")[0]
 
+    def is_native_composefs(self):
+        """Native AIB images have a versioned aboot payload under /boot."""
+        return bool(self.native_aboot_images())
+
+    def native_aboot_images(self):
+        """Find native aboot payloads through the image's mount namespace."""
+        self._ensure_mounted()
+        boot = self._get_full_path("/boot")
+        if self.run(self.unshared + ["test", "-d", boot]) != 0:
+            return []
+        return [
+            f"/boot/{name}"
+            for name in self.read_dir("/boot")
+            if fnmatch.fnmatchcase(name, "aboot-?*.img")
+            and self.has_file(f"/boot/{name}")
+        ]
+
     def get_ostree_initrd(self):
         kernel_subdir = self.get_kernel_subdir()
         ostree_boot_dir = "/usr/lib/ostree-boot"
@@ -468,9 +488,10 @@ class TemporaryContainer:
 
 
 class ContainerInfo:
-    def __init__(self, name, build_info):
+    def __init__(self, name, build_info, bootc_backend):
         self.name = name
         self.build_info = build_info
+        self.bootc_backend = bootc_backend
 
     def __str__(self):
         return f"{self.name}({self.build_info})"
@@ -480,13 +501,83 @@ def podman_image_info(storage, image):
     if not podman_image_exists(storage, image):
         return None
     build_info = None
-    try:
-        with PodmanImageMount(storage, image) as mount:
+    with PodmanImageMount(storage, image) as mount:
+        bootc_backend = "composefs" if mount.is_native_composefs() else "ostree"
+        try:
             content = mount.read_file("/etc/build-info")
             build_info = parse_shvars(content)
-    except (PodmanCommandFailed, RuntimeError, ValueError) as e:
-        log.info("No build info in %s: %s", image, e)
-    return ContainerInfo(image, build_info)
+        except (PodmanCommandFailed, RuntimeError, ValueError) as e:
+            log.info("No build info in %s: %s", image, e)
+    return ContainerInfo(image, build_info, bootc_backend)
+
+
+def _native_composefs_digests(mount, tool_image, tmpdir):
+    artifacts = mount.native_aboot_images()
+    if len(artifacts) != 1:
+        raise AIBException("Native reseal requires exactly one /boot/aboot-KVER.img")
+    artifact = os.path.join(tmpdir, "native-aboot.img")
+    mount.copy_out_file(artifacts[0], artifact)
+    expected = composefs_digests(boot_image_cmdline(artifact))
+    versions = sorted({version for choices, _ in expected for version in choices})
+    actual = {}
+    for version in versions:
+        digest = (
+            mount.capture_unshared(
+                mount.storage.podman()
+                + [
+                    "run",
+                    "--rm",
+                    "--security-opt",
+                    "label=type:unconfined_t",
+                    "--volume",
+                    f"{mount.mount_path}:/target:ro",
+                    "--entrypoint",
+                    "/usr/bin/bootc",
+                    tool_image,
+                    "container",
+                    "compute-composefs-digest",
+                    "--erofs-version",
+                    version,
+                    "/target",
+                ]
+            )
+            .strip()
+            .lower()
+        )
+        if len(digest) != 128 or any(c not in "0123456789abcdef" for c in digest):
+            raise AIBException(f"bootc returned an invalid {version} composefs digest")
+        actual[version] = digest
+    return artifacts[0], artifact, expected, actual
+
+
+def podman_bootc_check_composefs(mount, tool_image, tmpdir):
+    """Verify the currently mounted rootfs and boot artifact before committing."""
+    _, _, expected, actual = _native_composefs_digests(mount, tool_image, tmpdir)
+    if any(digest not in (actual[v] for v in choices) for choices, digest in expected):
+        raise AIBException(
+            "Native composefs rootfs digest differs from the signed boot image; "
+            "run prepare-reseal before extracting and signing the boot files."
+        )
+
+
+def podman_bootc_reseal_composefs(storage, image, dest_image, tool_image, tmpdir):
+    """Patch existing native boot artifacts only when their rootfs digest changed."""
+    # Check read-only first, preserving signatures, timestamps and image ID on no-op.
+    with PodmanImageMount(storage, image) as mount:
+        path, artifact, _, actual = _native_composefs_digests(mount, tool_image, tmpdir)
+    if not patch_boot_image(artifact, actual):
+        log.info("Composefs rootfs digest unchanged; resealing is unnecessary")
+        return False
+    # Read back before publishing. Never reconstruct the packed kernel/initramfs.
+    expected = composefs_digests(boot_image_cmdline(artifact))
+    if any(digest not in (actual[v] for v in choices) for choices, digest in expected):
+        raise AIBException("Patched native boot image has incorrect composefs digests")
+    with PodmanImageMount(
+        storage, image, writable=True, commit_image=dest_image
+    ) as mount:
+        mount.copy_in_file(artifact, path)
+    log.warning("Updated native composefs boot image; sign the boot files before use")
+    return True
 
 
 def podman_bootc_inject_pubkey(

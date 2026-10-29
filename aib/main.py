@@ -33,6 +33,8 @@ from .podman import (
     podman_image_exists,
     podman_image_info,
     podman_image_labels,
+    podman_bootc_check_composefs,
+    podman_bootc_reseal_composefs,
     podman_bootc_inject_pubkey,
     PodmanImageMount,
     TemporaryContainer,
@@ -605,10 +607,12 @@ def inject_signed(args, tmpdir, runner):
     Once the files produced by extract-for-signing have been signed, this command
     can be used to inject them into the bootc image again.
 
-    Note that this modified the bootc image which makes it not possible to boot if
-    sealed images are being used (which is the default). Also, signatures interact
-    in a complex way with sealing. See the help for reseal for how to re-seal
-    the modified image so that it boots again.
+    For sealed OSTree images, injection modifies the filesystem, so it must be
+    resealed. See the help for reseal for the ordering of signing and resealing.
+
+    For native composefs, signing files under /boot preserves the rootfs digest.
+    --reseal-with-key ignores the key with a warning and verifies the injected
+    boot image's digest. Rootfs changes must be resealed before signing.
     """
     storage = ContainerStorage.from_args(args, tmpdir)
 
@@ -620,6 +624,7 @@ def inject_signed(args, tmpdir, runner):
     else:
         new_container = args.new_container
 
+    reseal_with_key = bool(args.reseal_with_key)
     with PodmanImageMount(
         storage,
         args.src_container,
@@ -627,8 +632,15 @@ def inject_signed(args, tmpdir, runner):
         commit_image=None if args.reseal_with_key else new_container,
     ) as mount:
         if mount.has_file("/etc/signing_info.json"):
-            content = mount.read_file("/etc/signing_info.json")
-            info = json.loads(content)
+            native = mount.is_native_composefs()
+            info = json.loads(mount.read_file("/etc/signing_info.json"))
+            if native:
+                if reseal_with_key:
+                    log.warning(
+                        "--reseal-with-key is unnecessary for native composefs images; ignoring it"
+                    )
+                reseal_with_key = False
+                mount.commit_image = new_container
 
             for f in info.get("signed_files", []):
                 _type = f["type"]
@@ -646,11 +658,15 @@ def inject_signed(args, tmpdir, runner):
 
                 for dest_path in f["paths"]:
                     mount.copy_in_file(src, dest_path)
+            if native and args.reseal_with_key:
+                podman_bootc_check_composefs(
+                    mount, args.build_container or args.src_container, tmpdir
+                )
         else:
             log.info("No /etc/signing_info.json, nothing needed signing")
             sys.exit(0)
 
-    if args.reseal_with_key:
+    if reseal_with_key:
         _pubkey, privkey = read_keys(args.reseal_with_key, args.passwd)
         with TemporaryContainer(storage, mount.image_id) as temp_container:
             do_reseal_image(
@@ -667,6 +683,26 @@ def inject_signed(args, tmpdir, runner):
         store_to_bootc_archive(runner, storage, new_container, args.new_container)
 
 
+def do_native_reseal(args, tmpdir, runner, storage):
+    if args.key:
+        log.warning("--key is unnecessary for native composefs images; ignoring it")
+    archive = getattr(args, "oci_archive", False)
+    dest = temporary_container_name(args, storage) if archive else args.new_container
+    changed = podman_bootc_reseal_composefs(
+        storage,
+        args.src_container,
+        dest,
+        args.build_container or args.src_container,
+        tmpdir,
+    )
+    if archive:
+        store_to_bootc_archive(
+            runner, storage, dest if changed else args.src_container, args.new_container
+        )
+    elif not changed and args.src_container != dest:
+        runner.run_as_root(storage.podman() + ["tag", args.src_container, dest])
+
+
 @command(
     group=CommandGroup.BOOTC,
     help="Seal bootc image after it has been modified",
@@ -679,7 +715,7 @@ def inject_signed(args, tmpdir, runner):
             },
             "--key": {
                 "type": "path",
-                "help": "path to private key, as previously used in prepare-reseal",
+                "help": "path to private key from prepare-reseal (ignored for native composefs)",
             },
             "src_container": "Bootc container name",
             "new_container": "Destination container name or oci-archive file",
@@ -688,7 +724,18 @@ def inject_signed(args, tmpdir, runner):
 )
 def reseal(args, tmpdir, runner):
     """
-    By default, bootc images are 'sealed', which means that the root filesystem
+    For native composefs images, update the digests embedded in the existing
+    Android boot image or UKI to match the root filesystem. This preserves the
+    packed kernel and initramfs. If the digests already match, preserve the image
+    and its signatures and tag/export it to the destination without a new layer.
+    --key is ignored with a warning.
+
+    A changed digest invalidates boot signatures, so reseal before signing.
+    The workflow prepare-reseal, extract, sign, inject, reseal works for both
+    backends: native prepare-reseal updates the digests, and the final reseal
+    preserves the signed files if the rootfs has not changed since preparation.
+
+    For OSTree images, the root filesystem
     is signed by a secret key. The (signed by secureboot) initramfs will contain
     the corresponding public key used to validate the root filesystem. If a
     bootc image is built to be sealed and it is later modified then this check
@@ -700,13 +747,18 @@ def reseal(args, tmpdir, runner):
     where the initramfs is signed by a trusted key. To fix this issue there is a
     separate command 'prepare-reseal' that does the initial step of reseal
     i.e., it adds a new public key to the initrd. Once that is done, you can sign the
-    new initramfs and then finish with prepare-reseal, passing in the key used
+    new initramfs and then finish with reseal, passing in the key used
     in prepare-reseal to reseal with the --key option. See the help for
     prepare-reseal for more details
     """
     storage = ContainerStorage.from_args(args, tmpdir)
-    if not podman_image_exists(storage, args.src_container):
+    info = podman_image_info(storage, args.src_container)
+    if info is None:
         raise ContainerNotFound(args.src_container)
+
+    if info.bootc_backend == "composefs":
+        do_native_reseal(args, tmpdir, runner, storage)
+        return
 
     if args.oci_archive:
         new_container = temporary_container_name(args, storage)
@@ -746,15 +798,14 @@ def reseal(args, tmpdir, runner):
 
 @command(
     group=CommandGroup.BOOTC,
-    help="Do the initial step of sealing and image, allowing further changes before actually sealing",
+    help="Prepare boot files for signing before the final reseal",
     shared_args=["container"],
     args=[
         SHARED_RESEAL_ARGS,
         {
             "--key": {
                 "type": "path",
-                "help": "path to private key file.",
-                "required": True,
+                "help": "path to private key file (required for the OSTree backend)",
             },
             "src_container": "Bootc container name",
             "new_container": "Destination container name",
@@ -764,7 +815,14 @@ def reseal(args, tmpdir, runner):
 def prepare_reseal(args, tmpdir, runner):
     """
     Injects the public part of a key pair into the initramfs of the bootc image, to
-    prepare for signinging the initrd, and later calling reseal.
+    prepare for signing the initrd, and later calling reseal.
+
+    For native composefs images, perform a full reseal by updating the digests
+    in the existing Android boot image or UKI. Finish rootfs changes before this
+    step, then extract, sign, and inject the boot files. A final reseal preserves
+    signatures if the rootfs has not changed. No key is needed; --key is ignored
+    with a warning. Matching digests leave boot files untouched and tag the
+    original image as the destination without adding a layer.
 
     The private key supplied should be single-use, used only for one image and discarded after
     it has been used in the matching reseal operation.
@@ -775,8 +833,18 @@ def prepare_reseal(args, tmpdir, runner):
     then has to be supplied when using it).
     """
     storage = ContainerStorage.from_args(args, tmpdir)
-    if not podman_image_exists(storage, args.src_container):
+    info = podman_image_info(storage, args.src_container)
+    if info is None:
         raise ContainerNotFound(args.src_container)
+
+    if info.bootc_backend == "composefs":
+        do_native_reseal(args, tmpdir, runner, storage)
+        return
+
+    if not args.key:
+        raise exceptions.AIBException(
+            "--key is required for prepare-reseal with the OSTree backend"
+        )
 
     build_container = args.build_container
     if not build_container:

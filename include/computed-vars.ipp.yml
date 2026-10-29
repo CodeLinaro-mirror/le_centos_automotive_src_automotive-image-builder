@@ -5,6 +5,15 @@ version: '2'
 # things that depend on what was set in that.
 
 mpp-vars:
+  _check_bootc_composefs_sealed:
+    mpp-if: use_bootc_composefs and not use_composefs_signed
+    then:
+      mpp-eval: _error('Sealing cannot be disabled with bootc_backend=composefs (image.sealed=false or use_composefs_signed=false)')
+  _check_bootc_composefs_boot:
+    mpp-if: use_bootc_composefs and use_boot == 'none'
+    then:
+      mpp-eval: _error('bootc_backend=composefs does not support use_boot=none; use aboot or ukiboot')
+
   # Must stay fixed: changing it changes every reproducible image's UUID.
   _aib_uuid_namespace:
     mpp-eval: _uuid.UUID('6ba7b811-9dad-11d1-80b4-00c04fd430c8')

@@ -1,7 +1,62 @@
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch, call
 
-from aib.podman import TemporaryContainer
+from aib.exceptions import PodmanCommandFailed
+from aib.podman import PodmanImageMount, TemporaryContainer, podman_image_info
+
+
+class TestNativeComposefsDetection(unittest.TestCase):
+    def test_boot_artifact_detection(self):
+        for path, directory, expected in [
+            (None, False, False),
+            ("boot/aboot-6.12.0-274.el10iv.x86_64.img", False, True),
+            ("boot/aboot-6.12.aarch64.img", False, True),
+            ("usr/lib/modules/6.12/aboot.img", False, False),
+            ("usr/lib/composefs/setup-root-conf.toml", False, False),
+            ("boot/aboot.img", False, False),
+            ("boot/aboot-.img", False, False),
+            ("boot/aboot-6.12.img.bak", False, False),
+            ("boot/aboot-6.12.img", True, False),
+        ]:
+            with self.subTest(path=path, directory=directory):
+                with tempfile.TemporaryDirectory() as root:
+                    if path:
+                        artifact = Path(root) / path
+                        artifact.parent.mkdir(parents=True)
+                        if directory:
+                            artifact.mkdir()
+                        else:
+                            artifact.touch()
+                    mount = PodmanImageMount.__new__(PodmanImageMount)
+                    mount.mount_path = root
+                    mount.unshared = []
+                    mount.with_sudo = False
+                    self.assertEqual(mount.is_native_composefs(), expected)
+
+    @patch("aib.podman.podman_image_exists", return_value=True)
+    @patch("aib.podman.PodmanImageMount")
+    def test_image_backend_is_independent_of_build_info(self, mock_mount, _exists):
+        mount = mock_mount.return_value.__enter__.return_value
+        for native, metadata, expected in [
+            (True, 'DISTRO="autosd10"', "composefs"),
+            (False, 'DISTRO="autosd10"', "ostree"),
+            (True, None, "composefs"),
+            (False, None, "ostree"),
+        ]:
+            with self.subTest(native=native, metadata=metadata):
+                mount.is_native_composefs.return_value = native
+                mount.read_file.side_effect = (
+                    PodmanCommandFailed("cat", "missing build-info")
+                    if metadata is None
+                    else None
+                )
+                mount.read_file.return_value = metadata
+                info = podman_image_info(None, "test-image")
+                self.assertEqual(info.bootc_backend, expected)
+                if metadata is None:
+                    self.assertIsNone(info.build_info)
 
 
 class TestTemporaryContainer(unittest.TestCase):
