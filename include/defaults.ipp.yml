@@ -406,6 +406,7 @@ mpp-vars:
   shm_size: "20%"
 
   build_rpms:
+    - bootc
     - dnf
     - dosfstools
     - e2fsprogs
