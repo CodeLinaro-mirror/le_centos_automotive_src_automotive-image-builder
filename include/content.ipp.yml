@@ -383,6 +383,27 @@ mpp-vars:
   _bootupd_efi_dir: /usr/lib/bootupd/updates
   _signing_efi_dir:
     mpp-eval: "'/boot/efi' if use_bootc_composefs else _bootupd_efi_dir"
+  # Native bootc currently looks up EFI files by os-release ID instead of vendor.
+  _ukiboot_efi_vendors:
+    mpp-eval: "[uefi_vendor] + ([distro_release_id] if use_bootc_composefs and distro_release_id != uefi_vendor else [])"
+  _ukiboot_efi_files:
+    - type: efi
+      filename:
+        mpp-format-string: ukiboot{efiarch}.efi
+      paths:
+        mpp-eval: |
+          [
+            _signing_efi_dir + f'/EFI/{vendor}/{name}{efiarch}.efi'
+            for vendor in _ukiboot_efi_vendors for name in ['ukiboot', 'shim']
+          ] + [_signing_efi_dir + f'/EFI/BOOT/{efibootfile}']
+    - type: efi
+      filename: slot_a.addon.efi
+      paths:
+        mpp-eval: "[_signing_efi_dir + f'/EFI/{vendor}/ukiboot_a.efi.extra.d/slot_a.addon.efi' for vendor in _ukiboot_efi_vendors]"
+    - type: efi
+      filename: slot_b.addon.efi
+      paths:
+        mpp-eval: "[_signing_efi_dir + f'/EFI/{vendor}/ukiboot_b.efi.extra.d/slot_b.addon.efi' for vendor in _ukiboot_efi_vendors]"
   signing_info:
     signed_files:
       mpp-join:
@@ -392,21 +413,9 @@ mpp-vars:
               filename: aboot.img
               paths:
                 - mpp-eval: _boot_aboot_img
-            - type: efi
-              filename:
-                mpp-format-string: ukiboot{efiarch}.efi
-              paths:
-                - mpp-eval: "_signing_efi_dir + f'/EFI/{uefi_vendor}/ukiboot{efiarch}.efi'"
-                - mpp-eval: "_signing_efi_dir + f'/EFI/{uefi_vendor}/shim{efiarch}.efi'"
-                - mpp-eval: "_signing_efi_dir + f'/EFI/BOOT/{efibootfile}'"
-            - type: efi
-              filename: slot_a.addon.efi
-              paths:
-                - mpp-eval: "_signing_efi_dir + f'/EFI/{uefi_vendor}/ukiboot_a.efi.extra.d/slot_a.addon.efi'"
-            - type: efi
-              filename: slot_b.addon.efi
-              paths:
-                - mpp-eval: "_signing_efi_dir + f'/EFI/{uefi_vendor}/ukiboot_b.efi.extra.d/slot_b.addon.efi'"
+        - mpp-if: use_ukiboot
+          then:
+            mpp-eval: _ukiboot_efi_files
         - mpp-if: use_aboot
           then:
             - type: aboot

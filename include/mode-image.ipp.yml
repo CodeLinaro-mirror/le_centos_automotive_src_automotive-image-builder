@@ -194,6 +194,32 @@ pipelines:
               paths:
                 - from: input://tree/
                   to: tree:///
+          - mpp-if: use_ukiboot
+            then:
+              type: org.osbuild.mkdir
+              options:
+                paths:
+                  mpp-eval: |
+                    [
+                      {'path': directory, 'parents': True, 'exist_ok': True}
+                      for directory in sorted({
+                        path.rsplit('/', 1)[0]
+                        for entry in _ukiboot_efi_files for path in entry['paths']
+                      })
+                    ]
+          - mpp-if: use_ukiboot
+            then:
+              type: org.osbuild.copy
+              options:
+                paths:
+                  mpp-eval: |
+                    [
+                      {
+                        'from': 'tree:///usr/libexec/ukiboot/efi/' + entry['filename'],
+                        'to': 'tree://' + path
+                      }
+                      for entry in _ukiboot_efi_files for path in entry['paths']
+                    ]
           - type: org.osbuild.tmpfilesd
             options:
               filename: aib-composefs.conf
