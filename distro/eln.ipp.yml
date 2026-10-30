@@ -8,6 +8,7 @@ mpp-vars:
   distro_chroot: fedora-eln-$arch
   is_autoinit_supported: false
   uefi_vendor: fedora
+  distro_release_id: fedora
   kernel_package: kernel
   release_rpm: fedora-release
   distro_repos:

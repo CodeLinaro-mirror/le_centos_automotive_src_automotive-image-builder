@@ -7,6 +7,7 @@ mpp-vars:
   distro_baseurl_repo: $distro_baseurl/AutoSD/$arch/os/
   distro_chroot: centos-stream-$distro_version-$arch
   uefi_vendor: centos
+  distro_release_id: autosd
   release_rpm: centos-release-autosd
   selinux_policy: automotive
   distro_repos:
