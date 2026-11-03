@@ -422,13 +422,17 @@ def build_builder(args, tmpdir, runner):
         etag.old_etag = podman_image_labels(storage, dest_image).get(BUILD_DIGEST_LABEL)
 
     try:
-        outputdir = run_osbuild(args, tmpdir, runner, ["bootc-archive"], etag=etag)
+        outputdir = run_osbuild(
+            args, tmpdir, runner, ["bootc-builder-archive"], etag=etag
+        )
     except NotBuildByEtag:
         print(f"Image {dest_image} is up to date, doing nothing.")
         return
 
     with outputdir:
-        output_file = os.path.join(outputdir.name, "bootc-archive/image.oci-archive")
+        output_file = os.path.join(
+            outputdir.name, "bootc-builder-archive/image.oci-archive"
+        )
 
         if args.oci_archive:
             runner.move_chown(output_file, args.out)

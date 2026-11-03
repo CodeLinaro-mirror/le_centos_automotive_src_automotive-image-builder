@@ -372,6 +372,21 @@ pipelines:
               mpp-eval: ostree_ref
             key: /repo/build-key
 
+  - name: bootc-builder-archive
+    build: name:build
+    stages:
+      - type: org.osbuild.oci-archive
+        inputs:
+          base:
+            type: org.osbuild.tree
+            origin: org.osbuild.pipeline
+            references:
+              - name:bootc-tree
+        options:
+          filename: image.oci-archive
+          architecture:
+            mpp-eval: goarch
+
   - name: bootc-archive
     build: name:build
     stages:

@@ -409,7 +409,10 @@ def add_bootc_archive_labels(path, dest, labels):
         manifest = json.load(f)
 
     for pipeline in manifest["pipelines"]:
-        if pipeline.get("name") != "bootc-archive":
+        if (
+            pipeline.get("name") != "bootc-archive"
+            and pipeline.get("name") != "bootc-builder-archive"
+        ):
             continue
         for stage in pipeline.get("stages", []):
             stage_type = stage["type"]
