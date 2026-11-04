@@ -190,6 +190,21 @@ pipelines:
               options:
                 from:
                   mpp-format-string: "input://tree{ _boot_aboot_img()}"
+          - mpp-if: use_abootpart or use_ukibootpart
+            then:
+              type: org.osbuild.write-device
+              devices:
+                device:
+                  mpp-eval: image_loopdev['boot_b' if use_abootpart else 'ukiboot_b']
+              inputs:
+                tree:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - name:image-tree
+              options:
+                from:
+                  mpp-format-string: "input://tree{ _boot_aboot_img()}"
           - mpp-if: use_ablpart
             then:
               type: org.osbuild.write-device
