@@ -24,7 +24,7 @@ mpp-vars:
 
       [Mount]
       What=/dev/disk/by-label/ESP
-      Where=/boot/efi
+      Where={boot_efi_mount_path}
       Type=vfat
 
       [Install]
@@ -85,7 +85,7 @@ mpp-vars:
     mpp-format-string: |
       [Unit]
       After={sysroot_unit}
-      Before=ostree-prepare-root.service
+      Before={root_setup_unit}
 
       [Service]
       Type=oneshot
@@ -156,7 +156,11 @@ mpp-vars:
       [etc]
       { "transient=true" if use_transient_etc else "" }
       [composefs]
-      enabled={"maybe" if not use_composefs else "signed" if use_composefs_signed else "verity" }
+      enabled={"maybe" if not use_ostree_composefs else "signed" if use_composefs_signed else "verity" }
+  composefs_setup_root_conf:
+    mpp-format-string: |
+      [etc]
+      mount = "{ 'transient' if use_transient_etc else 'bind' }"
   # _Lazy: build_timestamp depends on rpms[], which is filled by depsolve.
   build_info:
     mpp-eval: |
@@ -255,16 +259,16 @@ mpp-vars:
       [Unit]
       Description=Generate and persist a stable machine-id (first boot)
       DefaultDependencies=no
-      ConditionKernelCommandLine=ostree
-      ConditionPathExists=!/sysroot/ostree/.machine-id
+      {machineid_kernel_conditions}
+      ConditionPathExists=!{machineid_path}
       Requires={sysroot_unit}
       After={sysroot_unit}
-      Before=ostree-prepare-root.service
+      Before={root_setup_unit}
 
       [Service]
       Type=oneshot
       RemainAfterExit=yes
-      StandardOutput=truncate:/sysroot/ostree/.machine-id
+      StandardOutput=truncate:{machineid_path}
       ExecStart=/usr/bin/systemd-id128 new
 
       [Install]
@@ -274,17 +278,17 @@ mpp-vars:
       [Unit]
       Description=Publish the persisted machine-id to systemd
       DefaultDependencies=no
-      ConditionKernelCommandLine=ostree
-      ConditionPathExists=/sysroot/ostree/.machine-id
+      {machineid_kernel_conditions}
+      ConditionPathExists={machineid_path}
       Requires={sysroot_unit}
       After={sysroot_unit} aib-machine-id-generate.service
-      Before=ostree-prepare-root.service
+      Before={root_setup_unit}
 
       [Service]
       Type=oneshot
       RemainAfterExit=yes
       ExecStartPre=/usr/bin/mkdir -p /run/credentials/@initrd
-      ExecStart=/usr/bin/dd if=/sysroot/ostree/.machine-id of=/run/credentials/@initrd/system.machine_id bs=1 count=32
+      ExecStart=/usr/bin/dd if={machineid_path} of=/run/credentials/@initrd/system.machine_id bs=1 count=32
 
       [Install]
       WantedBy=initrd.target
@@ -377,6 +381,29 @@ mpp-vars:
     mpp-eval: "'/usr/lib/efi/ukiboot/' + _ukiboot_evr"
   # For now we're using the old bootupd location instead of _ukiboot_efi_dir
   _bootupd_efi_dir: /usr/lib/bootupd/updates
+  _signing_efi_dir:
+    mpp-eval: "'/boot/efi' if use_bootc_composefs else _bootupd_efi_dir"
+  # Native bootc currently looks up EFI files by os-release ID instead of vendor.
+  _ukiboot_efi_vendors:
+    mpp-eval: "[uefi_vendor] + ([distro_release_id] if use_bootc_composefs and distro_release_id != uefi_vendor else [])"
+  _ukiboot_efi_files:
+    - type: efi
+      filename:
+        mpp-format-string: ukiboot{efiarch}.efi
+      paths:
+        mpp-eval: |
+          [
+            _signing_efi_dir + f'/EFI/{vendor}/{name}{efiarch}.efi'
+            for vendor in _ukiboot_efi_vendors for name in ['ukiboot', 'shim']
+          ] + [_signing_efi_dir + f'/EFI/BOOT/{efibootfile}']
+    - type: efi
+      filename: slot_a.addon.efi
+      paths:
+        mpp-eval: "[_signing_efi_dir + f'/EFI/{vendor}/ukiboot_a.efi.extra.d/slot_a.addon.efi' for vendor in _ukiboot_efi_vendors]"
+    - type: efi
+      filename: slot_b.addon.efi
+      paths:
+        mpp-eval: "[_signing_efi_dir + f'/EFI/{vendor}/ukiboot_b.efi.extra.d/slot_b.addon.efi' for vendor in _ukiboot_efi_vendors]"
   signing_info:
     signed_files:
       mpp-join:
@@ -385,34 +412,22 @@ mpp-vars:
             - type: efi
               filename: aboot.img
               paths:
-                - mpp-eval: _kernel_dir + "/aboot.img"
-            - type: efi
-              filename:
-                mpp-format-string: ukiboot{efiarch}.efi
-              paths:
-                - mpp-eval: "_bootupd_efi_dir + f'/EFI/{uefi_vendor}/ukiboot{efiarch}.efi'"
-                - mpp-eval: "_bootupd_efi_dir + f'/EFI/{uefi_vendor}/shim{efiarch}.efi'"
-                - mpp-eval: "_bootupd_efi_dir + f'/EFI/BOOT/{efibootfile}'"
-            - type: efi
-              filename: slot_a.addon.efi
-              paths:
-                - mpp-eval: "_bootupd_efi_dir + f'/EFI/{uefi_vendor}/ukiboot_a.efi.extra.d/slot_a.addon.efi'"
-            - type: efi
-              filename: slot_b.addon.efi
-              paths:
-                - mpp-eval: "_bootupd_efi_dir + f'/EFI/{uefi_vendor}/ukiboot_b.efi.extra.d/slot_b.addon.efi'"
+                - mpp-eval: _boot_aboot_img
+        - mpp-if: use_ukiboot
+          then:
+            mpp-eval: _ukiboot_efi_files
         - mpp-if: use_aboot
           then:
             - type: aboot
               filename: aboot.img
               paths:
-                - mpp-eval: _kernel_dir + "/aboot.img"
+                - mpp-eval: _boot_aboot_img
               partition_size:
                 mpp-eval: abootpart_size * 512
             - type: vbmeta
               filename: vbmeta.img
               paths:
-                - mpp-eval: _kernel_dir + "/vbmeta.img"
+                - mpp-eval: _boot_vbmeta_img
 
   podman_clean_transient_at_shutdown_service: |
     [Unit]
@@ -471,6 +486,10 @@ mpp-vars:
       [install]
       kargs = {_json.dumps(kernel_opts)}
       { 'bootloader = "none"' if use_aboot else "" }
+
+  bootc_kargs:
+    mpp-format-string: |
+      kargs = {_json.dumps(kernel_opts)}
 
   disk_yaml:
     mount_configuration: none
@@ -536,7 +555,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/aboot.img"
+                mpp-eval: _boot_aboot_img
         - mpp-if: use_abootpart
           then:
             label: boot_b
@@ -549,7 +568,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/aboot.img"
+                mpp-eval: _boot_aboot_img
         - mpp-if: use_vbmetapart
           then:
             label: vbmeta_a
@@ -560,7 +579,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/vbmeta.img"
+                mpp-eval: _boot_vbmeta_img
         - mpp-if: use_vbmetapart
           then:
             label: vbmeta_b
@@ -571,7 +590,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/vbmeta.img"
+                mpp-eval: _boot_vbmeta_img
         - mpp-if: use_ablpart
           then:
             label: abl_a
@@ -608,7 +627,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/aboot.img"
+                mpp-eval: _boot_aboot_img
         - mpp-if: use_ukibootpart
           then:
             label: ukiboot_b
@@ -620,7 +639,7 @@ mpp-vars:
             payload_type: raw
             payload:
               source_path:
-                mpp-eval: _kernel_dir + "/aboot.img"
+                mpp-eval: _boot_aboot_img
         - mpp-if: use_ukibootpart
           then:
             label: ukibootctl
@@ -999,6 +1018,21 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['ostree_prepare_root.conf']}
               to: tree:///ostree_prepare_root.conf
+      - mpp-if: use_bootc_composefs
+        then:
+          type: org.osbuild.copy
+          inputs:
+            inlinefile:
+              type: org.osbuild.files
+              origin: org.osbuild.source
+              mpp-embed:
+                id: setup-root-conf.toml
+                text: $composefs_setup_root_conf
+          options:
+            paths:
+              - from:
+                  mpp-format-string: input://inlinefile/{embedded['setup-root-conf.toml']}
+                to: tree:///setup-root-conf.toml
       - type: org.osbuild.copy
         inputs:
           inlinefile:
@@ -1251,6 +1285,20 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['bootc.install']}
               to: tree:///bootc.install
+
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: bootc.kargs
+              text: $bootc_kargs
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['bootc.kargs']}
+              to: tree:///bootc.kargs
 
       - type: org.osbuild.copy
         inputs:

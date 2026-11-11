@@ -12,14 +12,14 @@ pipelines:
   - name: build-keys
     build: name:build
     stages:
-      - mpp-if: use_composefs
+      - mpp-if: use_ostree_composefs
         then:
           type: org.osbuild.ostree.genkey
           options:
             publickey: /build-key.pub
             secretkey: /build-key
 
-  - name: ostree-tree
+  - name: bootc-tree
     build: name:build
     stages:
       mpp-join:
@@ -87,7 +87,7 @@ pipelines:
                     mpp-if: root_ssh_keys
                     then:
                       mpp-eval: root_ssh_keys
-          - mpp-if: use_composefs
+          - mpp-if: use_ostree_composefs
             then:
               type: org.osbuild.copy
               inputs:
@@ -178,6 +178,106 @@ pipelines:
                   mpp-if: dracut_install
                   then:
                     mpp-eval: dracut_install
+
+  - name: composefs-tree
+    build: name:build
+    stages:
+      mpp-join:
+        - - type: org.osbuild.copy
+            inputs:
+              tree:
+                type: org.osbuild.tree
+                origin: org.osbuild.pipeline
+                references:
+                  - name:bootc-tree
+            options:
+              paths:
+                - from: input://tree/
+                  to: tree:///
+          - mpp-if: use_ukiboot
+            then:
+              type: org.osbuild.mkdir
+              options:
+                paths:
+                  mpp-eval: |
+                    [
+                      {'path': directory, 'parents': True, 'exist_ok': True}
+                      for directory in sorted({
+                        path.rsplit('/', 1)[0]
+                        for entry in _ukiboot_efi_files for path in entry['paths']
+                      })
+                    ]
+          - mpp-if: use_ukiboot
+            then:
+              type: org.osbuild.copy
+              options:
+                paths:
+                  mpp-eval: |
+                    [
+                      {
+                        'from': 'tree:///usr/libexec/ukiboot/efi/' + entry['filename'],
+                        'to': 'tree://' + path
+                      }
+                      for entry in _ukiboot_efi_files for path in entry['paths']
+                    ]
+          - type: org.osbuild.tmpfilesd
+            options:
+              filename: aib-composefs.conf
+              config:
+                - type: d
+                  path: /run/media
+                  mode: "0755"
+                  user: root
+                  group: root
+                - type: Z
+                  path: /var/lib/selinux
+          - type: org.osbuild.lorax-script
+            options:
+              path: auto/runcmd
+              product:
+                name: "/usr/bin/composefs_postprocess /run/osbuild/tree"
+          - type: org.osbuild.dracut
+            options:
+              kernel:
+                - mpp-eval: _kernel_subdir()
+              extra:
+                - mpp-format-string: /usr/lib/modules/{_kernel_subdir()}/initramfs.img
+          - type: org.osbuild.lorax-script
+            options:
+              path: auto/runcmd
+              product:
+                name:
+                  mpp-format-string: "/usr/bin/composefs_finalize /run/osbuild/tree  {_kernel_subdir()}"
+          - mpp-if: use_aboot
+            then:
+              type: org.osbuild.copy
+              inputs:
+                extra-tree:
+                  type: org.osbuild.tree
+                  origin: org.osbuild.pipeline
+                  references:
+                    - name:extra-tree-content
+              options:
+                paths:
+                  - from: input://extra-tree/empty_vbmeta
+                    to:
+                      mpp-format-string: tree://{_boot_vbmeta_img()}
+
+  - name: ostree-tree
+    build: name:build
+    stages:
+      mpp-join:
+        - - type: org.osbuild.copy
+            inputs:
+              tree:
+                type: org.osbuild.tree
+                origin: org.osbuild.pipeline
+                references:
+                  - name:bootc-tree
+            options:
+              paths:
+                - from: input://tree/
+                  to: tree:///
           - type: org.osbuild.lorax-script
             options:
               path: auto/runcmd
@@ -221,7 +321,8 @@ pipelines:
                 paths:
                   - from: input://extra-tree/empty_vbmeta
                     to:
-                      mpp-format-string: tree://{_kernel_dir()}/vbmeta.img
+                      mpp-format-string: tree://{_boot_vbmeta_img()}
+
   - name: ostree-commit
     build: name:build
     stages:
@@ -247,7 +348,7 @@ pipelines:
           selinux-label-version:
             mpp-if: use_transient_etc
             then: 1
-      - mpp-if: use_composefs
+      - mpp-if: use_ostree_composefs
         then:
           type: org.osbuild.copy
           inputs:
@@ -262,7 +363,7 @@ pipelines:
                 to: tree:///repo/build-key.pub
               - from: input://tree/build-key
                 to: tree:///repo/build-key
-      - mpp-if: use_composefs
+      - mpp-if: use_ostree_composefs
         then:
           type: org.osbuild.ostree.sign
           options:
@@ -271,22 +372,56 @@ pipelines:
               mpp-eval: ostree_ref
             key: /repo/build-key
 
+  - name: bootc-builder-archive
+    build: name:build
+    stages:
+      - type: org.osbuild.oci-archive
+        inputs:
+          base:
+            type: org.osbuild.tree
+            origin: org.osbuild.pipeline
+            references:
+              - name:bootc-tree
+        options:
+          filename: image.oci-archive
+          architecture:
+            mpp-eval: goarch
+
   - name: bootc-archive
     build: name:build
     stages:
-      - type: org.osbuild.ostree.encapsulate
-        inputs:
-          commit:
-            type: org.osbuild.ostree
-            origin: org.osbuild.pipeline
-            references:
-              name:ostree-commit:
-                ref:
-                  mpp-eval: ostree_ref
-        options:
-          filename: image.oci-archive
-          cmd:
-            mpp-eval: container_cmd
+      - mpp-if: use_bootc_composefs
+        then:
+          type: org.osbuild.oci-archive
+          inputs:
+            base:
+              type: org.osbuild.tree
+              origin: org.osbuild.pipeline
+              references:
+                - name:composefs-tree
+          options:
+            filename: image.oci-archive
+            architecture:
+              mpp-eval: goarch
+            config:
+              Cmd:
+                mpp-eval: container_cmd
+              Labels:
+                containers.bootc: "1"
+        else:
+          type: org.osbuild.ostree.encapsulate
+          inputs:
+            commit:
+              type: org.osbuild.ostree
+              origin: org.osbuild.pipeline
+              references:
+                name:ostree-commit:
+                  ref:
+                    mpp-eval: ostree_ref
+          options:
+            filename: image.oci-archive
+            cmd:
+              mpp-eval: container_cmd
 
   - name: bootc-tar
     build: name:build
@@ -297,14 +432,18 @@ pipelines:
             type: org.osbuild.tree
             origin: org.osbuild.pipeline
             references:
-              - name:ostree-tree
+              - mpp-if: use_bootc_composefs
+                then: name:composefs-tree
+                else: name:ostree-tree
         options:
           filename: rootfs.tar
-          transform: 's,^usr/etc,etc,'
+          transform:
+            mpp-if: use_ostree
+            then: 's,^usr/etc,etc,'
           root-node:
             mpp-if: not tar_paths
             then: omit
           paths:
             mpp-if: tar_paths
             then:
-              mpp-eval: '[_re.sub(r"^etc(?=$|/)", "usr/etc", p) for p in tar_paths]'
+              mpp-eval: '[_re.sub(r"^etc(?=$|/)", "usr/etc", p) for p in tar_paths] if use_ostree else tar_paths'

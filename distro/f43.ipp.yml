@@ -11,6 +11,7 @@ mpp-vars:
     - shadow-utils
   is_autoinit_supported: false
   uefi_vendor: fedora
+  distro_release_id: fedora
   kernel_package: kernel
   build_kernel_package: kernel
   release_rpm: fedora-release

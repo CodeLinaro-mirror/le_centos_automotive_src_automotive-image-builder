@@ -5,6 +5,15 @@ version: '2'
 # things that depend on what was set in that.
 
 mpp-vars:
+  _check_bootc_composefs_sealed:
+    mpp-if: use_bootc_composefs and not use_composefs_signed
+    then:
+      mpp-eval: _error('Sealing cannot be disabled with bootc_backend=composefs (image.sealed=false or use_composefs_signed=false)')
+  _check_bootc_composefs_boot:
+    mpp-if: use_bootc_composefs and use_boot == 'none'
+    then:
+      mpp-eval: _error('bootc_backend=composefs does not support use_boot=none; use aboot or ukiboot')
+
   # Must stay fixed: changing it changes every reproducible image's UUID.
   _aib_uuid_namespace:
     mpp-eval: _uuid.UUID('6ba7b811-9dad-11d1-80b4-00c04fd430c8')
@@ -134,7 +143,15 @@ mpp-vars:
     mpp-eval: use_aboot or use_ukiboot
 
   use_generate_machine_id:
-    mpp-eval: use_ostree and _with_default(use_transient_etc).use_generate_machine_id
+    mpp-eval: use_bootc and _with_default(use_transient_etc).use_generate_machine_id
+  machineid_path:
+    mpp-eval: "'/sysroot/state/.machine-id' if use_bootc_composefs else '/sysroot/ostree/.machine-id'"
+  machineid_kernel_conditions:
+    mpp-if: use_bootc_composefs
+    then: |
+      ConditionKernelCommandLine=|composefs
+      ConditionKernelCommandLine=|composefs.digest
+    else: ConditionKernelCommandLine=ostree
 
   # Enable as needed
   use_abootpart:
@@ -147,6 +164,13 @@ mpp-vars:
     mpp-eval: _with_default(False).use_ablpart
   use_efipart:
     mpp-eval: _with_default(use_ukiboot).use_efipart
+  # With the bootc composefs backend, /boot is the normal /boot/efi ESP mount
+  use_boot_efi_at_boot:
+    mpp-eval: use_bootc_composefs
+  boot_efi_mount_name:
+    mpp-eval: "'boot-efi.mount' if not use_boot_efi_at_boot else 'boot.mount'"
+  boot_efi_mount_path:
+    mpp-eval: "'/boot/efi' if not use_boot_efi_at_boot else '/boot'"
   use_efipart_mount:
     mpp-eval: use_efipart
   use_efi_features:
@@ -271,7 +295,7 @@ mpp-vars:
   sign_kernel_modules:
     mpp-if: kernel_package.startswith('kernel-automotive') or kernel_package.startswith('kernel-ivos')
     then:
-      mpp-eval: _with_default(use_ostree).sign_kernel_modules
+      mpp-eval: _with_default(use_bootc).sign_kernel_modules
     else:
       mpp-eval: _with_default(False).sign_kernel_modules
   use_kernel_debug_package:
@@ -293,6 +317,17 @@ mpp-vars:
     else:
       mpp-eval: |
         "/boot/" + _aboot_img
+  _vbmeta_img:
+    mpp-eval: |
+      "vbmeta-" + _kernel_subdir + ".img"
+  _boot_vbmeta_img:
+    mpp-if: use_ostree
+    then:
+      mpp-eval: |
+        _kernel_dir + "/vbmeta.img"
+    else:
+      mpp-eval: |
+        "/boot/" + _vbmeta_img
   systemd_timeout:
     mpp-eval: "'180s' if use_debug_build else systemd_timeout"
   coredump_storage:
@@ -318,6 +353,8 @@ mpp-vars:
             then: nmstate
           - mpp-if: use_generate_machine_id
             then: aib-machine-id
+          - mpp-if: use_bootc_composefs
+            then: bootc
   dracut_add_modules:
     mpp-join:
       - mpp-eval: dracut_add_modules
@@ -327,10 +364,12 @@ mpp-vars:
           then: nmstate
         - mpp-if: use_generate_machine_id
           then: aib-machine-id
+        - mpp-if: use_bootc_composefs
+          then: bootc
   dracut_add_drivers:
     mpp-join:
       - mpp-eval: dracut_add_drivers
-      - mpp-if: use_composefs
+      - mpp-if: use_ostree_composefs or use_bootc_composefs
         then:
           - erofs
           - overlay
@@ -534,6 +573,8 @@ mpp-vars:
     mpp-if: use_autoinit
     then: mount-sysroot.service
     else: sysroot.mount
+  root_setup_unit:
+    mpp-eval: "'bootc-root-setup.service' if use_bootc_composefs else 'ostree-prepare-root.service'"
   qm_importfile:
     mpp-if: use_qm
     then: "qm"
@@ -552,7 +593,7 @@ mpp-vars:
         - shm-size.service
         - rcu-normal.service
         - mpp-if: use_efi_features
-          then: boot-efi.mount
+          then: $boot_efi_mount_name
         - mpp-if: use_bootpart
           then: boot.mount
         - mpp-if: _use_separate_var
@@ -769,13 +810,6 @@ mpp-vars:
               path: auto/runcmd
               product:
                 name: "/usr/bin/quadlet_preprocess /run/osbuild/tree"
-        - mpp-if: use_bootc
-          then:
-            type: org.osbuild.lorax-script
-            options:
-              path: auto/runcmd
-              product:
-                name: "/usr/bin/gen_bootc_preprocess /run/osbuild/tree"
       - mpp-if: use_aboot_like
         then:
           - type: org.osbuild-auto.aboot.conf
@@ -856,6 +890,16 @@ mpp-vars:
         - path: /usr/lib/systemd/system.conf.d
           parents: true
           exist_ok: true
+        - mpp-if: use_bootc
+          then:
+            path: /sysroot
+            mode: 0755
+            exist_ok: true
+        - mpp-if: use_bootc_composefs
+          then:
+            path: /usr/lib/composefs
+            parents: true
+            exist_ok: true
         - mpp-if: enable_reclaim_protection
           then:
             path: /usr/lib/systemd/system/system.slice.d
@@ -890,6 +934,9 @@ mpp-vars:
             parents: true
             exist_ok: true
         - path: /usr/lib/bootc/install
+          parents: true
+          exist_ok: true
+        - path: /usr/lib/bootc/kargs.d
           parents: true
           exist_ok: true
         - path: /usr/lib/bootc-image-builder
@@ -984,6 +1031,10 @@ mpp-vars:
           then:
             from: input://extra-tree/ostree_prepare_root.conf
             to: tree:///usr/lib/ostree/prepare-root.conf
+        - mpp-if: use_bootc_composefs
+          then:
+            from: input://extra-tree/setup-root-conf.toml
+            to: tree:///usr/lib/composefs/setup-root-conf.toml
         - from: input://build-info/build-info
           to: tree:///etc/build-info
         - mpp-if: load_modules
@@ -1013,7 +1064,8 @@ mpp-vars:
         - mpp-if: use_efi_features
           then:
             from: input://extra-tree/boot-efi.mount
-            to: tree:////usr/lib/systemd/system/boot-efi.mount
+            to:
+              mpp-format-string: tree:////usr/lib/systemd/system/{boot_efi_mount_name}
         - mpp-if: _use_separate_var
           then:
             from: input://extra-tree/fstab
@@ -1042,6 +1094,8 @@ mpp-vars:
           to: tree://///etc/signing_info.json
         - from: input://extra-tree/bootc.install
           to: tree://///usr/lib/bootc/install/05-aib.toml
+        - from: input://extra-tree/bootc.kargs
+          to: tree://///usr/lib/bootc/kargs.d/10-aib.toml
         - from: input://extra-tree/disk.yaml
           to: tree://///usr/lib/bootc-image-builder/disk.yaml
         - mpp-if: use_ukibootpart
@@ -1114,11 +1168,12 @@ mpp-vars:
           - systemd-ukify
           - systemd-boot
 
-  ostree_mode_rpms:
+  bootc_mode_rpms:
     - bootc
     - rpm
     - bubblewrap # Needed for ostree
-    - nss-altfiles
+    - mpp-if: use_ostree
+      then: nss-altfiles
     - skopeo  # Needed for upgrading from an OCI remove image
     - mpp-if: use_bootc and use_ukiboot
       then: bootupd
@@ -1143,9 +1198,9 @@ mpp-vars:
       - mpp-eval: base_rpms
       - mpp-eval: arch_rpms
       - mpp-eval: target_rpms
-      - mpp-if: use_ostree
+      - mpp-if: use_bootc
         then:
-          mpp-eval: ostree_mode_rpms
+          mpp-eval: bootc_mode_rpms
         else:
           mpp-eval: package_mode_rpms
       - mpp-if: is_autoinit_supported and use_autoinit

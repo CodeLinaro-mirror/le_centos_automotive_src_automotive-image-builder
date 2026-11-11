@@ -286,6 +286,32 @@ pipelines:
             type: org.osbuild.files
             origin: org.osbuild.source
             mpp-embed:
+              id: composefs_postprocess
+              path: $_basedir/files/composefs_postprocess
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['composefs_postprocess']}
+              to: tree:///usr/bin/composefs_postprocess
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: composefs_finalize
+              path: $_basedir/files/composefs_finalize
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['composefs_finalize']}
+              to: tree:///usr/bin/composefs_finalize
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
               id: pregen_ssh_host_keys
               path: $_basedir/files/pregen_ssh_host_keys.sh
         options:
@@ -306,29 +332,18 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['quadlet_preprocess']}
               to: tree:///usr/bin/quadlet_preprocess
-      - type: org.osbuild.copy
-        inputs:
-          inlinefile:
-            type: org.osbuild.files
-            origin: org.osbuild.source
-            mpp-embed:
-              id: bootc_preprocess
-              path: $_basedir/files/bootc_preprocess.sh
-        options:
-          paths:
-            - from:
-                mpp-format-string: input://inlinefile/{embedded['bootc_preprocess']}
-              to: tree:///usr/bin/gen_bootc_preprocess
       - type: org.osbuild.chmod
         options:
           items:
             "/usr/bin/ostree_postprocess":
               mode: "755"
+            "/usr/bin/composefs_postprocess":
+              mode: "755"
+            "/usr/bin/composefs_finalize":
+              mode: "755"
             "/usr/bin/pregen_ssh_host_keys":
               mode: "755"
             "/usr/bin/quadlet_preprocess":
-              mode: "755"
-            "/usr/bin/gen_bootc_preprocess":
               mode: "755"
   - name: data
     build: name:build

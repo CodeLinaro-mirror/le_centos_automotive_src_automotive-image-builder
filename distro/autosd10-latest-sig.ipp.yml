@@ -6,6 +6,8 @@ mpp-vars:
   distro_baseurl: http://mirror.stream.centos.org/$distro_version-stream
   distro_baseurl_repo: $distro_baseurl/BaseOS/$arch/os/
   distro_chroot: centos-stream-$distro_version-$arch
+  uefi_vendor: centos
+  distro_release_id: centos
   # We add the nightly autosd compose as well, because sometimes it has packages not synced to cs mirrors yet
   compose_baseurl: https://autosd.sig.centos.org/AutoSD-$distro_version/nightly/repos/AutoSD/compose
   compose_baseurl_repo: $compose_baseurl/AutoSD/$arch/os/

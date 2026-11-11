@@ -106,6 +106,9 @@ mpp-vars:
           r'[^a-zA-Z0-9:_.]',
           lambda m: '-' if m.group() == '/' else ''.join('\\x%02x' % b for b in m.group().encode()),
           s)
+  _validate_enum:
+    mpp-eval: |
+      lambda v, variable, values: True if v in values else _error(f'{variable} value {v} not supported, valid options are: {", ".join(sorted(values))}')
 
 pipelines:
   - mpp-import-pipelines:

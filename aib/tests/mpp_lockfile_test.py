@@ -7,6 +7,7 @@ import sys
 import types
 
 import pytest
+import yaml
 
 
 def stub_module(monkeypatch, name, **attributes):
@@ -54,6 +55,58 @@ def new_manifest(mpp_module, lockfile_data=None, lockfile_output=None):
     manifest.path = pathlib.Path("test.mpp.yml")
     manifest.basedir = pathlib.Path(".")
     return manifest
+
+
+@pytest.mark.parametrize(
+    "mode,backend,sealed,boot,error",
+    [
+        ("bootc", "composefs", False, "ukiboot", "Sealing cannot be disabled"),
+        ("bootc", "composefs", True, "none", "does not support use_boot=none"),
+        ("bootc", "composefs", True, "ukiboot", None),
+        ("bootc", "composefs", True, "aboot", None),
+        ("bootc", "ostree", False, "ukiboot", None),
+        ("bootc", "ostree", True, "none", None),
+        ("package", "composefs", False, "none", None),
+    ],
+)
+def test_bootc_composefs_configuration(
+    mpp_module, capsys, mode, backend, sealed, boot, error
+):
+    include = pathlib.Path(__file__).parents[2] / "include"
+
+    def variables(filename):
+        return yaml.safe_load((include / filename).read_text())["mpp-vars"]
+
+    # Exercise the real MPP variable processing without package resolution.
+    helpers = variables("main.ipp.yml")
+    defaults = variables("defaults.ipp.yml")
+    checks = variables("computed-vars.ipp.yml")
+    config = {key: helpers[key] for key in ("_sys", "_printerr", "_error")}
+    config.update((key, defaults[key]) for key in ("use_bootc", "use_bootc_composefs"))
+    config.update(
+        (key, value)
+        for key, value in checks.items()
+        if key.startswith("_check_bootc_composefs_")
+    )
+    overrides = {
+        "image_mode": mode,
+        "bootc_backend": backend,
+        "use_composefs_signed": sealed,
+        "use_boot": boot,
+    }
+
+    def load():
+        return mpp_module.ManifestFileV2(
+            "config.yml", overrides, {}, {"mpp-vars": config}, []
+        )
+
+    if error:
+        with pytest.raises(SystemExit) as exc:
+            load()
+        assert exc.value.code == 1
+        assert error in capsys.readouterr().err
+    else:
+        load()
 
 
 def embedded_url_stage(url):
