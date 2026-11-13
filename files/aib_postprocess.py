@@ -14,6 +14,7 @@ TMPFILES_FIELD = re.compile(
 TMPFILES_ESCAPE = re.compile(
     r"\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|[0-7]{3}|.)"
 )
+QM_VAR_TMPFILES = "usr/lib/qm/tmpfiles.d/var.conf"
 
 
 def resolve_in_root(root, path, follow_final=True):
@@ -144,3 +145,24 @@ def tmpfiles_escape(value):
         else:
             result.append(f"\\x{byte:02x}")
     return "".join(result)
+
+
+def split_qm_tmpfiles(entries):
+    """Defer QM state until after mounting, retaining host paths and owners."""
+    host = []
+    qm = []
+    for line in entries:
+        if not line.strip() or line.lstrip().startswith(("#", ";")):
+            host.append(line)
+            continue
+        _, path = tmpfiles_fields(line)
+        if path.rstrip("/") == "/var/qm":
+            # First create the mountpoint in /var, then apply its ownership
+            # and label to the filesystem mounted over it.
+            host.append(line)
+            qm.append(line)
+        elif path.startswith("/var/qm/"):
+            qm.append(line)
+        else:
+            host.append(line)
+    return host, qm

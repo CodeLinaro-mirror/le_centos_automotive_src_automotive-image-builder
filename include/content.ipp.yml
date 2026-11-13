@@ -51,8 +51,14 @@ mpp-vars:
   qm_var_mount:
     mpp-format-string: |
       [Unit]
-      Before=local-fs.target
+      # Host tmpfiles must create and label /var/qm before mounting over it.
+      # Opt out of the mount's implicit Before=local-fs.target ordering.
+      DefaultDependencies=no
+      Requires=systemd-tmpfiles-setup.service
+      After=local-fs.target systemd-tmpfiles-setup.service
       After=blockdev@{_systemd_escape('dev/disk/by-uuid/' + qm_varfs_uuid)}.target
+      Before=multi-user.target umount.target
+      Conflicts=umount.target
       ConditionVirtualization=!container
 
       [Mount]
@@ -61,7 +67,19 @@ mpp-vars:
       Type=ext4
 
       [Install]
-      RequiredBy=local-fs.target
+      RequiredBy=multi-user.target
+  qm_var_tmpfiles_service: |
+    [Unit]
+    Description=Initialize QM persistent state
+    Requires=systemd-tmpfiles-setup.service
+    After=systemd-tmpfiles-setup.service
+    RequiresMountsFor=/var/qm
+    ConditionPathExists=/usr/lib/qm/tmpfiles.d/var.conf
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    ExecStart=/usr/bin/systemd-tmpfiles --create --boot /usr/lib/qm/tmpfiles.d/var.conf
   etc_ld_so_cache_mount:
     mpp-format-string: |
       [Unit]
@@ -202,6 +220,11 @@ mpp-vars:
 
   qm_automotive_conf:
     mpp-format-string: |
+      [Unit]
+      Requires=qm-var-tmpfiles.service
+      After=qm-var-tmpfiles.service
+      { "RequiresMountsFor=/var/qm" if _qm_use_separate_var else "" }
+
       [Service]
       MemoryMax={ qm_memory_max }
       MemoryHigh={ qm_memory_high }
@@ -819,6 +842,19 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['var-qm.mount']}
               to: tree:///var-qm.mount
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: qm-var-tmpfiles.service
+              text: $qm_var_tmpfiles_service
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['qm-var-tmpfiles.service']}
+              to: tree:///qm-var-tmpfiles.service
       - type: org.osbuild.copy
         inputs:
           inlinefile:

@@ -8,8 +8,10 @@ import stat
 from pathlib import Path
 
 from aib_postprocess import (
+    QM_VAR_TMPFILES,
     ensure_file_contents,
     resolve_in_root,
+    split_qm_tmpfiles,
     tmpfiles_escape,
     tmpfiles_fields,
 )
@@ -160,6 +162,16 @@ def var_tmpfiles(root):
 def write_var_tmpfiles(root):
     output = resolve_in_root(root, f"usr/lib/tmpfiles.d/{AUTOVAR}", follow_final=False)
     entries = var_tmpfiles(root)
+    qm_root = resolve_in_root(root, "usr/lib/qm/rootfs")
+    if qm_root.is_dir():
+        entries, qm_entries = split_qm_tmpfiles(entries)
+        qm_output = resolve_in_root(root, QM_VAR_TMPFILES, follow_final=False)
+        qm_output.parent.mkdir(parents=True, exist_ok=True)
+        ensure_file_contents(
+            qm_output,
+            AUTOVAR_HEADER + "".join(f"{entry}\n" for entry in qm_entries),
+            0o644,
+        )
     contents = AUTOVAR_HEADER + "".join(f"{entry}\n" for entry in entries)
     ensure_file_contents(output, contents, 0o644)
 
@@ -182,12 +194,12 @@ def prepare_layout(root):
         ("mnt", "var/mnt"),
     ):
         relocate_directory(root, source, destination)
-        
+
     media = root / "media"
     if not media.is_symlink():
         media.rmdir()
         media.symlink_to("run/media")
-        
+
     alternatives = resolve_in_root(root, "var/lib/alternatives", follow_final=False)
     if alternatives.is_dir() and not alternatives.is_symlink():
         relocate_directory(root, "var/lib/alternatives", "usr/lib/alternatives")

@@ -1,0 +1,40 @@
+#!/usr/bin/python3
+
+"""Defer generated QM /var initialization until its filesystem is mounted."""
+
+import argparse
+from pathlib import Path
+
+from aib_postprocess import (
+    QM_VAR_TMPFILES,
+    ensure_file_contents,
+    resolve_in_root,
+    split_qm_tmpfiles,
+)
+
+AUTOVAR = "rpm-ostree-1-autovar.conf"
+
+
+def split_autovar(root):
+    source = resolve_in_root(root, f"usr/lib/tmpfiles.d/{AUTOVAR}")
+    entries = source.read_text(errors="surrogateescape").splitlines(keepends=True)
+    host, qm = split_qm_tmpfiles(entries)
+    if not qm:
+        return
+    destination = resolve_in_root(root, QM_VAR_TMPFILES, follow_final=False)
+    if host == entries and destination.is_file():
+        return  # Already split; the host still contains the mountpoint rule.
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    ensure_file_contents(destination, "".join(qm), 0o644)
+    ensure_file_contents(source, "".join(host), 0o644)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("root", type=Path)
+    args = parser.parse_args()
+    split_autovar(args.root.resolve())
+
+
+if __name__ == "__main__":
+    main()

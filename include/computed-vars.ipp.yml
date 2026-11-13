@@ -1078,6 +1078,10 @@ mpp-vars:
           then:
             from: input://extra-tree/var-qm.mount
             to: tree:////usr/lib/systemd/system/var-qm.mount
+        - mpp-if: use_qm
+          then:
+            from: input://extra-tree/qm-var-tmpfiles.service
+            to: tree:///usr/lib/systemd/system/qm-var-tmpfiles.service
         - mpp-if: ld_so_cache_protected
           then:
             from: input://extra-tree/etc-ld.so.cache.mount
