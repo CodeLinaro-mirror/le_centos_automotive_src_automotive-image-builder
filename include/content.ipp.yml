@@ -80,6 +80,9 @@ mpp-vars:
     Type=oneshot
     RemainAfterExit=yes
     ExecStart=/usr/bin/systemd-tmpfiles --create --boot /usr/lib/qm/tmpfiles.d/var.conf
+  systemd_random_seed_dropin: |
+    [Unit]
+    After=systemd-tmpfiles-setup.service
   etc_ld_so_cache_mount:
     mpp-format-string: |
       [Unit]
@@ -855,6 +858,19 @@ pipelines:
             - from:
                 mpp-format-string: input://inlinefile/{embedded['qm-var-tmpfiles.service']}
               to: tree:///qm-var-tmpfiles.service
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: random-seed.dropin
+              text: $systemd_random_seed_dropin
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['random-seed.dropin']}
+              to: tree:///random-seed.dropin
       - type: org.osbuild.copy
         inputs:
           inlinefile:
