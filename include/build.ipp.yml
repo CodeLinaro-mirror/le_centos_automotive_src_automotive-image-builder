@@ -286,6 +286,19 @@ pipelines:
             type: org.osbuild.files
             origin: org.osbuild.source
             mpp-embed:
+              id: aib_postprocess
+              path: $_basedir/files/aib_postprocess.py
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['aib_postprocess']}
+              to: tree:///usr/bin/aib_postprocess.py
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
               id: composefs_postprocess
               path: $_basedir/files/composefs_postprocess
         options:
