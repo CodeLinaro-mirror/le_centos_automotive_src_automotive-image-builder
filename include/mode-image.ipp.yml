@@ -288,6 +288,13 @@ pipelines:
               etc_group_members:
                 - wheel
                 - docker
+          - mpp-if: use_qm
+            then:
+              type: org.osbuild.lorax-script
+              options:
+                path: auto/runcmd
+                product:
+                  name: "/usr/bin/ostree_split_qm_tmpfiles /run/osbuild/tree"
           - mpp-if: use_bootc and use_ukiboot
             then:
               type: org.osbuild.bootupd.gen-metadata

@@ -286,6 +286,32 @@ pipelines:
             type: org.osbuild.files
             origin: org.osbuild.source
             mpp-embed:
+              id: aib_postprocess
+              path: $_basedir/files/aib_postprocess.py
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['aib_postprocess']}
+              to: tree:///usr/bin/aib_postprocess.py
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
+              id: ostree_split_qm_tmpfiles
+              path: $_basedir/files/ostree_split_qm_tmpfiles
+        options:
+          paths:
+            - from:
+                mpp-format-string: input://inlinefile/{embedded['ostree_split_qm_tmpfiles']}
+              to: tree:///usr/bin/ostree_split_qm_tmpfiles
+      - type: org.osbuild.copy
+        inputs:
+          inlinefile:
+            type: org.osbuild.files
+            origin: org.osbuild.source
+            mpp-embed:
               id: composefs_postprocess
               path: $_basedir/files/composefs_postprocess
         options:
@@ -336,6 +362,8 @@ pipelines:
         options:
           items:
             "/usr/bin/ostree_postprocess":
+              mode: "755"
+            "/usr/bin/ostree_split_qm_tmpfiles":
               mode: "755"
             "/usr/bin/composefs_postprocess":
               mode: "755"
