@@ -9,7 +9,7 @@ trap 'cleanup_path "$TAR_FILE" "etc" "usr"' 'EXIT'
 
 echo_log "Starting build for auth users and groups test..."
 build --tar \
-    --extend-define "tar_paths=['usr/lib/passwd','usr/lib/group','etc/shadow']" \
+    --extend-define "tar_paths=['etc','usr/lib']" \
     users-and-groups.aib.yml \
     "$TAR_FILE"
 echo_log "Build completed, output: $TAR_FILE"
@@ -17,17 +17,23 @@ echo_log "Build completed, output: $TAR_FILE"
 echo_log "Extracting $TAR_FILE..."
 tar xvf "$TAR_FILE" --no-same-owner --no-same-permissions
 
-PASSWD_PATH="./usr/lib/passwd"
-GROUP_PATH="./usr/lib/group"
+# Native bootc keeps accounts in /etc instead of splitting them for OSTree.
+if test -f ./usr/lib/composefs/setup-root-conf.toml; then
+    PASSWD_PATH="./etc/passwd"
+    GROUP_PATH="./etc/group"
+else
+    PASSWD_PATH="./usr/lib/passwd"
+    GROUP_PATH="./usr/lib/group"
+fi
 SHADOW_PATH="./etc/shadow"
 EXPECTED_HASH='$6$xoLqEUz0cGGJRx01$H3H/bFm0myJPULNMtbSsOFd/2BnHqHkMD92Sfxd.EKM9hXTWSmELG8cf205l6dktomuTcgKGGtGDgtvHVXSWU.'
 
-# Validate presence of /etc/passwd and expected users
+# Validate expected users
 assert_has_file "$PASSWD_PATH"
 assert_file_has_content "$PASSWD_PATH" "guest:x:2000:2000::/var/guest:/bin/bash"
 assert_file_has_content "$PASSWD_PATH" "foo:x:2042:2042::/home/foo:/sbin/nologin"
 
-# Validate presence of /etc/group and expected groups
+# Validate expected groups
 assert_has_file "$GROUP_PATH"
 assert_file_has_content "$GROUP_PATH" "guest:x:2000:"
 assert_file_has_content "$GROUP_PATH" "foo:x:2042:"
