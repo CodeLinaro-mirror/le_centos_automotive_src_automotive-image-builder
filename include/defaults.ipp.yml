@@ -202,6 +202,8 @@ mpp-vars:
   is_autoinit_supported: true
   use_autoinit: false
   use_autoinit_root: false
+  # Drivers to load without udev when using either autoinit implementation.
+  autoinit_load_modules: []
   aboot_partlabel: system_a
   qm_varpart_label: qm_var
   vbmeta_partlabel: vbmeta_a

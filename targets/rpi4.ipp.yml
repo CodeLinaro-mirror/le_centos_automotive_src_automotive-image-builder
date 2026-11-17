@@ -16,6 +16,8 @@ mpp-vars:
       priority: 1
   target_rpms:
     - pi4-firmware-blob
+  autoinit_load_modules:
+    - sdhci_iproc
   dracut_add_drivers:
     mpp-join:
       - mpp-eval: dracut_add_drivers
@@ -27,9 +29,4 @@ mpp-vars:
     mpp-join:
       - mpp-eval: dracut_force_drivers
       - - simplefb
-  kernel_opts:
-    mpp-join:
-      - mpp-eval: kernel_opts
-      - - mpp-if: is_autoinit_supported and use_autoinit # With autoinit, udev will not load block drivers
-          then: rd.modules-load=sdhci_iproc
 pipelines: []

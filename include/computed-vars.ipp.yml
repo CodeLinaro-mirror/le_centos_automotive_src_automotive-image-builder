@@ -459,6 +459,9 @@ mpp-vars:
       - mpp-if: is_autoinit_supported and use_autoinit
         then:
           mpp-join:
+            - mpp-if: autoinit_load_modules
+              then:
+                - mpp-format-string: "rd.modules-load={','.join(autoinit_load_modules)}"
             - mpp-if: use_autoinit_root
               then:
                 - mount-sysroot.root=$autoinit_root

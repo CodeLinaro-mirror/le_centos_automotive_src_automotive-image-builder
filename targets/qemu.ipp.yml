@@ -9,6 +9,9 @@ mpp-vars:
     mpp-if: arch == 'aarch64'
     then: "ttyAMA0 tty0"
     else: "ttyS0 tty0"
+  autoinit_load_modules:
+    - nvme
+    - virtio_mmio
   dracut_drivers:
     mpp-join:
       - mpp-eval: dracut_drivers
@@ -19,8 +22,3 @@ mpp-vars:
         - "virtio_mmio"
         - "sd_mod"
         - "ahci"
-  kernel_opts:
-    mpp-join:
-      - mpp-eval: kernel_opts
-      - - mpp-if: is_autoinit_supported and use_autoinit # With autoinit, udev will not load block drivers
-          then: rd.modules-load=nvme,virtio_mmio
