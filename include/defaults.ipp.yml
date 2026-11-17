@@ -199,8 +199,8 @@ mpp-vars:
   use_tuned_realtime: false
   tuned_realtime_isolcpus: "2-N"
   use_testpart: false
-  is_autoinit_supported: true
-  use_autoinit: false
+  use_initrd: dracut
+  is_dracut_autoinit_supported: true
   use_autoinit_root: false
   # Drivers to load without udev when using either autoinit implementation.
   autoinit_load_modules: []

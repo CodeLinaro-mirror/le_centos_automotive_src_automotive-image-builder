@@ -1,7 +1,7 @@
 # Target for general virtualized images (typically for qemu)
 version: '2'
 mpp-vars:
-  use_autoinit: true
+  use_initrd: dracut-autoinit
   static_ip_iface: "enp0s2"
   static_ip_modules:
     - "virtio_net"
