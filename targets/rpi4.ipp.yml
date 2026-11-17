@@ -18,13 +18,14 @@ mpp-vars:
     - pi4-firmware-blob
   autoinit_load_modules:
     - sdhci_iproc
-  dracut_add_drivers:
+  initrd_modules:
     mpp-join:
-      - mpp-eval: dracut_add_drivers
+      - mpp-eval: initrd_modules
       - - bcm2835
         - bcm2835-mailbox
         - sdhci
         - sdhci_iproc
+        - simplefb
   dracut_force_drivers:
     mpp-join:
       - mpp-eval: dracut_force_drivers

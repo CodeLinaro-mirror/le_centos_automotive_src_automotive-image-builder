@@ -20,12 +20,17 @@ mpp-vars:
       - mpp-eval: kernel_opts
       - - acpi=off
         - earlycon
-  dracut_drivers:
+  initrd_modules:
     mpp-join:
-      - mpp-eval: dracut_drivers
+      - mpp-eval: initrd_modules
       - - "mmc_block"
         - "mmc_core"
         - "sdhci-esdhc-imx"
+  # Keep dracut's restricted driver selection for this target.
+  dracut_drivers:
+    mpp-join:
+      - mpp-eval: dracut_drivers
+      - mpp-eval: initrd_modules
   dracut_modules:
     - "base"
     - "bash"

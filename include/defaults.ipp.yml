@@ -48,6 +48,8 @@ mpp-vars:
   extra_kernel_opts: []
   simple_kernel_opts: []
   kernel_loglevel: 4
+  # Kernel modules to include in the initramfs. Autoinit preloads these modules.
+  initrd_modules: []
   # Extra kernel modules loaded at boot
   load_modules: []
   # Denylist => remove these modules from image
@@ -201,8 +203,9 @@ mpp-vars:
   use_testpart: false
   use_initrd: dracut
   is_dracut_autoinit_supported: true
+  is_autoinit_supported: true
   use_autoinit_root: false
-  # Drivers to load without udev when using either autoinit implementation.
+  # Drivers to explicitly load without udev when using dracut-autoinit.
   autoinit_load_modules: []
   aboot_partlabel: system_a
   qm_varpart_label: qm_var
