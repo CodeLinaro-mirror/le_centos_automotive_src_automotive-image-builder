@@ -182,6 +182,9 @@ mpp-vars:
     mpp-format-string: |
       [etc]
       mount = "{ 'transient' if use_transient_etc else 'bind' }"
+      [var]
+      # Let var.mount handle a separate /var partition.
+      mount = "{ 'none' if _use_separate_var else 'bind' }"
   # _Lazy: build_timestamp depends on rpms[], which is filled by depsolve.
   build_info:
     mpp-eval: |
