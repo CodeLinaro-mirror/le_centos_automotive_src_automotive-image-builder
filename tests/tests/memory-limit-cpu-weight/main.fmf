@@ -1,7 +1,8 @@
 summary: Verify that memory_limit and cpu_weight options are correctly included in the QM image
 description: |
   Builds an AIB image with configured memory limits and CPU weight
-  and verifies that the expected settings are present in the QM container systemd configuration file.
+  and verifies that the expected settings are present in the QM 1.x container
+  drop-in or the QM 2.0 service drop-in.
 
   Test inputs:
     Custom a-i-b manifest, which define memory and CPU options applied to the qm partition in the image created

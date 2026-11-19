@@ -13,6 +13,8 @@ mpp-vars:
     mpp-eval: "__import__('datetime')"
   _re:
     mpp-eval: "__import__('re')"
+  _rpm:
+    mpp-eval: "__import__('rpm')"
   _printerr:
     mpp-eval: "lambda errstr: print('Error: ' + errstr, file=_sys.stderr)"
   _error:
@@ -66,6 +68,14 @@ mpp-vars:
   installed_rpm:
     mpp-eval: |
       lambda rpm: rpms['rootfs'][rpm] if rpm in rpms['rootfs'] else _error(f"rpm '{rpm}' was unexpectedly not installed in the rootfs")
+  # Compare an installed package's upstream Version, ignoring Epoch and Release
+  # on both sides. The requested version may also be a complete RPM EVR.
+  # Returns a negative number, zero, or a positive number, using RPM ordering.
+  installed_rpm_version_compare:
+    mpp-eval: |
+      lambda package, version: _rpm.labelCompare(
+        ('0', installed_rpm(package).evr.split(':')[-1].rsplit('-', 1)[0], ''),
+        ('0', version.split(':')[-1].rsplit('-', 1)[0], ''))
   optional_installed_rpm_evr:
     mpp-eval: |
       lambda rpm: rpms['rootfs'][rpm].evr if rpm in rpms['rootfs'] else ''

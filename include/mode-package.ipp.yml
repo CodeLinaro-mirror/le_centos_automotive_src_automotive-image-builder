@@ -46,7 +46,14 @@ pipelines:
                   - name:build-info-content
             options:
               paths:
-                mpp-eval: extra_tree_content
+                mpp-join:
+                  - mpp-eval: extra_tree_content
+                  - mpp-if: use_qm1()
+                    then:
+                      mpp-eval: extra_tree_content_qm1
+                  - mpp-if: use_qm2()
+                    then:
+                      mpp-eval: extra_tree_content_qm2
           - type: org.osbuild.users
             options:
               users:
@@ -76,6 +83,10 @@ pipelines:
           - type: org.osbuild.systemd
             options:
               enabled_services:
+                - mpp-if: use_qm2()
+                  then: qm.service
+                - mpp-if: use_boot_check()
+                  then: auto-boot-check.service
                 - mpp-if: use_ukiboot
                   then: ukiboot-set-success.service
                 - mpp-if: "containers_transient_store and 'podman' in rpms['rootfs']"

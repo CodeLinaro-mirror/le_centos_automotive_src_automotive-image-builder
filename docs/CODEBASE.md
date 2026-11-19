@@ -189,10 +189,13 @@ Resolution order: defaults -> data -> distro -> target -> arch -> user manifest 
 **Location:** `aib/simple.py` -> `QMContents`, `include/qm.ipp.yml`, `include/content.ipp.yml`
 **Purpose:** Builds an isolated secondary partition for quality-managed code separation
 **Key files:**
-- `simple.py` -- `QMContents` extends `Contents` for QM-specific content; `ManifestLoader.handle_qm()` processes memory/CPU limits and container checksum validation
-- `include/qm.ipp.yml` -- dedicated osbuild pipeline that builds a separate rootfs mounted at `/usr/share/qm/rootfs`
+- `simple.py` -- `QMContents` extends `Contents` for QM-specific content; `ManifestLoader.handle_qm()` processes memory/CPU limits
+- `include/qm.ipp.yml` -- dedicated osbuild pipeline that builds a separate rootfs at `/usr/lib/qm/rootfs`
 - Manifest `qm:` section supports its own RPMs, container images, files, and systemd services independent of the main image
 - Resource limits (`memory_max`, `memory_high`, `cpu_weight`) translate to systemd cgroup settings
+- AIB selects the QM interface from the resolved host-image RPM version. QM 1.x uses Podman/Quadlet; QM 2.0 uses the native `qm.service` with qmc/crun.
+- QM 1.x writes `qm_automotive_conf`, including `[Unit]`, `[Service]`, and `[Container]` settings, to `/usr/share/containers/systemd/qm.container.d/10-automotive.conf`. QM 2.0 writes the service-only `qm2_automotive_conf` to `/usr/lib/systemd/system/qm.service.d/10-automotive.conf` and uses JSON in `/usr/share/qm/qmc.conf.d/` for container settings. QM Wayland installs `qm-oci-hooks` on the host for either version. Application containers inside QM still use Podman and Quadlets.
+- Legacy QM supports writable package-mode roots and digest boot checks. QM 2.0 retains the native launcher's read-only root and omits QM digest checks. When policy requests a digest, `auto-boot-check` is included before resolving the QM version, but is enabled only for legacy QM or static-IP checks.
 
 See `examples/qm.aib.yml` for usage and `tests/tests/memory-limit-cpu-weight/` for resource limit validation.
 
