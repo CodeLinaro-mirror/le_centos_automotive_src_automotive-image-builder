@@ -7,9 +7,9 @@ mpp-vars:
     - cloud-utils-growpart
     - fdisk
     - hyperv-daemons
-  dracut_add_drivers:
+  initrd_modules:
     mpp-join:
-      - mpp-eval: dracut_add_drivers
+      - mpp-eval: initrd_modules
       - - hv_vmbus
         - hv_netvsc
         - hv_storvsc

@@ -5,6 +5,17 @@ version: '2'
 # things that depend on what was set in that.
 
 mpp-vars:
+  _check_use_initrd:
+    mpp-eval: "_validate_enum(use_initrd, 'use_initrd', ['dracut', 'dracut-autoinit', 'autoinit'])"
+  # Unsupported implementations fall back to the standard dracut initramfs.
+  _use_dracut_autoinit:
+    mpp-eval: use_initrd == 'dracut-autoinit' and is_dracut_autoinit_supported
+  _use_autoinit:
+    mpp-eval: use_initrd == 'autoinit' and is_autoinit_supported
+  _check_autoinit_backend:
+    mpp-if: _use_autoinit and not use_bootc_composefs
+    then:
+      mpp-eval: _error('use_initrd=autoinit requires bootc image mode and bootc_backend=composefs')
   _check_bootc_composefs_sealed:
     mpp-if: use_bootc_composefs and not use_composefs_signed
     then:
@@ -342,7 +353,7 @@ mpp-vars:
       - mpp-eval: policy_denylist_modules
   dracut_modules:
     mpp-join:
-      - mpp-if: is_autoinit_supported and use_autoinit
+      - mpp-if: _use_dracut_autoinit
         then:
           - systemd-initrd-automotive
           - mpp-if: use_debug_build
@@ -366,9 +377,9 @@ mpp-vars:
           then: aib-machine-id
         - mpp-if: use_bootc_composefs
           then: bootc
-  dracut_add_drivers:
+  _initrd_modules:
     mpp-join:
-      - mpp-eval: dracut_add_drivers
+      - mpp-eval: initrd_modules
       - mpp-if: use_ostree_composefs or use_bootc_composefs
         then:
           - erofs
@@ -376,7 +387,11 @@ mpp-vars:
           - loop
       - mpp-if: use_static_ip and static_ip_modules
         then:
-          mpp-eval: $static_ip_modules
+          mpp-eval: static_ip_modules
+  dracut_add_drivers:
+    mpp-join:
+      - mpp-eval: dracut_add_drivers
+      - mpp-eval: _initrd_modules
   dracut_omit_modules:
     mpp-join:
       - mpp-eval: dracut_omit_modules
@@ -456,9 +471,12 @@ mpp-vars:
           # This can catch some issues, however there is a performance penalty associated with
           # this option, so only enable this for debug builds.
           - iommu.strict=1
-      - mpp-if: is_autoinit_supported and use_autoinit
+      - mpp-if: _use_dracut_autoinit
         then:
           mpp-join:
+            - mpp-if: autoinit_load_modules
+              then:
+                - mpp-format-string: "rd.modules-load={','.join(autoinit_load_modules)}"
             - mpp-if: use_autoinit_root
               then:
                 - mount-sysroot.root=$autoinit_root
@@ -466,6 +484,19 @@ mpp-vars:
             - mpp-if: use_debug_build
               then:
                 - mount-sysroot.debug
+      - mpp-if: _use_autoinit
+        then:
+          mpp-join:
+            - mpp-if: use_autoinit_root
+              then:
+                - autoinit.root=$autoinit_root
+                - autoinit.rw
+            - mpp-if: use_debug_build
+              then:
+                - autoinit.debug
+            - mpp-if: not use_generate_machine_id
+              then:
+                - autoinit.machine-id=off
       - mpp-if: use_module_sig_enforce
         then:
           # Only allow modules with a valid signature to be loaded by the kernel.
@@ -570,7 +601,7 @@ mpp-vars:
   autoinit_root:
     mpp-eval: _with_default(f"PARTLABEL={rootpart_label}").autoinit_root
   sysroot_unit:
-    mpp-if: use_autoinit
+    mpp-if: _use_dracut_autoinit
     then: mount-sysroot.service
     else: sysroot.mount
   root_setup_unit:
@@ -1162,6 +1193,9 @@ mpp-vars:
       - mpp-eval: distro_build_rpms
       - mpp-eval: arch_build_rpms
       - mpp-eval: target_build_rpms
+      - mpp-if: _use_autoinit
+        then:
+          - autoinit
       - - selinux-policy-$selinux_policy
         - mpp-eval: build_kernel_package
         - mpp-if: use_aboot_like
@@ -1216,7 +1250,7 @@ mpp-vars:
           mpp-eval: bootc_mode_rpms
         else:
           mpp-eval: package_mode_rpms
-      - mpp-if: is_autoinit_supported and use_autoinit
+      - mpp-if: _use_dracut_autoinit
         then:
           - util-linux-automotive
           - dracut-automotive

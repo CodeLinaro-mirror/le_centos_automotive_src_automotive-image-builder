@@ -6,12 +6,17 @@ mpp-vars:
   consoles: "ttyLP5,115200"
   image_size: 3221225472
   dracut_compression: "lzo"
-  dracut_drivers:
+  initrd_modules:
     mpp-join:
-      - mpp-eval: dracut_drivers
+      - mpp-eval: initrd_modules
       - - "mmc_block"
         - "mmc_core"
         - "sdhci-esdhc-imx"
+  # Keep dracut's restricted driver selection for this target.
+  dracut_drivers:
+    mpp-join:
+      - mpp-eval: dracut_drivers
+      - mpp-eval: initrd_modules
   dracut_modules:
     - "base"
     - "bash"

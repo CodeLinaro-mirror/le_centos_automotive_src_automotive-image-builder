@@ -1,7 +1,7 @@
 # Target for general virtualized images (typically for qemu)
 version: '2'
 mpp-vars:
-  use_autoinit: true
+  use_initrd: dracut-autoinit
   static_ip_iface: "enp0s2"
   static_ip_modules:
     - "virtio_net"
@@ -9,9 +9,12 @@ mpp-vars:
     mpp-if: arch == 'aarch64'
     then: "ttyAMA0 tty0"
     else: "ttyS0 tty0"
-  dracut_drivers:
+  autoinit_load_modules:
+    - nvme
+    - virtio_mmio
+  initrd_modules:
     mpp-join:
-      - mpp-eval: dracut_drivers
+      - mpp-eval: initrd_modules
       - - "nvme"
         - "nvme_common"
         - "nvme_core"
@@ -19,8 +22,8 @@ mpp-vars:
         - "virtio_mmio"
         - "sd_mod"
         - "ahci"
-  kernel_opts:
+  # Keep dracut's restricted driver selection for this target.
+  dracut_drivers:
     mpp-join:
-      - mpp-eval: kernel_opts
-      - - mpp-if: is_autoinit_supported and use_autoinit # With autoinit, udev will not load block drivers
-          then: rd.modules-load=nvme,virtio_mmio
+      - mpp-eval: dracut_drivers
+      - mpp-eval: initrd_modules

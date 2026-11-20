@@ -9,7 +9,7 @@ mpp-vars:
   qm_varpart_label: system_b
   skip_root_on_cmdline: true # This uses ABL bootloader which appends root= cmdline
   use_efi_runtime: false
-  use_autoinit: true
+  use_initrd: dracut-autoinit
   use_autoinit_root: true
   consoles: "ttyMSM0,115200,n8"
   aboot_pagesize: 4096

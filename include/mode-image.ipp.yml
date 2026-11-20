@@ -236,12 +236,33 @@ pipelines:
               path: auto/runcmd
               product:
                 name: "/usr/bin/composefs_postprocess /run/osbuild/tree"
-          - type: org.osbuild.dracut
-            options:
-              kernel:
-                - mpp-eval: _kernel_subdir()
-              extra:
-                - mpp-format-string: /usr/lib/modules/{_kernel_subdir()}/initramfs.img
+          - mpp-if: _use_autoinit
+            then:
+              type: org.osbuild.lorax-script
+              options:
+                path: auto/runcmd
+                product:
+                  name:
+                    # Use the build environment's builder and init binary,
+                    # reading target configuration and dependencies via --root.
+                    mpp-eval: |
+                      __import__('shlex').join(
+                          ['/usr/bin/mkautoinitrd', '--root', '/run/osbuild/tree']
+                          + [arg for module in _initrd_modules
+                             for arg in ['--module', module]]
+                          + (['--nmstate-file', '/etc/main-initrd.nmstate'] if use_static_ip else [])
+                          + (['--repart'] if use_repart else [])
+                          + (['--growfs'] if grow_rootfs else [])
+                          + [f'/usr/lib/modules/{_kernel_subdir()}',
+                             f'/run/osbuild/tree/usr/lib/modules/{_kernel_subdir()}/initramfs.img']
+                      )
+            else:
+              type: org.osbuild.dracut
+              options:
+                kernel:
+                  - mpp-eval: _kernel_subdir()
+                extra:
+                  - mpp-format-string: /usr/lib/modules/{_kernel_subdir()}/initramfs.img
           - type: org.osbuild.lorax-script
             options:
               path: auto/runcmd
