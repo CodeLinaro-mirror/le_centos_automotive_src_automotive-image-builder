@@ -98,9 +98,11 @@ mpp-vars:
   boot_check_noreboot: false
   boot_check_qm_digest_default_per_arch:
     aarch64:
+      - "0075221b5a5233237cb718e839e3505f15d8eb438f9111b039c6b371dfbed818" # qm 1.3
       - "f3873680c15f9562175076633462a26a50e996b7cb75128a54ea8aaa547387c1" # qm 1.2
       - "bc353927483de0b05ad38273cb0addd6671cb66cb422e61931ff30969f137eb3" # qm 1.0
     x86_64:
+      - "dc0be6e1c96f7ab048a0863971111b224c8357d758911eb4fa4ebb0af3646582" # qm 1.3
       - "ba6cc02699683241246e9e9ff8adae4ddc94900742085f89f9cff86f43da0d70" # qm 1.2
       - "d3a6f44308daf613a4eed51a9f6b59bf5775da062f912fd3f6945b5270036be9" # qm 1.0
 
