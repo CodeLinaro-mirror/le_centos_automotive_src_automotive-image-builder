@@ -274,6 +274,14 @@ mpp-vars:
   build_repo_ids:
     mpp-eval: "[r['id'] for r in build_repos if r.get('id')]"
 
+  # The image's QM RPM is only known after depsolve, so defer these flags.
+  use_qm2:
+    mpp-eval: "_Lazy(lambda: use_qm and installed_rpm_version_compare('qm', '2') >= 0)"
+  use_qm1:
+    mpp-eval: "_Lazy(lambda: use_qm and not use_qm2())"
+
+  # Digest checks apply to QM 1.x only. Keep the requested digests available
+  # before depsolve so we can include auto-boot-check in the package set.
   _boot_check_qm_digest_default:
     mpp-eval:
       boot_check_qm_digest_default_per_arch[arch]
@@ -282,6 +290,10 @@ mpp-vars:
     mpp-eval: "[] if not (policy_require_qm_digest and use_qm) else _with_default(_boot_check_qm_digest_default).boot_check_qm_digest"
 
   need_boot_check:
+    mpp-eval: "_Lazy(lambda: use_static_ip or (use_qm1() and len(_boot_check_qm_digest) > 0))"
+
+  # Available before depsolve; may overestimate if the image uses QM 2.0.
+  need_boot_check_conservative:
     mpp-eval: "use_static_ip or len(_boot_check_qm_digest) > 0"
 
   # policy_require_boot_check was added after policy_require_qm_digest, so for backwards compat add as needed
@@ -289,7 +301,12 @@ mpp-vars:
     mpp-eval: "policy_require_boot_check or policy_require_qm_digest"
 
   use_boot_check:
-    mpp-eval: "policy_require_boot_check and need_boot_check"
+    mpp-eval: "_Lazy(lambda: policy_require_boot_check and need_boot_check())"
+
+  # The package set must be decided before the QM version is known. Include
+  # auto-boot-check when legacy QM might need it; enable it only when needed.
+  _boot_check_requested:
+    mpp-eval: "policy_require_boot_check and need_boot_check_conservative"
 
   kernel_devel_rpm:
     mpp-eval: kernel_package + "-devel" if not kernel_version else kernel_package + "-devel-" + kernel_version
@@ -633,8 +650,6 @@ mpp-vars:
           then: var-qm.mount
         - mpp-if: use_static_ip
           then: main-nmstate.service
-        - mpp-if: use_boot_check
-          then: auto-boot-check.service
         - mpp-if: use_tuned_realtime
           then: tuned.service
         - mpp-if: selinux_booleans
@@ -956,6 +971,16 @@ mpp-vars:
             exist_ok: true
         - mpp-if: use_qm
           then:
+            path: /usr/lib/systemd/system/qm.service.d
+            parents: true
+            exist_ok: true
+        - mpp-if: use_qm
+          then:
+            path: /usr/share/qm/qmc.conf.d
+            parents: true
+            exist_ok: true
+        - mpp-if: use_qm
+          then:
             path: /etc/qm/systemd/system.conf.d
             parents: true
             exist_ok: true
@@ -964,7 +989,7 @@ mpp-vars:
             path: /etc/qm/containers/systemd/wayland-compositor.container.d
             parents: true
             exist_ok: true
-        - mpp-if: use_boot_check
+        - mpp-if: _boot_check_requested
           then:
             path: /usr/lib/systemd/system/auto-boot-check.service.d
             parents: true
@@ -1081,11 +1106,7 @@ mpp-vars:
           to: tree:///etc/subuid
         - from: input://extra-tree/subgid
           to: tree:///etc/subgid
-        - mpp-if: _boot_check_qm_digest and use_boot_check
-          then:
-            from: input://extra-tree/qm.bootcheck
-            to: tree:///usr/lib/boot-check.d/qm.conf
-        - mpp-if: use_boot_check
+        - mpp-if: _boot_check_requested
           then:
             from: input://extra-tree/bootcheck.conf
             to: tree:///usr/lib/systemd/system/auto-boot-check.service.d/10-automotive.conf
@@ -1126,14 +1147,6 @@ mpp-vars:
           then:
             from: input://extra-tree/etc-ld.so.cache.mount
             to: tree:///usr/lib/systemd/system/etc-ld.so.cache.mount
-        - mpp-if: use_qm
-          then:
-            from: input://extra-tree/qm-automotive.conf
-            to: tree:////usr/share/containers/systemd/qm.container.d/10-automotive.conf
-        - mpp-if: use_qm and qm_wayland_enable
-          then:
-            from: input://extra-tree/wayland-extra-devices.conf
-            to: tree:///usr/share/containers/systemd/qm.container.d/20-wayland-extra-devices.conf
         - from: input://extra-tree/signing_info.json
           to: tree://///etc/signing_info.json
         - from: input://extra-tree/bootc.install
@@ -1166,7 +1179,7 @@ mpp-vars:
             to: tree:///etc/main.nmstate
           - from: input://extra-tree/main-nmstate.service
             to: tree:///usr/lib/systemd/system/main-nmstate.service
-          - mpp-if: use_boot_check
+          - mpp-if: policy_require_boot_check
             then:
               from: input://extra-tree/nmstate.bootcheck
               to: tree:///usr/lib/boot-check.d/nmstate.conf
@@ -1186,6 +1199,27 @@ mpp-vars:
               'to': f'tree:////usr/lib/systemd/system/{service}.d/10-container.conf'
             } for service in image_services_skipped_on_container
           ]
+
+  # The image modes select one of these lists after resolving the QM package.
+  extra_tree_content_qm1:
+    - from: input://extra-tree/qm-automotive.conf
+      to: tree:///usr/share/containers/systemd/qm.container.d/10-automotive.conf
+    - mpp-if: qm_wayland_enable
+      then:
+        from: input://extra-tree/wayland-extra-devices.conf
+        to: tree:///usr/share/containers/systemd/qm.container.d/20-wayland-extra-devices.conf
+    - mpp-if: _boot_check_requested and len(_boot_check_qm_digest) > 0
+      then:
+        from: input://extra-tree/qm.bootcheck
+        to: tree:///usr/lib/boot-check.d/qm.conf
+
+  extra_tree_content_qm2:
+    - from: input://extra-tree/qm-automotive.conf
+      to: tree:///usr/lib/systemd/system/qm.service.d/10-automotive.conf
+    - mpp-if: qm_wayland_enable
+      then:
+        from: input://extra-tree/wayland-extra-devices.conf
+        to: tree:///usr/share/qm/qmc.conf.d/20-wayland-extra-devices.conf
 
   build_rpms:
     mpp-join:
@@ -1271,7 +1305,7 @@ mpp-vars:
           then: tuned-profiles-realtime
         - mpp-if: use_static_ip
           then: nmstate
-        - mpp-if: use_boot_check
+        - mpp-if: _boot_check_requested
           then: auto-boot-check
         - mpp-if: not use_static_ip
           then: NetworkManager

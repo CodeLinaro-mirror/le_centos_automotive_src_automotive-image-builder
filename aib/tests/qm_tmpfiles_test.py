@@ -1,4 +1,4 @@
-"""Initialize QM state on the host after mounting and before starting Podman."""
+"""Initialize QM state on the host after mounting and before starting QM."""
 
 import importlib.machinery
 import importlib.util

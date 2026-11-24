@@ -13,6 +13,8 @@ content:
       source_path: ../../image-tests/dmesg_clean.sh
     - path: /usr/tests/systemd_running.sh
       source_path: ../../image-tests/systemd_running.sh
+    - path: /usr/tests/qm_running.sh
+      source_path: ../../image-tests/qm_running.sh
     - path: /usr/tests/selinux_check.sh
       source_path: ../../image-tests/selinux_check.sh
     - path: /usr/tests/rpmdb_initialized.sh
@@ -25,6 +27,8 @@ content:
     - path: /usr/tests/dmesg_clean.sh
       mode: "755"
     - path: /usr/tests/systemd_running.sh
+      mode: "755"
+    - path: /usr/tests/qm_running.sh
       mode: "755"
     - path: /usr/tests/selinux_check.sh
       mode: "755"

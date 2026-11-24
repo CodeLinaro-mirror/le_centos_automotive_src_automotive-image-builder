@@ -59,7 +59,14 @@ pipelines:
                   - name:build-info-content
             options:
               paths:
-                mpp-eval: extra_tree_content
+                mpp-join:
+                  - mpp-eval: extra_tree_content
+                  - mpp-if: use_qm1()
+                    then:
+                      mpp-eval: extra_tree_content_qm1
+                  - mpp-if: use_qm2()
+                    then:
+                      mpp-eval: extra_tree_content_qm2
           - mpp-if: use_qm
             then:
               type: org.osbuild.copy
@@ -117,6 +124,10 @@ pipelines:
           - type: org.osbuild.systemd
             options:
               enabled_services:
+                - mpp-if: use_qm2()
+                  then: qm.service
+                - mpp-if: use_boot_check()
+                  then: auto-boot-check.service
                 - mpp-if: use_ukiboot
                   then: ukiboot-set-success.service
                 - mpp-if: use_aboot and aboot_boot_type == 'aboot-gptctl'

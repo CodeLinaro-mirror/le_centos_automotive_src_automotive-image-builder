@@ -52,7 +52,7 @@ done
 # Check logs for success
 echo_log "Verifying test output..."
 
-tests=("dmesg" "selinux" "systemd" "rpmdb")
+tests=("dmesg" "selinux" "systemd" "qm" "rpmdb")
 all_passed=true
 
 for test in "${tests[@]}"; do
