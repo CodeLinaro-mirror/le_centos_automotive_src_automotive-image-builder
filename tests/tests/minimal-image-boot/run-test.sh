@@ -64,6 +64,13 @@ for test in "${tests[@]}"; do
     fi
 done
 
+# Verify that no additional restarts happened during the boot
+restart_count="$(grep -c -E 'Test booting slot .?, tries_remaining: .?' "$LOGFILE")"
+if [[ $restart_count -ne 1 ]]; then
+    echo_fail "System was restarted during the boot or the expected message was not found, see $LOGFILE for details"
+    all_passed=false
+fi
+
 if $all_passed; then
     echo_pass "All tests PASSED."
     success=0

@@ -42,3 +42,11 @@ content:
 qm:
   content:
     rpms: []
+
+image:
+  image_size: 4 GiB
+  partitions:
+    var:
+      relative_size: 0.1
+    var_qm:
+      relative_size: 0.05
